@@ -33,7 +33,23 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertFalse(format.roundDetail(score: displays[1]).contains("收"))
         XCTAssertEqual(format.roundDetail(score: displays[0]), "5 張 ×1")
         XCTAssertEqual(format.roundDetail(score: displays[2]), "9 張 ×2")
-        XCTAssertEqual(format.roundDetail(score: displays[3]), "11 張 ×3 🔥")
+        XCTAssertEqual(format.roundDetail(score: displays[3]), "11 張 ×3")
+        XCTAssertFalse(format.roundDetail(score: displays[3]).contains("🔥"))
+    }
+
+    /// No 炒到盡 / 最高倍 wording anywhere: every 炒倍 is just `N 張 ×M`.
+    func testRoundDetailHasNoMaxWording() throws {
+        let round = try ScoringEngine.score(cardsLeft: [0, 11, 13, 3], rule: .hongKongDefault, mode: .pairwise)
+        let d = RoundPresentation.displays(from: round)
+        XCTAssertEqual(format.roundDetail(score: d[2]), "13 張 ×4")
+        XCTAssertEqual(ScoreFormatting(region: .taiwan).roundDetail(score: d[2]), "13 張 ×4")
+        XCTAssertEqual(format.roundDetail(score: d[1]), "11 張 ×3")
+        XCTAssertEqual(format.roundDetail(score: d[0]), "出清牌")
+    }
+
+    func testResultTotalsHeader() {
+        XCTAssertEqual(format.resultTotalsHeader(6), "累計 · 打咗 6 局")
+        XCTAssertEqual(ScoreFormatting(region: .taiwan).resultTotalsHeader(6), "累計 · 已進行 6 局")
     }
 
     func testLegacyPresetsMapToChaoTables() {

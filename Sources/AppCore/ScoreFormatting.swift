@@ -49,20 +49,23 @@ public struct ScoreFormatting: Equatable, Sendable {
         "\(shortDate(date)) · \(rounds) 局"
     }
 
-    /// Detail under a player on the result screen, e.g. `出清牌`, `5 張 ×1`, `11 張 ×3 🔥`.
-    /// The round's net points are shown separately.
+    /// Detail under a player on the result screen, e.g. `出清牌`, `5 張 ×1`, `13 張 ×4`.
+    /// The round's net points are shown separately. Every 炒倍 reads the same (no 🔥, no
+    /// 炒到盡 wording). TODO: highest-炒倍 highlight will be an animation later.
     public func roundDetail(score: RoundScoreDisplay) -> String {
         if score.cardsLeft == 0 {
             return isTaiwan ? "出完牌" : "出清牌"
         }
         var text = "\(score.cardsLeft) 張 ×\(score.appliedMultiplier)"
-        if score.appliedMultiplier >= 3 {
-            text += " 🔥"
-        }
         if score.heldTwoApplied {
             text += "（有 2 再 ×2）"
         }
         return text
+    }
+
+    /// Header above the running totals on the result screen, e.g. `累計 · 打咗 6 局`.
+    public func resultTotalsHeader(_ completed: Int) -> String {
+        "累計 · \(homeProgress(completed))"
     }
 
     public func placeholderName(at index: Int) -> String {
@@ -81,11 +84,14 @@ public struct RoundScoreDisplay: Equatable, Sendable {
     public var appliedMultiplier: Int
     public var heldTwoApplied: Bool
     public var points: Int
+    /// 炒倍 from the session rule, before 有 2 再 ×2.
+    public var baseMultiplier: Int
 
-    public init(cardsLeft: Int, appliedMultiplier: Int, heldTwoApplied: Bool, points: Int) {
+    public init(cardsLeft: Int, appliedMultiplier: Int, heldTwoApplied: Bool, points: Int, baseMultiplier: Int? = nil) {
         self.cardsLeft = cardsLeft
         self.appliedMultiplier = appliedMultiplier
         self.heldTwoApplied = heldTwoApplied
         self.points = points
+        self.baseMultiplier = baseMultiplier ?? (heldTwoApplied ? appliedMultiplier / 2 : appliedMultiplier)
     }
 }

@@ -109,7 +109,7 @@ final class RoundEntryStateTests: XCTestCase {
     func testBadgesForEachTier() {
         var state = make()
         state.enterCards(8)
-        XCTAssertEqual(state.pendingBadge, .init(playerIndex: 0, multiplier: 2, cardsLeft: 8, isMax: false))
+        XCTAssertEqual(state.pendingBadge, .init(playerIndex: 0, multiplier: 2, cardsLeft: 8))
         state.enterCards(11)
         XCTAssertEqual(state.pendingBadge?.multiplier, 3)
         state.enterCards(13)
@@ -212,32 +212,12 @@ final class RoundEntryStateTests: XCTestCase {
         XCTAssertNil(state.pendingBadge)
     }
 
-    func testMaxBadgeFollowsSessionsHighestMultiplier() {
+    /// Every 炒倍 gets the same plain badge (no 炒到盡 / 最高 wording).
+    func testBadgeIsPlainMultiplier() {
         var hk = make(.hongKongDefault)
-        XCTAssertEqual(hk.highestMultiplier, 4)
-        hk.enterCards(12)
-        XCTAssertEqual(hk.consumePendingBadge()?.isMax, false)
         hk.enterCards(13)
-        let hkBadge = hk.consumePendingBadge()
-        XCTAssertEqual(hkBadge?.multiplier, 4)
-        XCTAssertEqual(hkBadge?.isMax, true)
-
-        var tw = make(.taiwanCommon)
-        XCTAssertEqual(tw.highestMultiplier, 3)
-        tw.enterCards(10)
-        XCTAssertEqual(tw.consumePendingBadge()?.isMax, false)
-        tw.enterCards(13)
-        let twBadge = tw.consumePendingBadge()
-        XCTAssertEqual(twBadge?.multiplier, 3)
-        XCTAssertEqual(twBadge?.isMax, true)
-
-        let flat = make(.noMultiplier)
-        XCTAssertEqual(flat.highestMultiplier, 1)
-        XCTAssertFalse(flat.isMaxMultiplier(1))
-
-        // Non-monotonic custom table: ×3 on 9 cards is the top even though 13 is ×2.
-        let odd = make(ChaoTable(multipliers: [1, 3, 1, 1, 1, 2]).rule)
-        XCTAssertTrue(odd.isMaxMultiplier(3))
-        XCTAssertFalse(odd.isMaxMultiplier(2))
+        XCTAssertEqual(hk.consumePendingBadge(), .init(playerIndex: 0, multiplier: 4, cardsLeft: 13))
+        hk.enterCards(12)
+        XCTAssertEqual(hk.consumePendingBadge(), .init(playerIndex: 1, multiplier: 3, cardsLeft: 12))
     }
 }

@@ -26,14 +26,11 @@ public struct RoundEntryState: Equatable, Sendable {
         public let playerIndex: Int
         public let multiplier: Int
         public let cardsLeft: Int
-        /// The session's highest 炒倍 was hit: show 炒到盡！×N / 最高 ×N！.
-        public let isMax: Bool
 
-        public init(playerIndex: Int, multiplier: Int, cardsLeft: Int, isMax: Bool = false) {
+        public init(playerIndex: Int, multiplier: Int, cardsLeft: Int) {
             self.playerIndex = playerIndex
             self.multiplier = multiplier
             self.cardsLeft = cardsLeft
-            self.isMax = isMax
         }
     }
 
@@ -131,19 +128,6 @@ public struct RoundEntryState: Equatable, Sendable {
         return taiwan ? "剩幾張？" : "剩幾多張？"
     }
 
-    /// Highest multiplier any loser count can get under this session's rule.
-    public var highestMultiplier: Int {
-        (ScoringEngine.minLoserCards...ScoringEngine.maxLoserCards)
-            .compactMap { try? rule.multiplier(forCardsLeft: $0) }
-            .max() ?? 1
-    }
-
-    /// True when `multiplier` is the session's top 炒倍 and that top is at least ×2,
-    /// e.g. ×4 under 香港炒, ×3 under 台灣常見. Drives the 炒到盡 badge.
-    public func isMaxMultiplier(_ multiplier: Int) -> Bool {
-        multiplier >= 2 && multiplier == highestMultiplier
-    }
-
     public func multiplier(forCardsLeft cardsLeft: Int) -> Int? {
         guard cardsLeft >= ScoringEngine.minLoserCards else { return nil }
         return try? rule.multiplier(forCardsLeft: cardsLeft)
@@ -171,8 +155,7 @@ public struct RoundEntryState: Equatable, Sendable {
             pendingBadge = ChaoBadge(
                 playerIndex: focus,
                 multiplier: multiplier,
-                cardsLeft: count,
-                isMax: isMaxMultiplier(multiplier)
+                cardsLeft: count
             )
         } else {
             pendingBadge = nil

@@ -111,7 +111,7 @@ jobs:
             raw="raw-${bundle%.xcresult}"
             if xcrun xcresulttool export attachments --path "$bundle" --output-path "$raw"; then
               RAW="$raw" python3 - <<'PY'
-          import json, os, pathlib, shutil
+          import json, os, pathlib, re, shutil
           raw = pathlib.Path(os.environ["RAW"])
           out = pathlib.Path("screenshots")
           manifest = json.loads((raw / "manifest.json").read_text())
@@ -120,6 +120,10 @@ jobs:
                   src = raw / att["exportedFileName"]
                   name = att.get("suggestedHumanReadableName") or att["exportedFileName"]
                   stem = name.split("_")[0]  # "HK-01-home-fresh_0_<uuid>.png" -> "HK-01-home-fresh"
+                  # Keep only our named screenshots (skip crash logs, debug descriptions,
+                  # synthesized-event images, screen recordings: odd names break upload).
+                  if src.suffix.lower() not in (".png", ".jpg", ".jpeg") or not re.fullmatch(r"(HK|TW)[-A-Za-z0-9]+", stem):
+                      continue
                   dest = out / (stem + src.suffix)
                   shutil.copy(src, dest)
                   print(dest)

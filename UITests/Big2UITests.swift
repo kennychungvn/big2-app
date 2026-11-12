@@ -106,6 +106,12 @@ final class Big2UITests: XCTestCase {
         element("result.title")
     }
 
+    /// Result sheet stays until 「下一局」 is tapped.
+    private func tapNextRound() {
+        tap("result.next")
+        waitForScoreboard()
+    }
+
     private func waitForScoreboard() {
         waitGone("entry.title", timeout: 12)
         element("scoreboard.addRound")
@@ -172,11 +178,22 @@ final class Big2UITests: XCTestCase {
                 XCTAssertTrue(label("result.row.2").contains("+3"), label("result.row.2"))
                 XCTAssertTrue(label("result.row.0").contains("出清牌"), label("result.row.0"))
                 XCTAssertFalse(label("result.row.0").contains("收"))
+                // Cards ×multiplier per row, all plain (no 炒到盡 / 🔥).
+                XCTAssertTrue(label("result.row.3").contains("13 張 ×4"), label("result.row.3"))
+                XCTAssertTrue(label("result.row.2").contains("9 張 ×2"), label("result.row.2"))
+                XCTAssertFalse(label("result.row.3").contains("炒到盡"))
+                XCTAssertFalse(label("result.row.3").contains("🔥"))
+                XCTAssertEqual(label("result.totalsHeader"), "累計 · 打咗 1 局")
+                XCTAssertTrue(element("result.undo").label.contains("撤回"))
+                XCTAssertFalse(element("result.undo").label.contains("秒"))
                 snap("result-round1")
+                // No auto-dismiss: sheet and 撤回 are still there after 4 s.
+                XCTAssertFalse(element("result.title").waitForNonExistence(timeout: 4))
+                XCTAssertTrue(element("result.undo").exists)
             } else {
                 enterRound(cards)
             }
-            waitForScoreboard()
+            tapNextRound()
         }
         XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
         // Pairwise (HK): score_i = P − 4·p_i each round.
@@ -193,6 +210,7 @@ final class Big2UITests: XCTestCase {
         enterRound([13, 0, 2, 9])
         XCTAssertEqual(label("result.title"), "第 6 局結果")
         XCTAssertTrue(element("result.undoToast").label.contains("入錯咗？"))
+        XCTAssertEqual(label("result.totalsHeader"), "累計 · 打咗 6 局")
         snap("result-round6-undo-toast")
         XCTAssertTrue(label("result.row.2").contains("+64"), label("result.row.2"))
         XCTAssertTrue(label("result.row.0").contains("−136"), label("result.row.0"))
@@ -201,11 +219,11 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
         assertTotals(["+238", "−54", "−54", "−130"])
 
-        // Round 6 again (no second interstitial), let the result auto-close
+        // Round 6 again (no second interstitial), close with 下一局; 撤回 lingers on the scoreboard
         tap("scoreboard.addRound")
         XCTAssertFalse(app.descendants(matching: .any)["interstitial.close"].waitForExistence(timeout: 1.5))
         enterRound([13, 0, 2, 9])
-        waitForScoreboard()
+        tapNextRound()
         element("scoreboard.undoToast", timeout: 3)
         snap("scoreboard-undo-toast")
         XCTAssertEqual(label("scoreboard.title"), "打咗 6 局")
@@ -218,7 +236,7 @@ final class Big2UITests: XCTestCase {
         snap("edit-round2")
         tap("pad.13")
         element("result.title")
-        waitForScoreboard()
+        tapNextRound()
         assertTotals(["+124", "+40", "+32", "−196"])
         snap("scoreboard-after-edit")
 
@@ -310,7 +328,8 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(label("entry.prompt").contains("小明 剩幾張？"))
         snap("entry-start")
         tap("pad.13")
-        XCTAssertTrue(label("entry.row.0").contains("最高 ×3！"), label("entry.row.0"))
+        XCTAssertTrue(label("entry.row.0").contains("×3"), label("entry.row.0"))
+        XCTAssertFalse(label("entry.row.0").contains("最高"))
         tap("pad.win")
         XCTAssertFalse(element("pad.win").isEnabled, "only one winner")
         tap("pad.10")
@@ -318,8 +337,11 @@ final class Big2UITests: XCTestCase {
         tap("pad.5")
         element("result.title")
         XCTAssertTrue(element("result.undoToast").label.contains("輸入錯誤？"))
+        XCTAssertTrue(label("result.row.0").contains("13 張 ×3"), label("result.row.0"))
+        XCTAssertFalse(label("result.row.0").contains("最高"))
+        XCTAssertEqual(label("result.totalsHeader"), "累計 · 已進行 1 局")
         snap("result")
-        waitForScoreboard()
+        tapNextRound()
         // 13×3 + 10×2 + 5 = 64 to 阿強
         assertTotals(["−39", "+64", "−20", "−5"])
         XCTAssertEqual(label("scoreboard.title"), "已進行 1 局")

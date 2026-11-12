@@ -49,7 +49,7 @@ struct RoundResultView: View {
                         Button {
                             vm.performUndo()
                         } label: {
-                            Text(tr("↶ 撤回（5 秒）"))
+                            Text(tr("↶ 撤回"))
                                 .font(.system(size: 14, weight: .bold))
                         }
                         .buttonStyle(.plain)
@@ -64,7 +64,8 @@ struct RoundResultView: View {
                     .padding(.top, 10)
                 }
 
-                Text(tr("累計排名（%@）", vm.format.homeProgress(vm.model.currentSession?.session.roundsCompleted ?? sheet.roundNumber)))
+                Text(vm.format.resultTotalsHeader(sheet.roundsCompleted))
+                    .accessibilityIdentifier("result.totalsHeader")
                     .font(.system(size: 14))
                     .foregroundColor(Color(theme.secondaryText))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -94,12 +95,27 @@ struct RoundResultView: View {
                 }
 
                 Spacer(minLength: 8)
+
+                Button {
+                    vm.dismissResult()
+                } label: {
+                    Text(tr("下一局"))
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundColor(Color(theme.primaryText))
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .background(Color(theme.primary))
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("result.next")
+                .padding(.horizontal, 14)
+                .padding(.bottom, 12)
             }
             .background(Color(theme.background))
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .padding(.top, 8)
             .padding(.horizontal, 0)
-            .ignoresSafeArea(edges: .bottom)
+            .padding(.bottom, 0)
         }
     }
 

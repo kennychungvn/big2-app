@@ -137,3 +137,5 @@ swift test
   the app always uses the Hong Kong interface (also on zh-TW devices), Settings hides
   地區介面, and there is no zh-Hant-TW localization in the bundle. TW sessions would use
   `winnerTakesAll` scoring; HK uses pairwise settlement. To try it, launch with `-enableTaiwan`.
+- **Highest 炒倍 highlight:** to be an animation later (Kenny). For now every 炒倍 badge is the
+  same plain `×N` pill and there is no 炒到盡 / 最高倍 wording anywhere.

@@ -34,6 +34,8 @@ struct ResultSheet: Identifiable, Equatable {
     var totalsAfter: [Int]
     var roundNumber: Int
     var isEdit: Bool
+    /// Rounds in the session after this result, for 「累計 · 打咗 N 局」.
+    var roundsCompleted: Int
 
     init(
         id: UUID = UUID(),
@@ -41,8 +43,10 @@ struct ResultSheet: Identifiable, Equatable {
         players: [String],
         totalsAfter: [Int],
         roundNumber: Int,
-        isEdit: Bool
+        isEdit: Bool,
+        roundsCompleted: Int
     ) {
+        self.roundsCompleted = roundsCompleted
         self.id = id
         self.round = round
         self.players = players
@@ -266,11 +270,12 @@ final class AppViewModel: ObservableObject {
                     case .edit(let index, _): return index + 1
                     }
                 }(),
-                isEdit: isEdit
+                isEdit: isEdit,
+                roundsCompleted: current.session.roundsCompleted
             )
             resultSheet = sheet
-            startUndoWindow(kind: undoKind)
-            startResultAutoDismiss(id: sheet.id)
+            // 撤回 stays available for as long as the result sheet is open (no auto-dismiss).
+            startUndoWindow(kind: undoKind, duration: nil)
         } catch {
             errorMessage = tr("計分失敗，請檢查入咗嘅牌。")
         }
@@ -290,10 +295,14 @@ final class AppViewModel: ObservableObject {
         roundEntry = sheet
     }
 
+    /// 「下一局」: closes the result sheet. 撤回 stays on the scoreboard for 5 more seconds.
     func dismissResult() {
         resultTask?.cancel()
         resultSheet = nil
         roundEntry = nil
+        if let kind = undoWindow?.kind {
+            startUndoWindow(kind: kind, duration: 5)
+        }
     }
 
     func performUndo() {
@@ -314,8 +323,13 @@ final class AppViewModel: ObservableObject {
         roundEntry = nil
     }
 
-    private func startUndoWindow(kind: UndoWindow.Kind, duration: TimeInterval = 5) {
+    /// `duration == nil` keeps the window open until it is replaced or cleared.
+    private func startUndoWindow(kind: UndoWindow.Kind, duration: TimeInterval?) {
         undoTask?.cancel()
+        guard let duration else {
+            undoWindow = UndoWindow(expiresAt: .distantFuture, kind: kind)
+            return
+        }
         let expires = Date().addingTimeInterval(duration)
         undoWindow = UndoWindow(expiresAt: expires, kind: kind)
         undoTask = Task { [weak self] in
@@ -325,19 +339,6 @@ final class AppViewModel: ObservableObject {
             await MainActor.run {
                 guard self?.undoWindow?.expiresAt == expires else { return }
                 self?.undoWindow = nil
-            }
-        }
-    }
-
-    private func startResultAutoDismiss(id: UUID, duration: TimeInterval = 3) {
-        resultTask?.cancel()
-        resultTask = Task { [weak self] in
-            let nanos = UInt64(duration * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: nanos)
-            guard !Task.isCancelled else { return }
-            await MainActor.run {
-                guard self?.resultSheet?.id == id else { return }
-                self?.dismissResult()
             }
         }
     }

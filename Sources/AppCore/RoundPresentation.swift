@@ -9,8 +9,11 @@ public enum RoundPresentation: Sendable {
                 cardsLeft: score.cardsLeft,
                 appliedMultiplier: score.appliedMultiplier,
                 heldTwoApplied: score.heldTwoApplied,
-                points: score.points
+                points: score.points,
+                baseMultiplier: score.baseMultiplier
             )
         }
     }
+
+
 }

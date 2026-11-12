@@ -118,20 +118,22 @@ struct NumberPad: View {
     }
 }
 
+/// The same `×N` pill for every 炒倍; fixed width so pills line up across rows.
+// TODO: highlight the session's highest 炒倍 with an animation (Kenny, later) — no wording.
 struct ChaoBadgeView: View {
+    static let width: CGFloat = 30
     let multiplier: Int
-    /// The session's highest 炒倍 (≥ ×2): shows 炒到盡！×N / 最高 ×N！.
-    var isMax: Bool = false
     var scale: CGFloat = 1
 
     @Environment(\.appTheme) private var theme
 
     var body: some View {
-        Text(isMax ? tr("炒到盡！×%@", "\(multiplier)") : "×\(multiplier)")
-            .font(.system(size: isMax ? 13 : 12, weight: .bold))
+        Text("×\(multiplier)")
+            .font(.system(size: 12, weight: .bold))
+            .monospacedDigit()
             .foregroundColor(.white)
+            .frame(width: Self.width)
             .padding(.vertical, 2)
-            .padding(.horizontal, 6)
             .background(Color(theme.badgeColor(forMultiplier: multiplier)))
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .scaleEffect(scale)

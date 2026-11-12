@@ -128,3 +128,12 @@ swift test
 - 設定 →「地區介面」：跟系統（預設）／香港／台灣。跟系統規則：電話語言係 zh-Hant-TW 或者地區係台灣 → 台灣；語言明確係香港／澳門中文 → 香港；其他 → 香港。
 - 台灣介面新開一場預設「台灣常見」：1-9張 ×1 · 10-12張 ×2 · 13張 ×3。
 - 主畫面 app 名跟 iOS 語言：香港「鋤大D計分」、台灣「大老二記分」（`InfoPlist.strings`）。
+
+## TODO
+
+- **Taiwan (大老二) version is on hold — TW scoring to be decided by Kenny.**
+  The TW interface, strings (`scripts/l10n_table.py` → `App/Localization/LocalizableTW.strings`)
+  and unit tests stay in the repo, but `FeatureFlags.taiwanEnabledByDefault` is `false`:
+  the app always uses the Hong Kong interface (also on zh-TW devices), Settings hides
+  地區介面, and there is no zh-Hant-TW localization in the bundle. TW sessions would use
+  `winnerTakesAll` scoring; HK uses pairwise settlement. To try it, launch with `-enableTaiwan`.

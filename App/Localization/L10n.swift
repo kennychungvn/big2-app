@@ -34,9 +34,19 @@ enum L10n {
         return bundle
     }
 
+    /// Taiwan interface switch: `FeatureFlags.taiwanEnabledByDefault`, or the `-enableTaiwan`
+    /// launch argument (UI tests only).
+    static let taiwanEnabled: Bool =
+        FeatureFlags.taiwanEnabledByDefault || ProcessInfo.processInfo.arguments.contains("-enableTaiwan")
+
     static func string(_ key: String, region: InterfaceRegion) -> String {
         // Context keys look like "完場|nav"; if a lookup ever misses, show the text before "|".
         let fallback = key.split(separator: "|", maxSplits: 1).first.map(String.init) ?? key
+        if region == .taiwan {
+            // Taiwan strings are a plain table (App/Localization/LocalizableTW.strings), not a
+            // zh-Hant-TW.lproj, so iOS never picks them on its own while Taiwan is on hold.
+            return Bundle.main.localizedString(forKey: key, value: fallback, table: "LocalizableTW")
+        }
         return bundle(for: region).localizedString(forKey: key, value: fallback, table: "Localizable")
     }
 }

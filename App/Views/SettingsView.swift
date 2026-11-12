@@ -9,6 +9,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                if L10n.taiwanEnabled {
                 Section {
                     Picker(tr("地區介面"), selection: regionBinding) {
                         ForEach(InterfaceRegionPreference.allCases, id: \.self) { preference in
@@ -21,6 +22,7 @@ struct SettingsView: View {
                     Text(tr("地區介面"))
                 } footer: {
                     Text(tr("揀「台灣」會用大老二用語，第一次開場預設台灣常見炒法（10-12張 ×2 · 13張 ×3）。"))
+                }
                 }
 
                 Section {

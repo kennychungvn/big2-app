@@ -8,6 +8,7 @@ struct NewSessionView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: NewSessionDraft
+    @FocusState private var focusedField: Int?
 
     init(draft: NewSessionDraft) {
         _draft = State(initialValue: draft)
@@ -24,6 +25,11 @@ struct NewSessionView: View {
                             PlayerColorDot(index: index, height: 30)
                             TextField(vm.format.placeholderName(at: index), text: $draft.names[index])
                                 .accessibilityIdentifier("setup.name.\(index)")
+                                .focused($focusedField, equals: index)
+                                .submitLabel(index < ScoringEngine.playerCount - 1 ? .next : .done)
+                                .onSubmit {
+                                    focusedField = index < ScoringEngine.playerCount - 1 ? index + 1 : nil
+                                }
                                 .font(.system(size: 18))
                                 .foregroundColor(Color(theme.text))
                                 .tint(Color(theme.primary))

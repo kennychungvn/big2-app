@@ -57,7 +57,7 @@ final class InterfaceRegionTests: XCTestCase {
         ])
         var session = try Session(players: names, rule: custom)
         try session.addRound(cardsLeft: [0, 9, 10, 13])
-        XCTAssertEqual(session.totals, [55, -9, -20, -26])
+        XCTAssertEqual(session.totals, [55, 19, -25, -49])  // pairwise: P = 55, 55 − 4p
     }
 
     // MARK: - New session defaults
@@ -75,8 +75,13 @@ final class InterfaceRegionTests: XCTestCase {
     func testTaiwanSessionUsesTaiwanTable() throws {
         var model = AppModel()
         let draft = model.newSessionDraft(region: .taiwan)
-        let stored = try model.startNewSession(players: names, chaoTable: draft.chaoTable)
+        let stored = try model.startNewSession(
+            players: names,
+            chaoTable: draft.chaoTable,
+            scoringMode: InterfaceRegion.taiwan.defaultScoringMode
+        )
         XCTAssertEqual(stored.session.rule, .taiwanCommon)
+        XCTAssertEqual(stored.session.scoringMode, .winnerTakesAll)
         let round = try model.addRound(cardsLeft: [10, 0, 13, 3])
         XCTAssertEqual(round.points, [-20, 62, -39, -3])
     }
@@ -134,8 +139,8 @@ final class InterfaceRegionTests: XCTestCase {
         let tw = ScoreFormatting(region: .taiwan)
         let round = try ScoringEngine.score(cardsLeft: [5, 0, 9, 11], rule: .taiwanCommon)
         let displays = RoundPresentation.displays(from: round)
-        let receipts = RoundPresentation.winnerReceipts(from: round)
-        XCTAssertEqual(tw.roundDetail(score: displays[1], winnerReceivedFrom: receipts), "出完牌，收 5 + 9 + 22")
+        XCTAssertEqual(tw.roundDetail(score: displays[1]), "出完牌")
+
         XCTAssertEqual(tw.homeProgress(0), "尚未開局")
         XCTAssertEqual(tw.homeProgress(5), "已進行 5 局")
         XCTAssertEqual(tw.appTitle, "大老二記分")
@@ -149,7 +154,7 @@ final class InterfaceRegionTests: XCTestCase {
         let cantonese = ["㩒", "揀", "嘅", "咗", "唔", "係", "喇", "緊", "幾多", "呢", "嚟", "冇"]
         let texts = [
             tw.homeProgress(0), tw.homeProgress(3), tw.appTitle,
-            tw.roundDetail(score: displays[1], winnerReceivedFrom: receipts),
+            tw.roundDetail(score: displays[1]), tw.roundDetail(score: displays[3]),
             state.hintText(in: .taiwan), state.padPrompt(playerNames: names, region: .taiwan),
             tw.ruleSummary(ScoringRule.noMultiplier),
             tw.ruleSummary(ScoringRule.taiwanCommon),
@@ -253,5 +258,22 @@ final class InterfaceRegionTests: XCTestCase {
         data.interfaceRegionPreference = .taiwan
         let decoded = try JSONDecoder().decode(AppData.self, from: JSONEncoder().encode(data))
         XCTAssertEqual(decoded.regionPreference, .taiwan)
+    }
+}
+
+final class TaiwanFeatureFlagTests: XCTestCase {
+    func testTaiwanIsOffByDefault() {
+        XCTAssertFalse(FeatureFlags.taiwanEnabledByDefault, "Taiwan is on hold until its scoring is decided")
+    }
+
+    func testFlagOffAlwaysResolvesHongKong() {
+        var data = AppData()
+        XCTAssertEqual(data.interfaceRegion(systemRegion: .taiwan, taiwanEnabled: false), .hongKong)
+        data.interfaceRegionPreference = .taiwan
+        XCTAssertEqual(data.interfaceRegion(systemRegion: .taiwan, taiwanEnabled: false), .hongKong)
+        XCTAssertEqual(data.interfaceRegion(systemRegion: .taiwan, taiwanEnabled: true), .taiwan)
+        data.interfaceRegionPreference = .system
+        XCTAssertEqual(data.interfaceRegion(systemRegion: .taiwan, taiwanEnabled: true), .taiwan)
+        XCTAssertEqual(data.interfaceRegion(systemRegion: .hongKong, taiwanEnabled: true), .hongKong)
     }
 }

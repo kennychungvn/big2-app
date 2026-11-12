@@ -15,9 +15,9 @@ final class Big2UITests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func launch(languages: String, locale: String, prefix: String) {
+    private func launch(languages: String, locale: String, prefix: String, extra: [String] = []) {
         app = XCUIApplication()
-        app.launchArguments = ["-uiTesting", "-AppleLanguages", "(\(languages))", "-AppleLocale", locale]
+        app.launchArguments = ["-uiTesting", "-AppleLanguages", "(\(languages))", "-AppleLocale", locale] + extra
         app.launch()
         shotPrefix = prefix
         shotIndex = 0
@@ -72,11 +72,27 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(match.waitForExistence(timeout: 10), "text not found: \(fragment)", file: file, line: line)
     }
 
+    /// Types the four names, using the keyboard's 下一個 (return) key to move between fields.
     private func typeNames(_ names: [String]) {
+        let first = element("setup.name.0")
+        first.tap()
+        waitUntil { (first.value(forKey: "hasKeyboardFocus") as? Bool) == true }
         for (index, name) in names.enumerated() {
             let field = element("setup.name.\(index)")
-            field.tap()
-            field.typeText(name)
+            if (field.value(forKey: "hasKeyboardFocus") as? Bool) != true {
+                field.tap()
+                waitUntil { (field.value(forKey: "hasKeyboardFocus") as? Bool) == true }
+            }
+            field.typeText(name + "\n")
+        }
+    }
+
+    /// The 完場 interstitial shows only if no other ad played in the last 3 minutes.
+    private func closeFinishInterstitialIfShown() {
+        let close = app.descendants(matching: .any)["interstitial.close"].firstMatch
+        if close.waitForExistence(timeout: 4) {
+            snap("finish-interstitial")
+            close.tap()
         }
     }
 
@@ -152,6 +168,10 @@ final class Big2UITests: XCTestCase {
                 XCTAssertTrue(label("entry.prompt").contains("阿明 剩幾多張？"))
                 snap("entry-start")
                 enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
+                // Pairwise: penalties 0/5/18/52 → +75 / +55 / +3 / −133; a loser can be positive.
+                XCTAssertTrue(label("result.row.2").contains("+3"), label("result.row.2"))
+                XCTAssertTrue(label("result.row.0").contains("出清牌"), label("result.row.0"))
+                XCTAssertFalse(label("result.row.0").contains("收"))
                 snap("result-round1")
             } else {
                 enterRound(cards)
@@ -159,7 +179,8 @@ final class Big2UITests: XCTestCase {
             waitForScoreboard()
         }
         XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
-        assertTotals(["+154", "−46", "−26", "−82"])
+        // Pairwise (HK): score_i = P − 4·p_i each round.
+        assertTotals(["+238", "−54", "−54", "−130"])
         snap("scoreboard-5-rounds")
 
         // Interstitial stand-in before round 6
@@ -173,10 +194,12 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(label("result.title"), "第 6 局結果")
         XCTAssertTrue(element("result.undoToast").label.contains("入錯咗？"))
         snap("result-round6-undo-toast")
+        XCTAssertTrue(label("result.row.2").contains("+64"), label("result.row.2"))
+        XCTAssertTrue(label("result.row.0").contains("−136"), label("result.row.0"))
         tap("result.undo")
         waitForScoreboard()
         XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
-        assertTotals(["+154", "−46", "−26", "−82"])
+        assertTotals(["+238", "−54", "−54", "−130"])
 
         // Round 6 again (no second interstitial), let the result auto-close
         tap("scoreboard.addRound")
@@ -186,7 +209,7 @@ final class Big2UITests: XCTestCase {
         element("scoreboard.undoToast", timeout: 3)
         snap("scoreboard-undo-toast")
         XCTAssertEqual(label("scoreboard.title"), "打咗 6 局")
-        assertTotals(["+102", "+26", "−28", "−100"])
+        assertTotals(["+102", "+18", "+10", "−130"])
 
         // Edit round 2: Kenny 10 → 13 cards
         tap("scoreboard.history.1")
@@ -196,7 +219,7 @@ final class Big2UITests: XCTestCase {
         tap("pad.13")
         element("result.title")
         waitForScoreboard()
-        assertTotals(["+102", "+48", "−28", "−122"])
+        assertTotals(["+124", "+40", "+32", "−196"])
         snap("scoreboard-after-edit")
 
         // 完場 with confirm (cancel first)
@@ -209,13 +232,14 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(element("scoreboard.finish").exists, "cancel keeps the session open")
         tap("scoreboard.finish")
         app.alerts.firstMatch.buttons["完場"].tap()
+        closeFinishInterstitialIfShown()
 
         // Final
         element("final.title")
         XCTAssertTrue(label("final.rank.1").contains("阿明"))
-        XCTAssertTrue(label("final.rank.1").contains("+102"))
+        XCTAssertTrue(label("final.rank.1").contains("+124"))
         XCTAssertTrue(label("final.rank.4").contains("Kenny"))
-        XCTAssertTrue(label("final.rank.4").contains("−122"))
+        XCTAssertTrue(label("final.rank.4").contains("−196"))
         snap("final")
 
         // Back home: session in the recent list, 所有紀錄 available
@@ -229,28 +253,39 @@ final class Big2UITests: XCTestCase {
         snap("all-sessions")
         app.navigationBars.buttons.firstMatch.tap()
 
-        // Settings: 去廣告 stub, then switch to 台灣
+        // Settings: no 地區介面 while Taiwan is on hold; 去廣告 stub
         tap("home.settings")
         element("settings.done")
-        snap("settings-hk")
+        XCTAssertFalse(app.descendants(matching: .any)["settings.region"].exists)
+        snap("settings")
         tap("settings.removeAds")
         XCTAssertTrue(element("settings.adsRemoved").label.contains("已經移除廣告"))
-        app.buttons["台灣"].firstMatch.tap()
-        assertText("選「台灣」會使用大老二用語")
-        XCTAssertTrue(element("settings.adsRemoved").label.contains("已移除廣告"))
-        snap("settings-tw")
+        snap("settings-ads-removed")
         tap("settings.done")
-        waitUntil { self.label("home.title") == "大老二記分" }
-        snap("home-tw")
-        tap("home.newSession")
-        assertText("開新牌局")
-        snap("setup-tw-after-switch")
+        XCTAssertEqual(label("home.title"), "鋤大D計分")
+        snap("home-ads-removed")
     }
 
-    // MARK: - Taiwan (system language zh-Hant-TW)
+    // MARK: - zh-TW device while Taiwan is on hold
 
-    func testTaiwanFlow() {
-        launch(languages: "zh-Hant-TW", locale: "zh_TW", prefix: "TW")
+    func testTaiwanDeviceFallsBackToHongKong() {
+        launch(languages: "zh-Hant-TW", locale: "zh_TW", prefix: "HK-on-zhTW")
+        XCTAssertEqual(label("home.title"), "鋤大D計分")
+        tap("home.newSession")
+        assertText("新開一場")
+        XCTAssertEqual(element("setup.tile.8").value as? String, "×2", "HK 炒法 default")
+        snap("setup")
+        tap("setup.close")
+        tap("home.settings")
+        element("settings.done")
+        XCTAssertFalse(app.descendants(matching: .any)["settings.region"].exists)
+        snap("settings")
+    }
+
+    // MARK: - Taiwan, flag forced on (non-blocking in CI while Taiwan is on hold)
+
+    func testTaiwanFlowFlagForcedOn() {
+        launch(languages: "zh-Hant-TW", locale: "zh_TW", prefix: "TW", extra: ["-enableTaiwan"])
 
         XCTAssertEqual(label("home.title"), "大老二記分")
         snap("home-fresh")
@@ -295,6 +330,10 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
         snap("finish-confirm")
         alert.buttons["結束"].tap()
+        // First ad of this session, 1 round played → the 完場 interstitial shows.
+        element("interstitial.close")
+        snap("finish-interstitial")
+        tap("interstitial.close")
         element("final.title")
         XCTAssertTrue(label("final.rank.1").contains("阿強"))
         snap("final")

@@ -7,7 +7,6 @@
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>zh-Hant-HK</string>
-		<string>zh-Hant-TW</string>
 	</array>
 	<key>CFBundleDisplayName</key>
 	<string>鋤大D計分</string>

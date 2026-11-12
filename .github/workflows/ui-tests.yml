@@ -62,7 +62,7 @@ jobs:
           xcrun simctl boot "${UDID}" || true
           xcrun simctl bootstatus "${UDID}" -b
 
-      - name: Run UI tests
+      - name: Run UI tests (Hong Kong, blocking)
         run: |
           set +e
           xcodebuild test \
@@ -72,11 +72,33 @@ jobs:
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -derivedDataPath DerivedData \
             -resultBundlePath UITestResults.xcresult \
+            -skip-testing:Big2UITests/Big2UITests/testTaiwanFlowFlagForcedOn \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             > xcodebuild-test.log 2>&1
           status=$?
-          grep -E "Test Case|error:|XCTAssert|failed|\*\* TEST" xcodebuild-test.log | tail -200
+          grep -E "Test Case|error:|failed|\*\* TEST" xcodebuild-test.log | tail -200
+          exit $status
+
+      # Taiwan is on hold (FeatureFlags.taiwanEnabledByDefault = false). This run forces the
+      # flag on with -enableTaiwan and never fails the workflow.
+      - name: Run UI tests (Taiwan flag forced on, non-blocking)
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e
+          xcodebuild test-without-building \
+            -project Big2.xcodeproj \
+            -scheme Big2 \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath UITestResults-TW.xcresult \
+            -only-testing:Big2UITests/Big2UITests/testTaiwanFlowFlagForcedOn \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            > xcodebuild-test-tw.log 2>&1
+          status=$?
+          grep -E "Test Case|error:|failed|\*\* TEST" xcodebuild-test-tw.log | tail -100
           exit $status
 
       - name: Export screenshots
@@ -84,27 +106,29 @@ jobs:
         run: |
           set -uo pipefail
           mkdir -p screenshots
-          if [ -d UITestResults.xcresult ]; then
-            if xcrun xcresulttool export attachments --path UITestResults.xcresult --output-path screenshots-raw 2>/dev/null; then
-              python3 - <<'PY'
-          import json, pathlib, shutil
-          raw = pathlib.Path("screenshots-raw")
+          for bundle in UITestResults.xcresult UITestResults-TW.xcresult; do
+            [ -d "$bundle" ] || continue
+            raw="raw-${bundle%.xcresult}"
+            if xcrun xcresulttool export attachments --path "$bundle" --output-path "$raw"; then
+              RAW="$raw" python3 - <<'PY'
+          import json, os, pathlib, shutil
+          raw = pathlib.Path(os.environ["RAW"])
           out = pathlib.Path("screenshots")
           manifest = json.loads((raw / "manifest.json").read_text())
           for test in manifest:
               for att in test.get("attachments", []):
                   src = raw / att["exportedFileName"]
                   name = att.get("suggestedHumanReadableName") or att["exportedFileName"]
-                  # names look like "HK-01-home-fresh_0_<uuid>.png"
-                  stem = name.split("_")[0]
+                  stem = name.split("_")[0]  # "HK-01-home-fresh_0_<uuid>.png" -> "HK-01-home-fresh"
                   dest = out / (stem + src.suffix)
                   shutil.copy(src, dest)
                   print(dest)
           PY
             else
-              brew install chargepoint/xcparse/xcparse && xcparse screenshots UITestResults.xcresult screenshots
+              brew list xcparse >/dev/null 2>&1 || brew install chargepoint/xcparse/xcparse
+              xcparse screenshots "$bundle" screenshots
             fi
-          fi
+          done
           ls -la screenshots || true
 
       - name: Upload screenshots
@@ -116,11 +140,11 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload test log and result bundle
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ui-test-results
           path: |
-            xcodebuild-test.log
-            UITestResults.xcresult
+            xcodebuild-test*.log
+            UITestResults*.xcresult
           if-no-files-found: ignore

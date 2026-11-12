@@ -19,7 +19,6 @@ struct RootView: View {
                     }
                 }
         }
-        .id(vm.navigationStackID)
         .tint(Color(theme.accentLink))
         .preferredColorScheme(.dark)
         .sheet(isPresented: $vm.isPresentingNewSession) {

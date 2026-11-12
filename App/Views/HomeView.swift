@@ -61,11 +61,7 @@ struct HomeView: View {
                 }
 
                 if !vm.model.allSessions.isEmpty {
-                    // Button + path append rather than NavigationLink(value:): the link was
-                    // ignored after the path had been reset programmatically (完場 → 首頁).
-                    Button {
-                        vm.path.append(.allSessions)
-                    } label: {
+                    NavigationLink(value: AppRoute.allSessions) {
                         HStack {
                             Text(tr("所有紀錄"))
                             Spacer()
@@ -81,6 +77,9 @@ struct HomeView: View {
                             RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous)
                                 .stroke(Color(theme.card), lineWidth: 1.5)
                         )
+                        // Plain-style links only hit-test drawn pixels; without this the
+                        // middle of the row (Spacer) ignored taps and 所有紀錄 felt dead.
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("home.allSessions")

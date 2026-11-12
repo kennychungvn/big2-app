@@ -81,10 +81,6 @@ struct UndoWindow: Equatable {
 final class AppViewModel: ObservableObject {
     @Published var model: AppModel
     @Published var path: [AppRoute] = []
-    /// Changed by goHome() to rebuild the NavigationStack. After 首頁 from Final (path set
-    /// to [] from a pushed screen's toolbar) the stack ignored the next push (所有紀錄 did
-    /// nothing in UI tests); a fresh stack avoids that stale state.
-    @Published private(set) var navigationStackID = UUID()
     @Published var isPresentingNewSession = false
     @Published var isPresentingSettings = false
     @Published var roundEntry: RoundEntrySheet?
@@ -193,7 +189,6 @@ final class AppViewModel: ObservableObject {
         resultSheet = nil
         model.closeCurrentSession()
         path = []
-        navigationStackID = UUID()
     }
 
     /// Called after the 完場 confirm. May show one skippable interstitial first

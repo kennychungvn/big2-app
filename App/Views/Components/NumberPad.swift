@@ -53,16 +53,17 @@ struct NumberPad: View {
             } label: {
                 Text(tr("贏"))
                     .font(.system(size: 22, weight: .heavy))
-                    .foregroundColor(Color(theme.primaryText))
+                    // Disabled (winner already picked): keep 贏 readable — yellow text on a
+                    // faint yellow key instead of dark text on a 30 % key (looked blank).
+                    .foregroundColor(enabled ? Color(theme.primaryText) : Color(theme.primary).opacity(0.55))
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.keyHeight)
-                    .background(Color(theme.primary))
+                    .background(Color(theme.primary).opacity(enabled ? 1 : 0.14))
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
                             .stroke(Color.white, lineWidth: isSelected ? 3 : 0)
                     )
-                    .opacity(enabled ? 1 : 0.3)
             }
             .buttonStyle(.plain)
             .disabled(!enabled)

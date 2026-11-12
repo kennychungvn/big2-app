@@ -35,8 +35,8 @@ targets:
       - path: App/Store/Products.storekit
         buildPhase: none
         type: file
-    info:
-      path: App/Info.plist
+    # No `info:` block: XcodeGen would regenerate App/Info.plist from it and drop
+    # UILaunchScreen / CFBundleDisplayName etc. (the app then ran letterboxed at 320×480).
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kenny.daidee

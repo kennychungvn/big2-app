@@ -3,14 +3,23 @@ import ScoringEngine
 
 /// In-place state machine for the 入剩牌 screen. Animation lives in the view;
 /// this only reports a `pendingBadge` the UI should spring in after an input.
+///
+/// Flow: a new round starts focused on player 1. Each pad press fills the focused row and
+/// moves to the next empty row, in seat order. The pad's 贏 key enters 0 cards (the winner).
+/// Only one winner is allowed: once someone has 贏, the key is disabled for everyone else
+/// until the winner row is focused again and changed. The round auto-scores once all four
+/// rows are filled and exactly one of them is the winner.
 public struct RoundEntryState: Equatable, Sendable {
+    /// Pad value for the 贏 key.
+    public static let winnerValue = 0
+
     public let rule: ScoringRule
     public private(set) var cards: [Int?]
     public private(set) var focusedIndex: Int?
-    /// Set after a loser input whose multiplier is 2 or more. The view should
+    /// Set after an input whose multiplier is 2 or more. The view should
     /// animate it, then call `consumePendingBadge()`.
     public private(set) var pendingBadge: ChaoBadge?
-    /// Becomes `true` only on the transition that fills the last empty seat.
+    /// Becomes `true` only on the input that makes the round complete.
     public private(set) var justCompleted: Bool
 
     public struct ChaoBadge: Equatable, Sendable {
@@ -29,8 +38,12 @@ public struct RoundEntryState: Equatable, Sendable {
     }
 
     public enum Status: Equatable, Sendable {
-        case pickingWinner
-        case enteringLosers
+        /// Nothing entered yet.
+        case notStarted
+        /// Some rows filled, round not complete yet.
+        case entering
+        /// Every row filled but nobody has 贏.
+        case needsWinner
         case complete(cardsLeft: [Int])
     }
 
@@ -41,6 +54,8 @@ public struct RoundEntryState: Equatable, Sendable {
         var focusedIndex: Int?
     }
 
+    /// - Parameter prefill: Cards of an existing round (edit mode). Nothing is focused until
+    ///   the user taps a row. Without a prefill the new round starts focused on player 1.
     public init(rule: ScoringRule = .hongKongDefault, prefill: [Int]? = nil) {
         self.rule = rule
         self.pendingBadge = nil
@@ -51,33 +66,45 @@ public struct RoundEntryState: Equatable, Sendable {
             self.focusedIndex = nil
         } else {
             self.cards = Array(repeating: nil, count: ScoringEngine.playerCount)
-            self.focusedIndex = nil
+            self.focusedIndex = 0
         }
     }
 
     public var playerCount: Int { ScoringEngine.playerCount }
 
     public var winnerIndex: Int? {
-        cards.firstIndex(of: 0)
+        cards.firstIndex(of: Self.winnerValue)
     }
 
+    /// The pad accepts input whenever a row is focused.
     public var isPadEnabled: Bool {
-        winnerIndex != nil && focusedIndex != nil && cards[focusedIndex!] != 0
+        focusedIndex != nil
+    }
+
+    /// 贏 is available for the focused row unless someone else already has it.
+    public var canEnterWinner: Bool {
+        guard let focusedIndex else { return false }
+        guard let winnerIndex else { return true }
+        return winnerIndex == focusedIndex
     }
 
     public var canUndo: Bool { !undoStack.isEmpty }
 
+    /// All four rows, when filled with exactly one winner.
     public var completeCards: [Int]? {
-        guard cards.allSatisfy({ $0 != nil }), cards.contains(0) else { return nil }
-        return cards.map { $0! }
+        guard cards.allSatisfy({ $0 != nil }) else { return nil }
+        let values = cards.map { $0! }
+        guard values.filter({ $0 == Self.winnerValue }).count == 1 else { return nil }
+        return values
     }
 
     public var isComplete: Bool { completeCards != nil }
 
     public var status: Status {
         if let complete = completeCards { return .complete(cardsLeft: complete) }
-        if winnerIndex == nil { return .pickingWinner }
-        return .enteringLosers
+        if cards.allSatisfy({ $0 == nil }) { return .notStarted }
+        if cards.allSatisfy({ $0 != nil }) { return .needsWinner }
+        return .entering
     }
 
     /// Hong Kong wording, kept for existing callers.
@@ -86,19 +113,19 @@ public struct RoundEntryState: Equatable, Sendable {
     public func hintText(in region: InterfaceRegion) -> String {
         let taiwan = region == .taiwan
         switch status {
-        case .pickingWinner:
-            return taiwan ? "點「贏」選出誰先出完牌" : "㩒「贏」揀邊個出清牌"
-        case .enteringLosers:
+        case .notStarted, .needsWinner:
+            return taiwan ? "依序輸入剩幾張，先出完的點「贏」" : "逐個入剩幾多張，出清牌嘅㩒「贏」"
+        case .entering:
             return taiwan ? "輸入後會自動跳到下一位，點任一列可修改" : "入完自動跳下一個，㩒邊行都改得"
         case .complete:
             return taiwan ? "輸入完成，正在記分…" : "入完喇，計緊分…"
         }
     }
 
+    /// 「{name} 剩幾多張？」 for the focused row.
     public func padPrompt(playerNames: [String], region: InterfaceRegion = .hongKong) -> String {
         let taiwan = region == .taiwan
-        if winnerIndex == nil { return taiwan ? "先選贏家" : "先揀贏家" }
-        if let focusedIndex, focusedIndex < playerNames.count, cards[focusedIndex] != 0 {
+        if let focusedIndex, focusedIndex < playerNames.count {
             return taiwan ? "\(playerNames[focusedIndex]) 剩幾張？" : "\(playerNames[focusedIndex]) 剩幾多張？"
         }
         return taiwan ? "剩幾張？" : "剩幾多張？"
@@ -122,35 +149,25 @@ public struct RoundEntryState: Equatable, Sendable {
         return try? rule.multiplier(forCardsLeft: cardsLeft)
     }
 
-    /// Marks `index` as the winner (0 cards). A previous winner is cleared.
-    /// Tapping the current winner again unsets them. Focus jumps to the next empty loser.
-    public mutating func markWinner(_ index: Int) {
-        guard cards.indices.contains(index) else { return }
-        justCompleted = false
-        pendingBadge = nil
-        pushUndo()
-        if winnerIndex == index {
-            cards[index] = nil
-            focusedIndex = firstUnset()
-            return
-        }
-        if let old = winnerIndex {
-            cards[old] = nil
-        }
-        cards[index] = 0
-        focusedIndex = nextUnset(after: index)
-        markCompletedIfNeeded()
+    /// The pad's 贏 key: the focused player went out first.
+    public mutating func enterWinner() {
+        enterCards(Self.winnerValue)
     }
 
-    /// Enters 1...13 leftover cards for the focused loser and advances focus.
+    /// Fills the focused row with `count` (0 = 贏, 1...13 leftover cards) and moves focus to
+    /// the next empty row in seat order. 贏 is ignored while another row is the winner.
     public mutating func enterCards(_ count: Int) {
         guard let focus = focusedIndex, cards.indices.contains(focus) else { return }
-        guard winnerIndex != nil, cards[focus] != 0 else { return }
-        guard (ScoringEngine.minLoserCards...ScoringEngine.maxLoserCards).contains(count) else { return }
+        let isWinner = count == Self.winnerValue
+        if isWinner {
+            guard canEnterWinner else { return }
+        } else {
+            guard (ScoringEngine.minLoserCards...ScoringEngine.maxLoserCards).contains(count) else { return }
+        }
         justCompleted = false
         pushUndo()
         cards[focus] = count
-        if let multiplier = multiplier(forCardsLeft: count), multiplier >= 2 {
+        if !isWinner, let multiplier = multiplier(forCardsLeft: count), multiplier >= 2 {
             pendingBadge = ChaoBadge(
                 playerIndex: focus,
                 multiplier: multiplier,
@@ -160,20 +177,22 @@ public struct RoundEntryState: Equatable, Sendable {
         } else {
             pendingBadge = nil
         }
-        if completeCards == nil {
+        if completeCards != nil {
+            justCompleted = true
+            focusedIndex = nil
+        } else {
             focusedIndex = nextUnset(after: focus) ?? focus
         }
-        markCompletedIfNeeded()
     }
 
-    /// Lets the user tap a row to edit it. The winner row can be focused but the pad stays off.
+    /// Tapping a row focuses it so its value can be changed.
     public mutating func selectPlayer(_ index: Int) {
         guard cards.indices.contains(index) else { return }
         justCompleted = false
         focusedIndex = index
     }
 
-    /// Reverts the last `markWinner` / `enterCards` / `clear` mutation.
+    /// The pad's ↶ key: reverts the last input. To change a row, tap it and enter again.
     public mutating func undo() {
         justCompleted = false
         pendingBadge = nil
@@ -182,50 +201,14 @@ public struct RoundEntryState: Equatable, Sendable {
         focusedIndex = snapshot.focusedIndex
     }
 
-    /// Clears the focused row. If nothing is focused, clears the whole pad.
-    public mutating func clearFocusedOrAll() {
-        justCompleted = false
-        pendingBadge = nil
-        if let focus = focusedIndex, cards[focus] != nil {
-            pushUndo()
-            cards[focus] = nil
-            if winnerIndex == nil {
-                focusedIndex = nil
-            }
-            return
-        }
-        clearAll()
-    }
-
-    /// Resets every seat and returns to 「先揀贏家」.
-    public mutating func clearAll() {
-        justCompleted = false
-        pendingBadge = nil
-        guard cards.contains(where: { $0 != nil }) || focusedIndex != nil else { return }
-        pushUndo()
-        cards = Array(repeating: nil, count: playerCount)
-        focusedIndex = nil
-    }
-
     public mutating func consumePendingBadge() -> ChaoBadge? {
         let badge = pendingBadge
         pendingBadge = nil
         return badge
     }
 
-    private mutating func markCompletedIfNeeded() {
-        if completeCards != nil {
-            justCompleted = true
-            focusedIndex = nil
-        }
-    }
-
     private mutating func pushUndo() {
         undoStack.append(Snapshot(cards: cards, focusedIndex: focusedIndex))
-    }
-
-    private func firstUnset() -> Int? {
-        cards.firstIndex(where: { $0 == nil })
     }
 
     private func nextUnset(after index: Int) -> Int? {

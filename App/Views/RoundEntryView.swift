@@ -26,6 +26,7 @@ struct RoundEntryView: View {
             header(roundNumber: roundNumber)
 
             Text(sheet.state.hintText(in: vm.region))
+                .accessibilityIdentifier("entry.hint")
                 .font(.system(size: 13))
                 .foregroundColor(Color(theme.secondaryText))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -64,10 +65,12 @@ struct RoundEntryView: View {
     private func header(roundNumber: Int) -> some View {
         HStack {
             Button(tr("✕ 取消")) { vm.cancelRoundEntry() }
+                .accessibilityIdentifier("entry.cancel")
                 .font(.system(size: 15))
                 .foregroundColor(Color(theme.accentLink))
             Spacer()
             Text(vm.format.roundTitle(roundNumber))
+                .accessibilityIdentifier("entry.title")
                 .font(.system(size: 22, weight: .bold))
                 .foregroundColor(Color(theme.text))
             Spacer()
@@ -94,27 +97,10 @@ struct RoundEntryView: View {
                 .foregroundColor(Color(theme.text))
                 .lineLimit(1)
             Spacer(minLength: 4)
-            Button {
-                sheet.state.markWinner(index)
-                syncLingeringBadges()
-            } label: {
-                Text(tr("贏"))
-                    .font(.system(size: 15, weight: isWinner ? .bold : .regular))
-                    .foregroundColor(isWinner ? Color(theme.primaryText) : Color(theme.secondaryText))
-                    .frame(width: 62, height: 42)
-                    .background(isWinner ? Color(theme.primary) : Color.clear)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(isWinner ? Color(theme.primary) : Color(theme.winButtonBorder), lineWidth: 2)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .buttonStyle(.plain)
-
             countView(cards: cards, isWinner: isWinner, isFocused: isFocused, badgeMultiplier: badgeMultiplier, scale: badgeScale[index] ?? 1)
         }
         .padding(.horizontal, 12)
-        .frame(height: 66)
+        .frame(height: 62)
         .background(Color(isFocused ? theme.cardElevated : theme.card))
         .overlay(
             RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous)
@@ -127,6 +113,9 @@ struct RoundEntryView: View {
         .onTapGesture {
             sheet.state.selectPlayer(index)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("entry.row.\(index)")
     }
 
     @ViewBuilder
@@ -143,7 +132,7 @@ struct RoundEntryView: View {
                 if let badgeMultiplier, badgeMultiplier >= 2 {
                     ChaoBadgeView(multiplier: badgeMultiplier, isMax: sheet.state.isMaxMultiplier(badgeMultiplier), scale: scale)
                 }
-            } else if isFocused && sheet.state.winnerIndex != nil {
+            } else if isFocused {
                 Text("?")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(Color(theme.tertiaryText))
@@ -169,13 +158,11 @@ struct RoundEntryView: View {
     }
 
     private func padSection(names: [String]) -> some View {
-        let enabled = sheet.state.winnerIndex != nil && vm.resultSheet == nil
+        let enabled = sheet.state.isPadEnabled && vm.resultSheet == nil
         return VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text(sheet.state.padPrompt(playerNames: names, region: vm.region))
-                Spacer()
-                Text(tr("顏色 = 炒倍"))
-            }
+            Text(sheet.state.padPrompt(playerNames: names, region: vm.region))
+                .accessibilityIdentifier("entry.prompt")
+                .frame(maxWidth: .infinity, alignment: .leading)
             .font(.system(size: 13))
             .foregroundColor(Color(theme.secondaryText))
             .padding(.bottom, 8)
@@ -187,10 +174,6 @@ struct RoundEntryView: View {
                 },
                 onUndo: {
                     sheet.state.undo()
-                    syncLingeringBadges()
-                },
-                onClear: {
-                    sheet.state.clearFocusedOrAll()
                     syncLingeringBadges()
                 }
             )

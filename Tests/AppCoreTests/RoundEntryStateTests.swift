@@ -4,86 +4,112 @@ import ScoringEngine
 
 final class RoundEntryStateTests: XCTestCase {
 
+    private let names = ["阿明", "Kenny", "阿強", "阿May"]
+
     private func make(_ rule: ScoringRule = .hongKongDefault) -> RoundEntryState {
         RoundEntryState(rule: rule)
     }
 
-    func testStartsByPickingWinnerWithPadDisabled() {
+    func testStartsFocusedOnPlayerOneWithPadEnabled() {
         let state = make()
-        XCTAssertEqual(state.status, .pickingWinner)
+        XCTAssertEqual(state.status, .notStarted)
+        XCTAssertEqual(state.focusedIndex, 0)
         XCTAssertNil(state.winnerIndex)
-        XCTAssertFalse(state.isPadEnabled)
+        XCTAssertTrue(state.isPadEnabled)
+        XCTAssertTrue(state.canEnterWinner)
         XCTAssertFalse(state.isComplete)
-        XCTAssertEqual(state.hintText, "㩒「贏」揀邊個出清牌")
-        XCTAssertEqual(state.padPrompt(playerNames: ["阿明", "Kenny", "阿強", "阿May"]), "先揀贏家")
+        XCTAssertEqual(state.hintText, "逐個入剩幾多張，出清牌嘅㩒「贏」")
+        XCTAssertEqual(state.hintText(in: .taiwan), "依序輸入剩幾張，先出完的點「贏」")
+        XCTAssertEqual(state.padPrompt(playerNames: names), "阿明 剩幾多張？")
+        XCTAssertEqual(state.padPrompt(playerNames: names, region: .taiwan), "阿明 剩幾張？")
     }
 
-    func testMarkWinnerSetsZeroAndFocusesNextLoser() {
+    func testEntriesAdvanceInSeatOrder() {
         var state = make()
-        state.markWinner(1)
-        XCTAssertEqual(state.cards, [nil, 0, nil, nil])
-        XCTAssertEqual(state.winnerIndex, 1)
-        XCTAssertEqual(state.focusedIndex, 2)
-        XCTAssertEqual(state.status, .enteringLosers)
-        XCTAssertTrue(state.isPadEnabled)
+        state.enterCards(5)
+        XCTAssertEqual(state.cards, [5, nil, nil, nil])
+        XCTAssertEqual(state.focusedIndex, 1)
+        XCTAssertEqual(state.status, .entering)
         XCTAssertEqual(state.hintText(in: .hongKong), "入完自動跳下一個，㩒邊行都改得")
         XCTAssertEqual(state.hintText(in: .taiwan), "輸入後會自動跳到下一位，點任一列可修改")
+        XCTAssertEqual(state.padPrompt(playerNames: names), "Kenny 剩幾多張？")
+        state.enterWinner()
+        XCTAssertEqual(state.winnerIndex, 1)
+        XCTAssertEqual(state.focusedIndex, 2)
+        state.enterCards(9)
+        XCTAssertEqual(state.focusedIndex, 3)
+        XCTAssertFalse(state.isComplete)
+        state.enterCards(11)
+        XCTAssertTrue(state.isComplete)
+        XCTAssertTrue(state.justCompleted)
+        XCTAssertNil(state.focusedIndex)
+        XCTAssertEqual(state.completeCards, [5, 0, 9, 11])
+        XCTAssertEqual(state.status, .complete(cardsLeft: [5, 0, 9, 11]))
+        XCTAssertEqual(state.hintText, "入完喇，計緊分…")
     }
 
-    func testWinnerAtLastSeatWrapsFocusToFirst() {
+    func testWinnerFirstThenLosers() {
         var state = make()
-        state.markWinner(3)
-        XCTAssertEqual(state.focusedIndex, 0)
+        state.enterWinner()
+        XCTAssertEqual(state.cards, [0, nil, nil, nil])
+        XCTAssertFalse(state.canEnterWinner, "贏 is disabled for the others")
+        state.enterCards(3)
+        state.enterCards(8)
+        state.enterCards(13)
+        XCTAssertEqual(state.completeCards, [0, 3, 8, 13])
     }
 
-    func testTappingCurrentWinnerUnsetsThem() {
+    func testSecondWinnerIsIgnored() {
         var state = make()
-        state.markWinner(1)
-        state.markWinner(1)
-        XCTAssertNil(state.winnerIndex)
-        XCTAssertEqual(state.status, .pickingWinner)
-        XCTAssertEqual(state.cards, [nil, nil, nil, nil])
+        state.enterWinner()
+        state.enterWinner()  // focused on player 2 now; ignored
+        XCTAssertEqual(state.cards, [0, nil, nil, nil])
+        XCTAssertEqual(state.focusedIndex, 1)
     }
 
-    func testChangingWinnerClearsThePreviousOne() {
+    func testChangingTheWinnerByRefocusingTheirRow() {
         var state = make()
-        state.markWinner(0)
+        state.enterWinner()
         state.enterCards(5)
-        state.markWinner(2)
-        XCTAssertEqual(state.winnerIndex, 2)
-        XCTAssertEqual(state.cards[0], nil)
-        XCTAssertEqual(state.cards[2], 0)
-    }
-
-    func testEnterCardsBeforeWinnerIsIgnored() {
-        var state = make()
         state.selectPlayer(0)
-        state.enterCards(5)
-        XCTAssertEqual(state.cards, [nil, nil, nil, nil])
+        XCTAssertTrue(state.canEnterWinner)
+        state.enterCards(7)  // old winner now has cards
+        XCTAssertNil(state.winnerIndex)
+        XCTAssertEqual(state.cards, [7, 5, nil, nil])
+        XCTAssertEqual(state.focusedIndex, 2, "focus moves to the next empty row")
+        state.enterWinner()
+        XCTAssertEqual(state.winnerIndex, 2)
+    }
+
+    func testAllFourFilledWithoutWinnerDoesNotScore() {
+        var state = make()
+        state.enterCards(1)
+        state.enterCards(2)
+        state.enterCards(3)
+        state.enterCards(4)
+        XCTAssertFalse(state.isComplete)
         XCTAssertFalse(state.justCompleted)
+        XCTAssertEqual(state.status, .needsWinner)
+        XCTAssertEqual(state.hintText, "逐個入剩幾多張，出清牌嘅㩒「贏」")
+        XCTAssertEqual(state.focusedIndex, 3, "focus stays on the last row")
+        XCTAssertTrue(state.canEnterWinner)
+        state.enterWinner()
+        XCTAssertTrue(state.justCompleted)
+        XCTAssertEqual(state.completeCards, [1, 2, 3, 0])
     }
 
     func testEnteringLowCardsDoesNotCreateBadge() {
         var state = make()
-        state.markWinner(0)
         state.enterCards(5)
         XCTAssertNil(state.pendingBadge)
-        XCTAssertEqual(state.cards[1], 5)
-        XCTAssertEqual(state.focusedIndex, 2)
+        state.enterWinner()
+        XCTAssertNil(state.pendingBadge)
     }
 
-    func testEnteringTierTwoCreatesBadge() {
+    func testBadgesForEachTier() {
         var state = make()
-        state.markWinner(0)
         state.enterCards(8)
-        XCTAssertEqual(state.pendingBadge?.playerIndex, 1)
-        XCTAssertEqual(state.pendingBadge?.multiplier, 2)
-        XCTAssertEqual(state.pendingBadge?.cardsLeft, 8)
-    }
-
-    func testEnteringTierThreeAndFourCreatesBadge() {
-        var state = make()
-        state.markWinner(0)
+        XCTAssertEqual(state.pendingBadge, .init(playerIndex: 0, multiplier: 2, cardsLeft: 8, isMax: false))
         state.enterCards(11)
         XCTAssertEqual(state.pendingBadge?.multiplier, 3)
         state.enterCards(13)
@@ -93,135 +119,102 @@ final class RoundEntryStateTests: XCTestCase {
 
     func testClassicRuleHasNoTimesFourBadge() {
         var state = make(.classic)
-        state.markWinner(0)
         state.enterCards(13)
         XCTAssertEqual(state.pendingBadge?.multiplier, 3)
-        state.selectPlayer(2)
         state.enterCards(10)
         XCTAssertEqual(state.pendingBadge?.multiplier, 2)
-        state.selectPlayer(3)
         state.enterCards(7)
         XCTAssertNil(state.pendingBadge)
     }
 
     func testNoMultiplierNeverCreatesBadge() {
         var state = make(.noMultiplier)
-        state.markWinner(0)
         state.enterCards(13)
         XCTAssertNil(state.pendingBadge)
     }
 
-    func testLastLoserAutoCompletes() {
+    func testInvalidCountsAreIgnored() {
         var state = make()
-        // players: 0 阿明, 1 Kenny, 2 阿強, 3 阿May
-        state.markWinner(1) // Kenny
-        XCTAssertEqual(state.focusedIndex, 2)
-        state.enterCards(9) // 阿強
-        XCTAssertEqual(state.focusedIndex, 3)
-        state.enterCards(11) // 阿May
-        XCTAssertEqual(state.focusedIndex, 0)
-        XCTAssertFalse(state.isComplete)
-        state.enterCards(5) // 阿明
-        XCTAssertTrue(state.isComplete)
-        XCTAssertTrue(state.justCompleted)
-        XCTAssertEqual(state.completeCards, [5, 0, 9, 11])
-        XCTAssertNil(state.focusedIndex)
-        if case .complete(let cards) = state.status {
-            XCTAssertEqual(cards, [5, 0, 9, 11])
-        } else {
-            XCTFail("expected complete")
-        }
+        state.enterCards(14)
+        state.enterCards(-1)
+        XCTAssertEqual(state.cards, [nil, nil, nil, nil])
+        XCTAssertFalse(state.canUndo)
     }
 
     func testSelectPlayerLetsYouEditAFilledRow() {
         var state = make()
-        state.markWinner(0)
         state.enterCards(5)
-        state.selectPlayer(1)
+        state.selectPlayer(0)
         state.enterCards(8)
-        XCTAssertEqual(state.cards[1], 8)
+        XCTAssertEqual(state.cards[0], 8)
         XCTAssertEqual(state.pendingBadge?.multiplier, 2)
+        XCTAssertEqual(state.focusedIndex, 1)
     }
 
     func testUndoRestoresPreviousInput() {
         var state = make()
-        state.markWinner(0)
         state.enterCards(8)
-        XCTAssertEqual(state.cards[1], 8)
+        state.enterWinner()
         state.undo()
-        XCTAssertEqual(state.cards[1], nil)
+        XCTAssertEqual(state.cards, [8, nil, nil, nil])
         XCTAssertEqual(state.focusedIndex, 1)
+        state.undo()
+        XCTAssertEqual(state.status, .notStarted)
+        XCTAssertEqual(state.focusedIndex, 0)
         XCTAssertNil(state.pendingBadge)
-        state.undo()
-        XCTAssertEqual(state.status, .pickingWinner)
         XCTAssertFalse(state.canUndo)
-        state.undo() // no-op
-        XCTAssertEqual(state.status, .pickingWinner)
+        state.undo()  // no-op
+        XCTAssertEqual(state.status, .notStarted)
     }
 
-    func testClearFocusedClearsOnlyThatRow() {
+    func testRetappingARowOverwritesIt() {
         var state = make()
-        state.markWinner(0)
+        state.enterWinner()
         state.enterCards(5)
+        state.enterCards(9)
         state.selectPlayer(1)
-        state.clearFocusedOrAll()
-        XCTAssertEqual(state.cards, [0, nil, nil, nil])
-        XCTAssertEqual(state.winnerIndex, 0)
+        state.enterCards(12)
+        XCTAssertEqual(state.cards, [0, 12, 9, nil])
+        XCTAssertEqual(state.focusedIndex, 3)
+        state.enterCards(2)
+        XCTAssertEqual(state.completeCards, [0, 12, 9, 2])
     }
 
-    func testClearAllResetsToPickingWinner() {
-        var state = make()
-        state.markWinner(0)
-        state.enterCards(5)
-        state.clearAll()
-        XCTAssertEqual(state.status, .pickingWinner)
-        XCTAssertEqual(state.cards, [nil, nil, nil, nil])
-        state.undo()
-        XCTAssertEqual(state.winnerIndex, 0)
-        XCTAssertEqual(state.cards[1], 5)
-    }
-
-    func testPrefillForEditDoesNotAutoCompleteUntilAChange() {
+    func testPrefillForEditStartsUnfocusedAndScoresOnChange() {
         var state = RoundEntryState(rule: .hongKongDefault, prefill: [5, 0, 9, 11])
         XCTAssertTrue(state.isComplete)
         XCTAssertFalse(state.justCompleted)
-        XCTAssertEqual(state.completeCards, [5, 0, 9, 11])
+        XCTAssertNil(state.focusedIndex)
+        XCTAssertFalse(state.isPadEnabled)
         state.selectPlayer(0)
         state.enterCards(6)
         XCTAssertTrue(state.justCompleted)
         XCTAssertEqual(state.completeCards, [6, 0, 9, 11])
     }
 
+    func testEditCanMoveTheWinner() {
+        var state = RoundEntryState(rule: .hongKongDefault, prefill: [5, 0, 9, 11])
+        state.selectPlayer(2)
+        XCTAssertFalse(state.canEnterWinner)
+        state.selectPlayer(1)
+        state.enterCards(4)  // old winner now lost with 4
+        XCTAssertFalse(state.isComplete)
+        state.selectPlayer(0)
+        state.enterWinner()
+        XCTAssertTrue(state.justCompleted)
+        XCTAssertEqual(state.completeCards, [0, 4, 9, 11])
+    }
+
     func testConsumePendingBadgeClearsIt() {
         var state = make()
-        state.markWinner(0)
         state.enterCards(9)
         XCTAssertNotNil(state.consumePendingBadge())
         XCTAssertNil(state.pendingBadge)
     }
 
-    func testPadPromptUsesFocusedName() {
-        var state = make()
-        state.markWinner(1)
-        XCTAssertEqual(
-            state.padPrompt(playerNames: ["阿明", "Kenny", "阿強", "阿May"]),
-            "阿強 剩幾多張？"
-        )
-    }
-
-    func testCannotEnterCardsOnTheWinnerRow() {
-        var state = make()
-        state.markWinner(0)
-        state.selectPlayer(0)
-        XCTAssertFalse(state.isPadEnabled)
-        state.enterCards(7)
-        XCTAssertEqual(state.cards[0], 0)
-    }
-
     func testMaxBadgeFollowsSessionsHighestMultiplier() {
         var hk = make(.hongKongDefault)
         XCTAssertEqual(hk.highestMultiplier, 4)
-        hk.markWinner(0)
         hk.enterCards(12)
         XCTAssertEqual(hk.consumePendingBadge()?.isMax, false)
         hk.enterCards(13)
@@ -231,7 +224,6 @@ final class RoundEntryStateTests: XCTestCase {
 
         var tw = make(.taiwanCommon)
         XCTAssertEqual(tw.highestMultiplier, 3)
-        tw.markWinner(0)
         tw.enterCards(10)
         XCTAssertEqual(tw.consumePendingBadge()?.isMax, false)
         tw.enterCards(13)

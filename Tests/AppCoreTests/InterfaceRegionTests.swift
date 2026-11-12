@@ -141,9 +141,10 @@ final class InterfaceRegionTests: XCTestCase {
         XCTAssertEqual(tw.appTitle, "大老二記分")
 
         var state = RoundEntryState(rule: .taiwanCommon)
-        XCTAssertEqual(state.hintText(in: .taiwan), "點「贏」選出誰先出完牌")
-        XCTAssertEqual(state.padPrompt(playerNames: names, region: .taiwan), "先選贏家")
-        state = RoundEntryState(rule: .taiwanCommon)
+        XCTAssertEqual(state.hintText(in: .taiwan), "依序輸入剩幾張，先出完的點「贏」")
+        XCTAssertEqual(state.padPrompt(playerNames: names, region: .taiwan), "阿明 剩幾張？")
+        state.enterCards(5)
+        XCTAssertEqual(state.hintText(in: .taiwan), "輸入後會自動跳到下一位，點任一列可修改")
 
         let cantonese = ["㩒", "揀", "嘅", "咗", "唔", "係", "喇", "緊", "幾多", "呢", "嚟", "冇"]
         let texts = [

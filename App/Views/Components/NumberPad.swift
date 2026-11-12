@@ -4,23 +4,26 @@ import ScoringEngine
 
 struct NumberPad: View {
     let state: RoundEntryState
+    /// Called with 0 for the 贏 key, 1...13 for leftover cards.
     var onEnter: (Int) -> Void
     var onUndo: () -> Void
-    var onClear: () -> Void
 
     @Environment(\.appTheme) private var theme
 
+    /// 5 columns × 3 rows: 贏 1 2 3 4 / 5 6 7 8 9 / 10 11 12 13 ↶.
+    static let keyHeight: CGFloat = 56
+
     private let keys: [Key] = {
-        var result: [Key] = (1...13).map { .number($0) }
+        var result: [Key] = [.winner]
+        result += (1...13).map { .number($0) }
         result.append(.undo)
-        result.append(.clear)
         return result
     }()
 
     private enum Key: Hashable {
+        case winner
         case number(Int)
         case undo
-        case clear
     }
 
     var body: some View {
@@ -42,6 +45,30 @@ struct NumberPad: View {
     @ViewBuilder
     private func padKey(_ key: Key, selected: Int?) -> some View {
         switch key {
+        case .winner:
+            let enabled = state.isPadEnabled && state.canEnterWinner
+            let isSelected = selected == RoundEntryState.winnerValue && state.isPadEnabled
+            Button {
+                onEnter(RoundEntryState.winnerValue)
+            } label: {
+                Text(tr("贏"))
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundColor(Color(theme.primaryText))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: Self.keyHeight)
+                    .background(Color(theme.primary))
+                    .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
+                            .stroke(Color.white, lineWidth: isSelected ? 3 : 0)
+                    )
+                    .opacity(enabled ? 1 : 0.3)
+            }
+            .buttonStyle(.plain)
+            .disabled(!enabled)
+            .accessibilityIdentifier("pad.win")
+            .accessibilityLabel(tr("贏"))
+
         case .number(let value):
             let multiplier = state.multiplier(forCardsLeft: value) ?? 1
             let isSelected = selected == value && state.isPadEnabled
@@ -59,7 +86,7 @@ struct NumberPad: View {
                 }
                 .foregroundColor(Color(theme.keyTextColor(forMultiplier: multiplier)))
                 .frame(maxWidth: .infinity)
-                .frame(height: 58)
+                .frame(height: Self.keyHeight)
                 .background(Color(theme.keyColor(forMultiplier: multiplier)))
                 .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                 .overlay(
@@ -69,6 +96,7 @@ struct NumberPad: View {
             }
             .buttonStyle(.plain)
             .disabled(!state.isPadEnabled)
+            .accessibilityIdentifier("pad.\(value)")
             .accessibilityLabel(multiplier >= 2 ? tr("%@ 張，炒 %@ 倍", "\(value)", "\(multiplier)") : tr("%@ 張", "\(value)"))
 
         case .undo:
@@ -77,26 +105,15 @@ struct NumberPad: View {
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(Color(theme.secondaryText))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 58)
+                    .frame(height: Self.keyHeight)
                     .background(Color(theme.keyUtilityBackground))
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(!state.canUndo)
+            .accessibilityIdentifier("pad.undo")
             .accessibilityLabel(tr("撤回"))
 
-        case .clear:
-            Button(action: onClear) {
-                Text(tr("清除"))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color(theme.secondaryText))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(Color(theme.keyUtilityBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(tr("清除"))
         }
     }
 }

@@ -4,8 +4,9 @@ import AppCore
 
 /// Launch switches used by the XCUITest target (`Big2UITests`). None of them are set in normal use.
 ///
-/// - `-uiTesting`: start from empty data, show a dismissible stand-in interstitial at the
-///   5-round milestone, and use the stub store so 移除廣告 works without StoreKit.
+/// - `-uiTesting`: start from empty data and use the stub store so 移除廣告 works without StoreKit.
+/// - `-uiTestAds` (`AdConfig.usesStubAds`): no Google Mobile Ads / UMP / ATT at all; the
+///   placeholder banner (`banner`) and the dismissible stand-in interstitial below are used.
 enum UITestSupport {
     static var isActive: Bool {
         ProcessInfo.processInfo.arguments.contains("-uiTesting")

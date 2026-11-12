@@ -426,7 +426,7 @@ final class AppViewModel: ObservableObject {
         } catch StoreError.purchasePending {
             storeMessage = tr("購買等候批准，稍後會自動生效。")
         } catch {
-            storeMessage = tr("購買失敗，請稍後再試或用「恢復購買」。")
+            storeMessage = tr("購買失敗，請稍後再試或用「回復購買」。")
         }
     }
 
@@ -437,12 +437,23 @@ final class AppViewModel: ObservableObject {
             if ok {
                 model.setAdsRemoved(true)
                 persist()
-                storeMessage = tr("已經恢復購買，廣告已移除。")
+                storeMessage = tr("已經回復購買，廣告已移除。")
             } else {
                 storeMessage = tr("搵唔到之前嘅購買記錄。")
             }
         } catch {
-            storeMessage = tr("恢復購買失敗，請稍後再試。")
+            storeMessage = tr("回復購買失敗，請稍後再試。")
+        }
+    }
+
+    /// StoreKit reported the 移除廣告 entitlement (launch check, Ask to Buy, another device)
+    /// or its revocation (refund). Persisted so ads stay hidden offline.
+    func applyStoreEntitlement(_ entitled: Bool) {
+        guard model.data.adsRemoved != entitled else { return }
+        model.setAdsRemoved(entitled)
+        persist()
+        if !entitled {
+            ads.preloadInterstitial()
         }
     }
 

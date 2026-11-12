@@ -17,7 +17,7 @@ final class Big2UITests: XCTestCase {
 
     private func launch(languages: String, locale: String, prefix: String, extra: [String] = []) {
         app = XCUIApplication()
-        app.launchArguments = ["-uiTesting", "-AppleLanguages", "(\(languages))", "-AppleLocale", locale] + extra
+        app.launchArguments = ["-uiTesting", "-uiTestAds", "-AppleLanguages", "(\(languages))", "-AppleLocale", locale] + extra
         app.launch()
         shotPrefix = prefix
         shotIndex = 0

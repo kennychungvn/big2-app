@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var adsRuntime = AdsRuntime.shared
 
     var body: some View {
         NavigationStack {
@@ -46,7 +47,7 @@ struct SettingsView: View {
                                     Text(tr("移除廣告"))
                                         .font(.system(size: 17, weight: .semibold))
                                     Spacer()
-                                    Text(StoreProduct.removeAdsDisplayPrice)
+                                    Text(vm.shop.removeAdsPriceLabel)
                                         .font(.system(size: 17, weight: .bold))
                                 }
                                 .foregroundColor(Color(theme.primaryText))
@@ -62,10 +63,19 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 6)
 
-                    Button(tr("恢復購買")) {
+                    Button(tr("回復購買")) {
                         Task { await vm.restorePurchases() }
                     }
                     .foregroundColor(Color(theme.accentLink))
+                    .accessibilityIdentifier("settings.restorePurchases")
+
+                    // Required by Google UMP where consent applies (EEA / UK / some US states).
+                    if adsRuntime.privacyOptionsRequired {
+                        Button(tr("廣告私隱設定")) {
+                            Task { await AdsRuntime.shared.presentPrivacyOptions() }
+                        }
+                        .foregroundColor(Color(theme.accentLink))
+                    }
 
                     if let message = vm.storeMessage {
                         Text(message)
@@ -75,7 +85,7 @@ struct SettingsView: View {
                 } header: {
                     Text(tr("購買"))
                 } footer: {
-                    Text(tr("%@ 係一次性購買（非訂閱），商品編號暫時係 %@，上架前會喺 App Store Connect 設定。", tr(StoreProduct.removeAdsDisplayName), StoreProduct.removeAdsProductID))
+                    Text(tr("%@ 係一次性購買（非訂閱），買咗之後所有廣告永久移除；換機或重裝可用「回復購買」。", tr(StoreProduct.removeAdsDisplayName)))
                 }
 
                 Section(tr("體驗")) {

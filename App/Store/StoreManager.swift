@@ -2,14 +2,27 @@ import Foundation
 import StoreKit
 import AppCore
 
-/// StoreKit 2 implementation of the one-time HK$8 「移除廣告」 non-consumable.
-/// The product id is a placeholder until it is created in App Store Connect.
+/// StoreKit 2 implementation of the one-time 「移除廣告」 non-consumable
+/// (`com.kenny.daidee.removeads`, HK$8 tier chosen in App Store Connect).
+///
+/// - Purchase and 「回復購買」 (`AppStore.sync`) from Settings.
+/// - `Transaction.currentEntitlements` is checked at launch and `Transaction.updates` is
+///   observed for the whole app lifetime (Ask to Buy, purchases on another device, refunds).
+/// - The entitlement is also persisted in app-data.json (`AppData.adsRemoved`) by
+///   `AppViewModel`, so ads stay hidden offline. A refund (revocation) brings ads back.
+/// - Local testing: the Run scheme uses App/Store/Products.storekit.
 @MainActor
 final class StoreKitStoreManager: ObservableObject, StoreManaging {
     @Published private(set) var isPurchasing = false
     @Published private(set) var adsRemoved = false
+    /// Localised App Store price (e.g. "HK$8.00"); `nil` until the product loads.
+    @Published private(set) var displayPrice: String?
+
+    /// Called with `true` when the entitlement is found / bought, `false` when it was revoked.
+    var onEntitlementChange: ((Bool) -> Void)?
 
     private var updatesTask: Task<Void, Never>?
+    private var product: Product?
 
     init() {
         updatesTask = Task { [weak self] in
@@ -17,15 +30,19 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
         }
         Task { [weak self] in
             await self?.refreshEntitlements()
+            await self?.preloadProduct()
         }
+    }
+
+    deinit {
+        updatesTask?.cancel()
     }
 
     func purchaseRemoveAds() async throws -> Bool {
         isPurchasing = true
         defer { isPurchasing = false }
 
-        let products = try await Product.products(for: [StoreProduct.removeAdsProductID])
-        guard let product = products.first else {
+        guard let product = try await loadProduct() else {
             throw StoreError.productNotFound
         }
 
@@ -34,7 +51,7 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
         case .success(let verification):
             let transaction = try Self.checked(verification)
             await transaction.finish()
-            adsRemoved = true
+            setEntitled(true)
             return true
         case .userCancelled:
             throw StoreError.cancelled
@@ -51,6 +68,19 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
         return adsRemoved
     }
 
+    @discardableResult
+    private func loadProduct() async throws -> Product? {
+        if let product { return product }
+        let loaded = try await Product.products(for: [StoreProduct.removeAdsProductID]).first
+        product = loaded
+        displayPrice = loaded?.displayPrice
+        return loaded
+    }
+
+    private func preloadProduct() async {
+        _ = try? await loadProduct()
+    }
+
     private func refreshEntitlements() async {
         var entitled = false
         for await result in Transaction.currentEntitlements {
@@ -58,25 +88,26 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
                transaction.productID == StoreProduct.removeAdsProductID,
                transaction.revocationDate == nil {
                 entitled = true
-                await transaction.finish()
             }
         }
-        adsRemoved = entitled
+        // Absence is not treated as a revocation (could be offline / signed out); only an
+        // explicit revoked transaction in `Transaction.updates` turns ads back on.
+        if entitled { setEntitled(true) }
     }
 
     private func listenForUpdates() async {
         for await result in Transaction.updates {
-            if let transaction = try? Self.checked(result) {
-                if transaction.productID == StoreProduct.removeAdsProductID,
-                   transaction.revocationDate == nil {
-                    adsRemoved = true
-                }
-                if transaction.revocationDate != nil {
-                    adsRemoved = false
-                }
-                await transaction.finish()
+            guard let transaction = try? Self.checked(result) else { continue }
+            if transaction.productID == StoreProduct.removeAdsProductID {
+                setEntitled(transaction.revocationDate == nil)
             }
+            await transaction.finish()
         }
+    }
+
+    private func setEntitled(_ entitled: Bool) {
+        adsRemoved = entitled
+        onEntitlementChange?(entitled)
     }
 
     private static func checked(_ result: VerificationResult<Transaction>) throws -> Transaction {
@@ -86,5 +117,12 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
         case .verified(let transaction):
             return transaction
         }
+    }
+}
+
+extension StoreManaging {
+    /// App Store price when StoreKit has loaded it, else the HK$8 fallback label.
+    var removeAdsPriceLabel: String {
+        (self as? StoreKitStoreManager)?.displayPrice ?? StoreProduct.removeAdsDisplayPrice
     }
 }

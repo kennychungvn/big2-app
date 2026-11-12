@@ -22,6 +22,15 @@ settings:
 packages:
   AppCore:
     path: .
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads
+    from: 13.12.0
+  GoogleUserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform
+    from: 3.1.0
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 13.1.0
 targets:
   Big2:
     type: application
@@ -32,8 +41,17 @@ targets:
         excludes:
           - Info.plist
           - Store/Products.storekit
+          - PrivacyInfo.xcprivacy
+          - Support/GoogleService-Info.plist
       - path: App/Store/Products.storekit
         buildPhase: none
+        type: file
+      - path: App/PrivacyInfo.xcprivacy
+        buildPhase: resources
+        type: file
+      # Firebase config for project daidee-d0a6b (Crashlytics only; Analytics disabled).
+      - path: App/Support/GoogleService-Info.plist
+        buildPhase: resources
         type: file
     # No `info:` block: XcodeGen would regenerate App/Info.plist from it and drop
     # UILaunchScreen / CFBundleDisplayName etc. (the app then ran letterboxed at 320×480).
@@ -50,12 +68,47 @@ targets:
         SUPPORTS_MACCATALYST: NO
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_EMIT_LOC_STRINGS: YES
+        # Crashlytics needs dSYMs; its upload script reads files outside the sandbox.
+        DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-ObjC"
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/Frameworks"
     dependencies:
       - package: AppCore
         product: AppCore
+      - package: GoogleMobileAds
+        product: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
+        product: GoogleUserMessagingPlatform
+      # Crashlytics only. Do NOT add FirebaseAnalytics (Analytics stays off).
+      - package: Firebase
+        product: FirebaseCrashlytics
+    postBuildScripts:
+      - name: Upload dSYMs to Crashlytics
+        basedOnDependencyAnalysis: false
+        inputFiles:
+          - "${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}"
+          - "${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}"
+          - "${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist"
+          - "$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist"
+          - "$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)"
+        script: |
+          # Release only (TestFlight / App Store archives). Never fails the build: CI simulator
+          # builds are Debug and unsigned, and a failed upload must not block an archive.
+          if [ "${CONFIGURATION}" != "Release" ]; then
+            echo "Crashlytics dSYM upload skipped for ${CONFIGURATION}."
+            exit 0
+          fi
+          RUN_SCRIPT="${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
+          if [ ! -f "${RUN_SCRIPT}" ]; then
+            echo "warning: Crashlytics run script not found at ${RUN_SCRIPT}; dSYMs not uploaded."
+            exit 0
+          fi
+          "${RUN_SCRIPT}" || echo "warning: Crashlytics dSYM upload failed; upload the dSYMs manually."
   Big2UITests:
     type: bundle.ui-testing
     platform: iOS

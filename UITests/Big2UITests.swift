@@ -196,7 +196,7 @@ final class Big2UITests: XCTestCase {
                 enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
                 // Pairwise: penalties 0/5/18/52 → +75 / +55 / +3 / −133; a loser can be positive.
                 XCTAssertTrue(label("result.row.2").contains("+3"), label("result.row.2"))
-                XCTAssertTrue(label("result.row.0").contains("出清牌"), label("result.row.0"))
+                XCTAssertTrue(label("result.row.0").contains("出晒"), label("result.row.0"))
                 XCTAssertFalse(label("result.row.0").contains("收"))
                 // Cards ×multiplier per row, all plain (no 炒到盡 / 🔥).
                 XCTAssertTrue(label("result.row.3").contains("13 張 ×4"), label("result.row.3"))

@@ -124,7 +124,7 @@ struct RoundEntryView: View {
     private func countView(cards: Int?, isWinner: Bool, isFocused: Bool, badgeMultiplier: Int?, scale: CGFloat) -> some View {
         HStack(spacing: 4) {
             if isWinner {
-                Text(tr("出清 👑"))
+                Text(tr("出晒 👑"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(Color(theme.primary))
             } else if let cards {

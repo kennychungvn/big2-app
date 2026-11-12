@@ -49,12 +49,12 @@ public struct ScoreFormatting: Equatable, Sendable {
         "\(shortDate(date)) · \(rounds) 局"
     }
 
-    /// Detail under a player on the result screen, e.g. `出清牌`, `5 張 ×1`, `13 張 ×4`.
+    /// Detail under a player on the result screen, e.g. `出晒`, `5 張 ×1`, `13 張 ×4`.
     /// The round's net points are shown separately. Every 炒倍 reads the same (no 🔥, no
     /// 炒到盡 wording). TODO: highest-炒倍 highlight will be an animation later.
     public func roundDetail(score: RoundScoreDisplay) -> String {
         if score.cardsLeft == 0 {
-            return isTaiwan ? "出完牌" : "出清牌"
+            return isTaiwan ? "出完" : "出晒"
         }
         var text = "\(score.cardsLeft) 張 ×\(score.appliedMultiplier)"
         if score.heldTwoApplied {

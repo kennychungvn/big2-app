@@ -139,7 +139,7 @@ final class InterfaceRegionTests: XCTestCase {
         let tw = ScoreFormatting(region: .taiwan)
         let round = try ScoringEngine.score(cardsLeft: [5, 0, 9, 11], rule: .taiwanCommon)
         let displays = RoundPresentation.displays(from: round)
-        XCTAssertEqual(tw.roundDetail(score: displays[1]), "出完牌")
+        XCTAssertEqual(tw.roundDetail(score: displays[1]), "出完")
 
         XCTAssertEqual(tw.homeProgress(0), "尚未開局")
         XCTAssertEqual(tw.homeProgress(5), "已進行 5 局")

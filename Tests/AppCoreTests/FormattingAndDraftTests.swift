@@ -29,7 +29,7 @@ final class FormattingAndDraftTests: XCTestCase {
         let displays = RoundPresentation.displays(from: round)
         // penalties 5 / 0 / 18 / 33, P = 56 → 56 − 4p
         XCTAssertEqual(displays.map(\.points), [36, 56, -16, -76])
-        XCTAssertEqual(format.roundDetail(score: displays[1]), "出清牌")
+        XCTAssertEqual(format.roundDetail(score: displays[1]), "出晒")
         XCTAssertFalse(format.roundDetail(score: displays[1]).contains("收"))
         XCTAssertEqual(format.roundDetail(score: displays[0]), "5 張 ×1")
         XCTAssertEqual(format.roundDetail(score: displays[2]), "9 張 ×2")
@@ -44,7 +44,7 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(format.roundDetail(score: d[2]), "13 張 ×4")
         XCTAssertEqual(ScoreFormatting(region: .taiwan).roundDetail(score: d[2]), "13 張 ×4")
         XCTAssertEqual(format.roundDetail(score: d[1]), "11 張 ×3")
-        XCTAssertEqual(format.roundDetail(score: d[0]), "出清牌")
+        XCTAssertEqual(format.roundDetail(score: d[0]), "出晒")
     }
 
     func testResultTotalsHeader() {

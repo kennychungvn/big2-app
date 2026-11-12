@@ -111,7 +111,7 @@ public struct RoundEntryState: Equatable, Sendable {
         let taiwan = region == .taiwan
         switch status {
         case .notStarted, .needsWinner:
-            return taiwan ? "依序輸入剩幾張，先出完的點「贏」" : "逐個入剩幾多張，出清牌嘅㩒「贏」"
+            return taiwan ? "依序輸入剩幾張，先出完的點「贏」" : "逐個入剩幾多張，出晒嘅㩒「贏」"
         case .entering:
             return taiwan ? "輸入後會自動跳到下一位，點任一列可修改" : "入完自動跳下一個，㩒邊行都改得"
         case .complete:

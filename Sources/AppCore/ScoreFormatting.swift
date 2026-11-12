@@ -28,6 +28,12 @@ public struct ScoreFormatting: Equatable, Sendable {
         return "第 \(completed) 局後"
     }
 
+    /// Progress line under the home screen's 繼續上一場 button.
+    public func homeProgress(_ completed: Int) -> String {
+        if completed == 0 { return isTaiwan ? "尚未開局" : "未開始" }
+        return isTaiwan ? "已進行 \(completed) 局" : "打咗 \(completed) 局"
+    }
+
     public func resultTitle(_ number: Int) -> String {
         "第 \(number) 局結果"
     }

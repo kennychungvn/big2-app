@@ -9,8 +9,12 @@ struct HomeView: View {
         ScrollView {
             VStack(spacing: 0) {
                 VStack(spacing: 8) {
-                    Text("🃏")
-                        .font(.system(size: 64))
+                    Image("HomeLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 88, height: 88)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .accessibilityHidden(true)
                     Text(tr("鋤大D計分"))
                         .font(.system(size: 28, weight: .heavy))
                         .foregroundColor(Color(theme.text))
@@ -27,7 +31,7 @@ struct HomeView: View {
                     Color.clear.frame(height: 14)
                     SecondaryButton(
                         title: tr("▶  繼續上一場"),
-                        subtitle: "\(unfinished.playerSummary) · \(vm.format.afterRoundTitle(unfinished.session.roundsCompleted))"
+                        subtitle: "\(unfinished.playerSummary) · \(vm.format.homeProgress(unfinished.session.roundsCompleted))"
                     ) {
                         vm.continueUnfinished()
                     }
@@ -58,7 +62,7 @@ struct HomeView: View {
                                     Text(leader)
                                         .foregroundColor(leadingPoints >= 0 ? Color(theme.positive) : Color(theme.negative))
                                 } else if !stored.isFinished {
-                                    Text(tr("未完"))
+                                    Text(tr("未打完"))
                                         .foregroundColor(Color(theme.secondaryText))
                                 }
                             }

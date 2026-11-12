@@ -16,6 +16,8 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(format.roundTitle(6), "第 6 局")
         XCTAssertEqual(format.afterRoundTitle(6), "第 6 局後")
         XCTAssertEqual(format.afterRoundTitle(0), "未開局")
+        XCTAssertEqual(format.homeProgress(0), "未開始")
+        XCTAssertEqual(format.homeProgress(5), "打咗 5 局")
         XCTAssertEqual(format.resultTitle(6), "第 6 局結果")
         // 1_700_000_000 is 2023-11-14 22:13:20 UTC = 2023-11-15 06:13 HKT
         let date = Date(timeIntervalSince1970: 1_700_000_000)

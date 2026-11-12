@@ -168,7 +168,7 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(tile8.value as? String, "×1")
         tile8.tap()
         XCTAssertEqual(tile8.value as? String, "×2", "tile cycles back to the HK default")
-        typeNames(["阿明", "阿強", "阿珍", "Kenny"])
+        typeNames(["小肥", "文仔", "呀權", "呀南"])
         snap("setup-filled")
         tap("setup.start")
 
@@ -190,7 +190,7 @@ final class Big2UITests: XCTestCase {
             tap("scoreboard.addRound")
             if number == 0 {
                 XCTAssertTrue(label("entry.hint").contains("逐個入剩幾多張"))
-                XCTAssertTrue(label("entry.prompt").contains("阿明 剩幾多張？"))
+                XCTAssertTrue(label("entry.prompt").contains("小肥 剩幾多張？"))
                 assertBanner("entry-start")
                 snap("entry-start")
                 enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
@@ -205,8 +205,8 @@ final class Big2UITests: XCTestCase {
                 XCTAssertFalse(label("result.row.3").contains("🔥"))
                 XCTAssertEqual(label("result.totalsHeader"), "累計 · 打咗 1 局")
                 // Pairwise breakdown (penalties 0 / 5 / 18 / 52).
-                XCTAssertTrue(label("result.row.0").contains("贏Kenny 52 張、贏阿珍 18 張、贏阿強 5 張"), label("result.row.0"))
-                XCTAssertTrue(label("result.row.2").contains("贏Kenny 34 張、輸阿明 18 張、輸阿強 13 張"), label("result.row.2"))
+                XCTAssertTrue(label("result.row.0").contains("贏呀南 52 張、贏呀權 18 張、贏文仔 5 張"), label("result.row.0"))
+                XCTAssertTrue(label("result.row.2").contains("贏呀南 34 張、輸小肥 18 張、輸文仔 13 張"), label("result.row.2"))
                 XCTAssertTrue(element("result.undo").label.contains("撤回"))
                 XCTAssertFalse(element("result.undo").label.contains("秒"))
                 assertBanner("result-round1")
@@ -259,14 +259,14 @@ final class Big2UITests: XCTestCase {
         // History tap shows round 2's result with the pairwise breakdown (penalties 1 / 0 / 3 / 30)
         tap("scoreboard.history.1")
         XCTAssertEqual(label("result.title"), "第 2 局結果")
-        XCTAssertTrue(label("result.row.1").contains("贏Kenny 30 張、贏阿珍 3 張、贏阿明 1 張"), label("result.row.1"))
-        XCTAssertTrue(label("result.row.3").contains("輸阿強 30 張、輸阿明 29 張、輸阿珍 27 張"), label("result.row.3"))
+        XCTAssertTrue(label("result.row.1").contains("贏呀南 30 張、贏呀權 3 張、贏小肥 1 張"), label("result.row.1"))
+        XCTAssertTrue(label("result.row.3").contains("輸文仔 30 張、輸小肥 29 張、輸呀權 27 張"), label("result.row.3"))
         XCTAssertFalse(app.descendants(matching: .any)["result.undo"].exists, "no 撤回 when reviewing")
         XCTAssertEqual(label("result.totalsHeader"), "累計 · 打咗 2 局")
         assertBanner("history-round2-breakdown")
         snap("history-round2-breakdown")
 
-        // 編輯 from there: Kenny 10 → 13 cards
+        // 編輯 from there: 呀南 10 → 13 cards
         tap("result.edit")
         XCTAssertEqual(label("entry.title"), "第 2 局")
         tap("entry.row.3")
@@ -292,9 +292,9 @@ final class Big2UITests: XCTestCase {
 
         // Final
         element("final.title")
-        XCTAssertTrue(label("final.rank.1").contains("阿明"))
+        XCTAssertTrue(label("final.rank.1").contains("小肥"))
         XCTAssertTrue(label("final.rank.1").contains("+124"))
-        XCTAssertTrue(label("final.rank.4").contains("Kenny"))
+        XCTAssertTrue(label("final.rank.4").contains("呀南"))
         XCTAssertTrue(label("final.rank.4").contains("−196"))
         assertBanner("final")
         snap("final")

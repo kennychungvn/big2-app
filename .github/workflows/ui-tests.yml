@@ -16,7 +16,8 @@ concurrency:
 jobs:
   ui-tests:
     name: XCUITest (Simulator)
-    runs-on: macos-latest
+    # macos-latest (arm64) jobs sat unacquired for 15+ min on 2026-11-12; Intel picks them up.
+    runs-on: macos-15-intel
     timeout-minutes: 60
     steps:
       - name: Checkout

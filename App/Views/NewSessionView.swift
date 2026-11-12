@@ -99,7 +99,7 @@ struct NewSessionView: View {
 
     private func chaoTile(cards: Int) -> some View {
         let multiplier = draft.chaoTable.multiplier(forCards: cards)
-        let foreground = Color(theme.chaoTileTextColor(forMultiplier: multiplier))
+        let foreground = Color(theme.keyTextColor(forMultiplier: multiplier))
         return Button {
             draft.cycleMultiplier(cards: cards)
             if vm.model.data.hapticsEnabled {
@@ -118,7 +118,7 @@ struct NewSessionView: View {
             .foregroundColor(foreground)
             .frame(maxWidth: .infinity)
             .frame(height: 58)
-            .background(Color(theme.chaoTileColor(forMultiplier: multiplier)))
+            .background(Color(theme.keyColor(forMultiplier: multiplier)))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)

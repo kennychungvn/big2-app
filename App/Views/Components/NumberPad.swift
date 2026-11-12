@@ -57,7 +57,7 @@ struct NumberPad: View {
                             .opacity(0.85)
                     }
                 }
-                .foregroundColor(Color(theme.text))
+                .foregroundColor(Color(theme.keyTextColor(forMultiplier: multiplier)))
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
                 .background(Color(theme.keyColor(forMultiplier: multiplier)))
@@ -103,13 +103,15 @@ struct NumberPad: View {
 
 struct ChaoBadgeView: View {
     let multiplier: Int
+    /// The session's highest 炒倍 (≥ ×2): shows 炒到盡！×N / 最高 ×N！.
+    var isMax: Bool = false
     var scale: CGFloat = 1
 
     @Environment(\.appTheme) private var theme
 
     var body: some View {
-        Text(multiplier >= 4 ? tr("炒到盡！×%@", "\(multiplier)") : "×\(multiplier)")
-            .font(.system(size: multiplier >= 4 ? 13 : 12, weight: .bold))
+        Text(isMax ? tr("炒到盡！×%@", "\(multiplier)") : "×\(multiplier)")
+            .font(.system(size: isMax ? 13 : 12, weight: .bold))
             .foregroundColor(.white)
             .padding(.vertical, 2)
             .padding(.horizontal, 6)

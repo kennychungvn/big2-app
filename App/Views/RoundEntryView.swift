@@ -141,7 +141,7 @@ struct RoundEntryView: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(Color(theme.text))
                 if let badgeMultiplier, badgeMultiplier >= 2 {
-                    ChaoBadgeView(multiplier: badgeMultiplier, scale: scale)
+                    ChaoBadgeView(multiplier: badgeMultiplier, isMax: sheet.state.isMaxMultiplier(badgeMultiplier), scale: scale)
                 }
             } else if isFocused && sheet.state.winnerIndex != nil {
                 Text("?")
@@ -218,7 +218,7 @@ struct RoundEntryView: View {
             _ = sheet.state.consumePendingBadge()
             return
         }
-        badgeScale[badge.playerIndex] = badge.multiplier >= 4 ? 1.85 : 1.6
+        badgeScale[badge.playerIndex] = badge.isMax ? 1.85 : 1.6
         withAnimation(.spring(response: 0.35, dampingFraction: 0.52)) {
             badgeScale[badge.playerIndex] = 1
         }

@@ -38,11 +38,6 @@ public struct Theme: Equatable, Sendable {
     public var badgeTier3: RGBColor
     public var badgeTier4: RGBColor
 
-    /// 開場設定 炒法 tiles (×2 / ×3 / ×4); ×1 tiles use `countUnsetBackground`.
-    public var chaoTile2: RGBColor = RGBColor(hex: 0xF5C542)
-    public var chaoTile3: RGBColor = RGBColor(hex: 0xE38B2C)
-    public var chaoTile4: RGBColor = RGBColor(hex: 0xC8372D)
-
     public var bannerPlaceholder: RGBColor
     public var bannerPlaceholderText: RGBColor
 
@@ -89,9 +84,9 @@ public struct Theme: Equatable, Sendable {
             RGBColor(hex: 0x3CCF7A),
             RGBColor(hex: 0xFFA53C)
         ],
-        keyTier2: RGBColor(hex: 0x24493A),
-        keyTier3: RGBColor(hex: 0x5A3E18),
-        keyTier4: RGBColor(hex: 0x6B2222),
+        keyTier2: RGBColor(hex: 0xF5C542),
+        keyTier3: RGBColor(hex: 0xE38B2C),
+        keyTier4: RGBColor(hex: 0xC8372D),
         badgeTier2: RGBColor(hex: 0x2F6D4A),
         badgeTier3: RGBColor(hex: 0x8A5A1A),
         badgeTier4: RGBColor(hex: 0x9B2C2C),
@@ -113,6 +108,8 @@ public struct Theme: Equatable, Sendable {
         return playerColors[index % playerColors.count]
     }
 
+    /// Shared 炒倍 colour for the 入剩牌 number pad keys and the 開場設定 炒法 tiles:
+    /// grey ×1, yellow ×2, orange ×3, red ×4.
     public func keyColor(forMultiplier multiplier: Int) -> RGBColor {
         switch multiplier {
         case 4...: return keyTier4
@@ -122,18 +119,8 @@ public struct Theme: Equatable, Sendable {
         }
     }
 
-    /// Background for a 炒法 tile in 開場設定: grey ×1, yellow ×2, orange ×3, red ×4.
-    public func chaoTileColor(forMultiplier multiplier: Int) -> RGBColor {
-        switch multiplier {
-        case 4...: return chaoTile4
-        case 3: return chaoTile3
-        case 2: return chaoTile2
-        default: return countUnsetBackground
-        }
-    }
-
-    /// Text on a 炒法 tile: dark on yellow / orange, white on grey / red.
-    public func chaoTileTextColor(forMultiplier multiplier: Int) -> RGBColor {
+    /// Text on a `keyColor` background: dark on yellow / orange, white on grey / red.
+    public func keyTextColor(forMultiplier multiplier: Int) -> RGBColor {
         (multiplier == 2 || multiplier == 3) ? primaryText : text
     }
 

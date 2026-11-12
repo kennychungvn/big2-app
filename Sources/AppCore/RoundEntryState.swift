@@ -17,6 +17,15 @@ public struct RoundEntryState: Equatable, Sendable {
         public let playerIndex: Int
         public let multiplier: Int
         public let cardsLeft: Int
+        /// The session's highest 炒倍 was hit: show 炒到盡！×N / 最高 ×N！.
+        public let isMax: Bool
+
+        public init(playerIndex: Int, multiplier: Int, cardsLeft: Int, isMax: Bool = false) {
+            self.playerIndex = playerIndex
+            self.multiplier = multiplier
+            self.cardsLeft = cardsLeft
+            self.isMax = isMax
+        }
     }
 
     public enum Status: Equatable, Sendable {
@@ -80,7 +89,7 @@ public struct RoundEntryState: Equatable, Sendable {
         case .pickingWinner:
             return taiwan ? "點「贏」選出誰先出完牌" : "㩒「贏」揀邊個出清牌"
         case .enteringLosers:
-            return taiwan ? "選完會自動跳到下一位，點任何一列都可以修改" : "揀完一個自動跳下一個，㩒任何一行可以改"
+            return taiwan ? "輸入後會自動跳到下一位，點任一列可修改" : "入完自動跳下一個，㩒邊行都改得"
         case .complete:
             return taiwan ? "輸入完成，正在記分…" : "入完喇，計緊分…"
         }
@@ -93,6 +102,19 @@ public struct RoundEntryState: Equatable, Sendable {
             return taiwan ? "\(playerNames[focusedIndex]) 剩幾張？" : "\(playerNames[focusedIndex]) 剩幾多張？"
         }
         return taiwan ? "剩幾張？" : "剩幾多張？"
+    }
+
+    /// Highest multiplier any loser count can get under this session's rule.
+    public var highestMultiplier: Int {
+        (ScoringEngine.minLoserCards...ScoringEngine.maxLoserCards)
+            .compactMap { try? rule.multiplier(forCardsLeft: $0) }
+            .max() ?? 1
+    }
+
+    /// True when `multiplier` is the session's top 炒倍 and that top is at least ×2,
+    /// e.g. ×4 under 香港炒, ×3 under 台灣常見. Drives the 炒到盡 badge.
+    public func isMaxMultiplier(_ multiplier: Int) -> Bool {
+        multiplier >= 2 && multiplier == highestMultiplier
     }
 
     public func multiplier(forCardsLeft cardsLeft: Int) -> Int? {
@@ -129,7 +151,12 @@ public struct RoundEntryState: Equatable, Sendable {
         pushUndo()
         cards[focus] = count
         if let multiplier = multiplier(forCardsLeft: count), multiplier >= 2 {
-            pendingBadge = ChaoBadge(playerIndex: focus, multiplier: multiplier, cardsLeft: count)
+            pendingBadge = ChaoBadge(
+                playerIndex: focus,
+                multiplier: multiplier,
+                cardsLeft: count,
+                isMax: isMaxMultiplier(multiplier)
+            )
         } else {
             pendingBadge = nil
         }

@@ -80,9 +80,12 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(theme.cardCornerRadius, 16)
         XCTAssertEqual(theme.keyCornerRadius, 14)
         XCTAssertEqual(theme.chineseName, "街坊")
-        XCTAssertEqual(theme.keyColor(forMultiplier: 2).hexString, "#24493A")
-        XCTAssertEqual(theme.keyColor(forMultiplier: 3).hexString, "#5A3E18")
-        XCTAssertEqual(theme.keyColor(forMultiplier: 4).hexString, "#6B2222")
+        XCTAssertEqual(theme.keyColor(forMultiplier: 1), theme.keyBackground)
+        XCTAssertEqual(theme.keyColor(forMultiplier: 2).hexString, "#F5C542")
+        XCTAssertEqual(theme.keyColor(forMultiplier: 3).hexString, "#E38B2C")
+        XCTAssertEqual(theme.keyColor(forMultiplier: 4).hexString, "#C8372D")
+        XCTAssertEqual(theme.keyTextColor(forMultiplier: 2), theme.primaryText)
+        XCTAssertEqual(theme.keyTextColor(forMultiplier: 4), theme.text)
     }
 
     func testStubStoreAndMockAds() async throws {

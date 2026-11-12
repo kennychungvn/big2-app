@@ -1,0 +1,12 @@
+# Temporary diagnostic: does any GitHub-hosted runner pick up jobs for this repo?
+name: Runner probe
+"on":
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo "ubuntu runner acquired"

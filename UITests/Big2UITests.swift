@@ -73,18 +73,33 @@ final class Big2UITests: XCTestCase {
     }
 
     /// Types the four names, using the keyboard's 下一個 (return) key to move between fields.
+    /// On a slow CI simulator, `hasKeyboardFocus` can lag after a tap; retry and type
+    /// anyway rather than failing hard. Each field is tapped first so the name lands
+    /// in the right place even if 下一個 has not moved focus yet.
     private func typeNames(_ names: [String]) {
-        let first = element("setup.name.0")
-        first.tap()
-        waitUntil { (first.value(forKey: "hasKeyboardFocus") as? Bool) == true }
         for (index, name) in names.enumerated() {
             let field = element("setup.name.\(index)")
-            if (field.value(forKey: "hasKeyboardFocus") as? Bool) != true {
-                field.tap()
-                waitUntil { (field.value(forKey: "hasKeyboardFocus") as? Bool) == true }
-            }
+            focusNameField(field)
             field.typeText(name + "\n")
         }
+    }
+
+    /// Taps the field and waits up to ~20s for keyboard focus, retrying the tap
+    /// up to 3 times. Returns without failing if focus still cannot be confirmed.
+    private func focusNameField(_ field: XCUIElement) {
+        for _ in 1...3 {
+            field.tap()
+            if hasKeyboardFocus(field, timeout: 20) { return }
+        }
+    }
+
+    private func hasKeyboardFocus(_ field: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if (field.value(forKey: "hasKeyboardFocus") as? Bool) == true { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return false
     }
 
     /// The 完場 interstitial shows only if no other ad played in the last 3 minutes.

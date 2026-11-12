@@ -6,6 +6,8 @@ import ScoringEngine
 enum AppRoute: Hashable {
     case scoreboard(UUID)
     case final(UUID)
+    /// 所有紀錄 list pushed from the home screen.
+    case allSessions
 }
 
 struct RoundEntrySheet: Identifiable, Equatable {
@@ -126,13 +128,13 @@ final class AppViewModel: ObservableObject {
         do {
             let stored = try model.startNewSession(
                 players: draft.names,
-                preset: draft.preset
+                chaoTable: draft.chaoTable
             )
             persist()
             isPresentingNewSession = false
             path = [.scoreboard(stored.id)]
         } catch AppModelError.emptyPlayerName {
-            errorMessage = tr("四個玩家都要填名。")
+            errorMessage = tr("要填齊 4 個玩家名先開到")
         } catch {
             errorMessage = tr("開唔到場，請檢查資料。")
         }
@@ -147,13 +149,15 @@ final class AppViewModel: ObservableObject {
         }
     }
 
-    func openSession(_ stored: StoredSession) {
+    /// - Parameter push: `true` from 所有紀錄, so back returns to the list instead of home.
+    func openSession(_ stored: StoredSession, push: Bool = false) {
         do {
             try model.openSession(stored.id)
-            if stored.isFinished {
-                path = [.final(stored.id)]
+            let route: AppRoute = stored.isFinished ? .final(stored.id) : .scoreboard(stored.id)
+            if push {
+                path.append(route)
             } else {
-                path = [.scoreboard(stored.id)]
+                path = [route]
             }
         } catch {
             errorMessage = tr("開唔到呢場。")

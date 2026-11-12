@@ -21,8 +21,9 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(format.resultTitle(6), "第 6 局結果")
         // 1_700_000_000 is 2023-11-14 22:13:20 UTC = 2023-11-15 06:13 HKT
         let date = Date(timeIntervalSince1970: 1_700_000_000)
-        XCTAssertEqual(format.shortDate(date), "11月15日")
-        XCTAssertEqual(format.sessionListSubtitle(date: date, rounds: 24), "11月15日 · 24 局")
+        XCTAssertEqual(format.shortDate(date), "2023/11/15")
+        XCTAssertEqual(format.sessionListSubtitle(date: date, rounds: 24), "2023/11/15 · 24 局")
+        XCTAssertEqual(ScoreFormatting(region: .taiwan).sessionListSubtitle(date: date, rounds: 18), "2023/11/15 · 18 局")
     }
 
     func testRoundDetailAndWinnerReceipts() throws {
@@ -36,16 +37,15 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(format.roundDetail(score: displays[3]), "11 張 ×3 🔥")
     }
 
-    func testRulePresetCopy() {
-        XCTAssertEqual(RulePreset.hongKongDefault.displayName, "香港炒")
-        XCTAssertEqual(RulePreset.noMultiplier.displayName, "唔炒")
-        XCTAssertEqual(RulePreset.classic.displayName, "經典")
-        XCTAssertEqual(RulePreset(matching: .classic), .classic)
-        XCTAssertEqual(RulePreset.hongKongDefault.rule, .hongKongDefault)
+    func testLegacyPresetsMapToChaoTables() {
+        XCTAssertEqual(RulePreset.hongKongDefault.chaoTable, .hongKongDefault)
+        XCTAssertEqual(RulePreset.noMultiplier.chaoTable, .noMultiplier)
+        XCTAssertEqual(RulePreset.classic.chaoTable, .taiwanDefault)
+        XCTAssertEqual(RulePreset.taiwanCommon.chaoTable, .taiwanDefault)
     }
 
     func testNewSessionDraftChipFillAndValidation() {
-        var draft = NewSessionDraft(from: LastSettings(playerNames: ["阿明", "Kenny", "", ""], rulePreset: .hongKongDefault))
+        var draft = NewSessionDraft(from: LastSettings(playerNames: ["阿明", "Kenny", "", ""], chaoTable: .hongKongDefault))
         XCTAssertFalse(draft.canStart)
         XCTAssertTrue(draft.applyChip("阿強"))
         XCTAssertTrue(draft.applyChip("阿May"))

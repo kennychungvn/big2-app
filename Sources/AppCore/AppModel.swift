@@ -30,17 +30,36 @@ public struct AppModel: Equatable, Sendable {
         data.recentSessionsForHome
     }
 
+    /// How many sessions the home screen's 最近場次 list shows.
+    public static let homeRecentLimit = 9
+
+    /// 最近場次 on the home screen: newest first, without the session behind 繼續上一場,
+    /// at most `homeRecentLimit` rows. Everything else is under 所有紀錄.
+    public var homeRecentSessions: [StoredSession] {
+        let latestUnfinishedID = latestUnfinished?.id
+        return Array(
+            data.recentSessionsForHome
+                .filter { $0.id != latestUnfinishedID }
+                .prefix(Self.homeRecentLimit)
+        )
+    }
+
+    /// 所有紀錄: every stored session, newest first.
+    public var allSessions: [StoredSession] {
+        data.recentSessionsForHome
+    }
+
     public mutating func startNewSession(
         players: [String],
-        preset: RulePreset,
+        chaoTable: ChaoTable,
         clock: any Clock = SystemClock()
     ) throws -> StoredSession {
         let names = try Self.validatedNames(players)
-        let session = try Session(players: names, rule: preset.rule)
+        let session = try Session(players: names, rule: chaoTable.rule)
         let now = clock.now
         let stored = StoredSession(session: session, createdAt: now, updatedAt: now)
         data.sessions.append(stored)
-        data.lastSettings = LastSettings(playerNames: names, rulePreset: preset)
+        data.lastSettings = LastSettings(playerNames: names, chaoTable: chaoTable)
         data.remember(playerNames: names)
         currentSessionID = stored.id
         return stored
@@ -127,18 +146,19 @@ public struct AppModel: Equatable, Sendable {
     }
 
     /// Draft for 新開一場 in `region`. Someone who has never started a session gets the
-    /// region's default table (香港炒 or 台灣常見); otherwise the remembered preset is kept,
-    /// mapped to the region's list.
+    /// region's first-time 炒法; otherwise the last-used table is prefilled.
     public func newSessionDraft(region: InterfaceRegion) -> NewSessionDraft {
-        var draft = NewSessionDraft(from: data.lastSettings, region: region)
+        var settings = data.lastSettings
         if data.sessions.isEmpty {
-            draft.preset = region.defaultRulePreset
+            // Files from older builds always carried a preset, even before the first session.
+            settings.chaoTable = nil
         }
-        return draft
+        return NewSessionDraft(from: settings, region: region)
     }
 
-    /// Saves the 地區介面 setting. When the effective region changes and the remembered preset is
-    /// still the old region's default, it switches to the new region's default.
+    /// Saves the 地區介面 setting. When the effective region changes and the remembered 炒法 is
+    /// still the old region's default, it switches to the new region's default; any other
+    /// table the players picked is kept.
     public mutating func setInterfaceRegionPreference(
         _ preference: InterfaceRegionPreference,
         systemRegion: InterfaceRegion
@@ -147,11 +167,8 @@ public struct AppModel: Equatable, Sendable {
         data.interfaceRegionPreference = preference
         let newRegion = data.interfaceRegion(systemRegion: systemRegion)
         guard oldRegion != newRegion else { return }
-        let remembered = data.lastSettings.rulePreset
-        if remembered == oldRegion.defaultRulePreset {
-            data.lastSettings.rulePreset = newRegion.defaultRulePreset
-        } else {
-            data.lastSettings.rulePreset = remembered.equivalent(in: newRegion)
+        if data.lastSettings.chaoTable == oldRegion.defaultChaoTable {
+            data.lastSettings.chaoTable = newRegion.defaultChaoTable
         }
     }
 

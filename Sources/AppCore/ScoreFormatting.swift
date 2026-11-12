@@ -38,13 +38,14 @@ public struct ScoreFormatting: Equatable, Sendable {
         "第 \(number) 局結果"
     }
 
+    /// Date with year, e.g. `2026/11/12` (both regions).
     public func shortDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = locale
         formatter.calendar = Calendar(identifier: .gregorian)
         let zone = isTaiwan ? "Asia/Taipei" : "Asia/Hong_Kong"
         formatter.timeZone = TimeZone(identifier: zone) ?? TimeZone(secondsFromGMT: 8 * 3600)
-        formatter.dateFormat = "M月d日"
+        formatter.dateFormat = "yyyy/M/d"
         return formatter.string(from: date)
     }
 

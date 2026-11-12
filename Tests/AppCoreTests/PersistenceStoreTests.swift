@@ -29,7 +29,7 @@ final class PersistenceStoreTests: XCTestCase {
         let clock = MutableClock(Date(timeIntervalSince1970: 1_700_000_000))
         _ = try model.startNewSession(
             players: ["阿明", "Kenny", "阿強", "阿May"],
-            preset: .hongKongDefault,
+            chaoTable: .hongKongDefault,
             clock: clock
         )
         try model.addRound(cardsLeft: [5, 0, 9, 11], clock: clock)

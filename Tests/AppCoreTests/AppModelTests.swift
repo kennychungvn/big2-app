@@ -12,7 +12,7 @@ final class AppModelTests: XCTestCase {
         var model = AppModel()
         _ = try model.startNewSession(
             players: names,
-            preset: .hongKongDefault,
+            chaoTable: .hongKongDefault,
             clock: clock
         )
         return (model, clock)
@@ -23,14 +23,14 @@ final class AppModelTests: XCTestCase {
         let clock = MutableClock(start)
         let stored = try model.startNewSession(
             players: [" 阿明 ", "Kenny", "阿強", "阿May"],
-            preset: .classic,
+            chaoTable: .taiwanDefault,
             clock: clock
         )
         XCTAssertEqual(stored.session.players, names)
-        XCTAssertEqual(stored.session.rule, .classic)
+        XCTAssertEqual(stored.session.rule, .classic)  // same tiers as 台灣常見
         XCTAssertEqual(model.currentSessionID, stored.id)
         XCTAssertEqual(model.data.lastSettings.playerNames, names)
-        XCTAssertEqual(model.data.lastSettings.rulePreset, .classic)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, .taiwanDefault)
         XCTAssertEqual(model.data.knownPlayerNames, ["阿明", "Kenny", "阿強", "阿May"])
         XCTAssertEqual(model.latestUnfinished?.id, stored.id)
     }
@@ -38,7 +38,7 @@ final class AppModelTests: XCTestCase {
     func testEmptyNameIsRejected() {
         var model = AppModel()
         XCTAssertThrowsError(
-            try model.startNewSession(players: ["阿明", "", "阿強", "阿May"], preset: .hongKongDefault)
+            try model.startNewSession(players: ["阿明", "", "阿強", "阿May"], chaoTable: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? AppModelError, .emptyPlayerName(index: 1))
         }
@@ -77,9 +77,9 @@ final class AppModelTests: XCTestCase {
     func testContinueUnfinishedOpensLatest() throws {
         var model = AppModel()
         let clock = MutableClock(start)
-        let first = try model.startNewSession(players: names, preset: .hongKongDefault, clock: clock)
+        let first = try model.startNewSession(players: names, chaoTable: .hongKongDefault, clock: clock)
         clock.advance(by: 10)
-        let second = try model.startNewSession(players: ["A", "B", "C", "D"], preset: .noMultiplier, clock: clock)
+        let second = try model.startNewSession(players: ["A", "B", "C", "D"], chaoTable: .noMultiplier, clock: clock)
         model.closeCurrentSession()
         XCTAssertEqual(model.latestUnfinished?.id, second.id)
         let opened = try model.continueUnfinished()
@@ -91,11 +91,11 @@ final class AppModelTests: XCTestCase {
     func testKnownNamesMostRecentFirstAndDeduped() throws {
         var model = AppModel()
         let clock = MutableClock(start)
-        _ = try model.startNewSession(players: names, preset: .hongKongDefault, clock: clock)
+        _ = try model.startNewSession(players: names, chaoTable: .hongKongDefault, clock: clock)
         clock.advance(by: 1)
         _ = try model.startNewSession(
             players: ["阿May", "細佬", "Kenny", "Ben"],
-            preset: .hongKongDefault,
+            chaoTable: .hongKongDefault,
             clock: clock
         )
         XCTAssertEqual(model.data.knownPlayerNames, ["阿May", "細佬", "Kenny", "Ben", "阿明", "阿強"])

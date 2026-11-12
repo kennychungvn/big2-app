@@ -50,32 +50,33 @@ struct HomeView: View {
                     .padding(.bottom, 6)
 
                     ForEach(recents) { stored in
-                        Button {
+                        SessionRow(stored: stored) {
                             vm.openSession(stored)
-                        } label: {
-                            HStack {
-                                Text(vm.format.sessionListSubtitle(date: stored.endedAt ?? stored.updatedAt, rounds: stored.session.roundsCompleted))
-                                    .foregroundColor(Color(theme.text))
-                                Spacer()
-                                if stored.isFinished, let leader = stored.leaderSummary(format: vm.format) {
-                                    let leadingPoints = stored.session.ranking.first?.total ?? 0
-                                    Text(leader)
-                                        .foregroundColor(leadingPoints >= 0 ? Color(theme.positive) : Color(theme.negative))
-                                } else if !stored.isFinished {
-                                    Text(tr("未打完"))
-                                        .foregroundColor(Color(theme.secondaryText))
-                                }
-                            }
-                            .font(.system(size: 15))
-                            .padding(.horizontal, 12)
-                            .frame(height: 54)
-                            .background(Color(theme.card))
-                            .clipShape(RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous))
                         }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 5)
                     }
+                }
+
+                if !vm.model.allSessions.isEmpty {
+                    NavigationLink(value: AppRoute.allSessions) {
+                        HStack {
+                            Text(tr("所有紀錄"))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color(theme.accentLink))
+                        .padding(.horizontal, 12)
+                        .frame(height: 48)
+                        .frame(maxWidth: .infinity)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous)
+                                .stroke(Color(theme.card), lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14)
+                    .padding(.top, recents.isEmpty ? 26 : 8)
                 }
             }
             .padding(.bottom, 12)
@@ -97,10 +98,6 @@ struct HomeView: View {
     }
 
     private var recentList: [StoredSession] {
-        let latestUnfinishedID = vm.model.latestUnfinished?.id
-        return vm.model.recentSessions
-            .filter { $0.id != latestUnfinishedID }
-            .prefix(20)
-            .map { $0 }
+        vm.model.homeRecentSessions
     }
 }

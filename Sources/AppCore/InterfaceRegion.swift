@@ -2,8 +2,8 @@ import Foundation
 
 /// Which wording and default 計分 table the interface uses.
 ///
-/// - `hongKong`: Cantonese 鋤大D wording (計分、炒、入今局), default table 香港炒.
-/// - `taiwan`: Taiwan Mandarin 大老二 wording (記分、加倍、記這一局), default table 台灣常見.
+/// - `hongKong`: Cantonese 鋤大D wording (計分、炒、入今局), first-time 炒法 8-9 ×2, 10-12 ×3, 13 ×4.
+/// - `taiwan`: Taiwan Mandarin 大老二 wording (記分、加倍、記這一局), first-time 炒法 10-12 ×2, 13 ×3.
 public enum InterfaceRegion: String, Codable, CaseIterable, Sendable {
     case hongKong
     case taiwan
@@ -26,20 +26,12 @@ public enum InterfaceRegion: String, Codable, CaseIterable, Sendable {
 
     public var locale: Locale { Locale(identifier: localeIdentifier) }
 
-    /// Preset picked for a brand-new player, or after switching region away from the other default.
-    public var defaultRulePreset: RulePreset {
+    /// 炒法 for someone who has never started a session, and the table swapped in when the
+    /// region changes while the remembered table is still the other region's default.
+    public var defaultChaoTable: ChaoTable {
         switch self {
         case .hongKong: return .hongKongDefault
-        case .taiwan: return .taiwanCommon
-        }
-    }
-
-    /// Presets shown in 開場設定, in display order. `classic` and `taiwanCommon` share one
-    /// table, so each region shows only one of them.
-    public var rulePresets: [RulePreset] {
-        switch self {
-        case .hongKong: return [.hongKongDefault, .noMultiplier, .classic]
-        case .taiwan: return [.taiwanCommon, .hongKongDefault, .noMultiplier]
+        case .taiwan: return .taiwanDefault
         }
     }
 

@@ -41,38 +41,13 @@ final class InterfaceRegionTests: XCTestCase {
         XCTAssertEqual(InterfaceRegion.hongKong.localizationIdentifier, "zh-Hant-HK")
     }
 
-    // MARK: - Presets
+    // MARK: - 炒法 defaults
 
-    func testTaiwanPresetTableAndCopy() {
-        XCTAssertEqual(RulePreset.taiwanCommon.rule, .taiwanCommon)
-        XCTAssertEqual(RulePreset.taiwanCommon.displayName(in: .taiwan), "台灣常見")
-        XCTAssertEqual(RulePreset.taiwanCommon.summary(in: .taiwan), "1-9張 ×1 · 10-12張 ×2 · 13張 ×3")
-        XCTAssertEqual(RulePreset.noMultiplier.displayName(in: .taiwan), "不加倍")
-        XCTAssertEqual(RulePreset.hongKongDefault.displayName(in: .taiwan), "香港算法")
-        XCTAssertEqual(RulePreset.hongKongDefault.displayName(in: .hongKong), "香港炒")
-    }
-
-    func testRegionPresetListsAndDefaults() {
-        XCTAssertEqual(InterfaceRegion.hongKong.defaultRulePreset, .hongKongDefault)
-        XCTAssertEqual(InterfaceRegion.taiwan.defaultRulePreset, .taiwanCommon)
-        XCTAssertEqual(InterfaceRegion.hongKong.rulePresets, [.hongKongDefault, .noMultiplier, .classic])
-        XCTAssertEqual(InterfaceRegion.taiwan.rulePresets, [.taiwanCommon, .hongKongDefault, .noMultiplier])
-        XCTAssertEqual(RulePreset.classic.equivalent(in: .taiwan), .taiwanCommon)
-        XCTAssertEqual(RulePreset.taiwanCommon.equivalent(in: .hongKong), .classic)
-        XCTAssertEqual(RulePreset.noMultiplier.equivalent(in: .taiwan), .noMultiplier)
-    }
-
-    func testMatchingRuleUsesRegionLabel() throws {
-        XCTAssertEqual(RulePreset(matching: .taiwanCommon, in: .taiwan), .taiwanCommon)
-        XCTAssertEqual(RulePreset(matching: .taiwanCommon, in: .hongKong), .classic)
-        XCTAssertEqual(RulePreset(matching: .classic, in: .taiwan), .taiwanCommon)
-        XCTAssertEqual(RulePreset(matching: .hongKongDefault, in: .taiwan), .hongKongDefault)
-        let custom = try ScoringRule(tiers: [
-            MultiplierTier(minCards: 1, maxCards: 4, multiplier: 1),
-            MultiplierTier(minCards: 5, maxCards: 13, multiplier: 5)
-        ])
-        XCTAssertEqual(RulePreset(matching: custom, in: .taiwan), .taiwanCommon)
-        XCTAssertEqual(RulePreset(matching: custom, in: .hongKong), .hongKongDefault)
+    func testRegionDefaultChaoTables() {
+        XCTAssertEqual(InterfaceRegion.hongKong.defaultChaoTable.multipliers, [2, 2, 3, 3, 3, 4])
+        XCTAssertEqual(InterfaceRegion.taiwan.defaultChaoTable.multipliers, [1, 1, 2, 2, 2, 3])
+        XCTAssertEqual(InterfaceRegion.hongKong.defaultChaoTable.rule, .hongKongDefault)
+        XCTAssertEqual(InterfaceRegion.taiwan.defaultChaoTable.rule, .taiwanCommon)
     }
 
     func testCustomRuleStillScoresInASession() throws {
@@ -87,52 +62,70 @@ final class InterfaceRegionTests: XCTestCase {
 
     // MARK: - New session defaults
 
-    func testFreshInstallUsesRegionDefaultPreset() {
+    func testFreshInstallUsesRegionDefaultTable() {
         let model = AppModel()
-        XCTAssertEqual(model.newSessionDraft(region: .taiwan).preset, .taiwanCommon)
-        XCTAssertEqual(model.newSessionDraft(region: .hongKong).preset, .hongKongDefault)
+        let tw = model.newSessionDraft(region: .taiwan)
+        XCTAssertEqual(tw.chaoTable, .taiwanDefault)
+        XCTAssertFalse(tw.usesRememberedChao)
+        let hk = model.newSessionDraft(region: .hongKong)
+        XCTAssertEqual(hk.chaoTable, .hongKongDefault)
+        XCTAssertFalse(hk.usesRememberedChao)
     }
 
     func testTaiwanSessionUsesTaiwanTable() throws {
         var model = AppModel()
         let draft = model.newSessionDraft(region: .taiwan)
-        let stored = try model.startNewSession(players: names, preset: draft.preset)
+        let stored = try model.startNewSession(players: names, chaoTable: draft.chaoTable)
         XCTAssertEqual(stored.session.rule, .taiwanCommon)
         let round = try model.addRound(cardsLeft: [10, 0, 13, 3])
         XCTAssertEqual(round.points, [-20, 62, -39, -3])
     }
 
-    func testRememberedPresetSurvivesAndMapsAcrossRegions() throws {
+    func testRememberedTableIsPrefilledInEitherRegion() throws {
         var model = AppModel()
-        _ = try model.startNewSession(players: names, preset: .noMultiplier)
-        XCTAssertEqual(model.newSessionDraft(region: .taiwan).preset, .noMultiplier)
-        _ = try model.startNewSession(players: names, preset: .classic)
-        XCTAssertEqual(model.newSessionDraft(region: .taiwan).preset, .taiwanCommon)
-        XCTAssertEqual(model.newSessionDraft(region: .hongKong).preset, .classic)
+        let custom = ChaoTable(multipliers: [1, 2, 2, 3, 4, 4])
+        _ = try model.startNewSession(players: names, chaoTable: custom)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, custom)
+        for region in InterfaceRegion.allCases {
+            let draft = model.newSessionDraft(region: region)
+            XCTAssertEqual(draft.chaoTable, custom)
+            XCTAssertTrue(draft.usesRememberedChao)
+        }
     }
 
-    func testSwitchingRegionSwapsDefaultPreset() throws {
+    func testSwitchingRegionSwapsOnlyAnUntouchedDefault() throws {
         var model = AppModel()
-        _ = try model.startNewSession(players: names, preset: .hongKongDefault)
+        _ = try model.startNewSession(players: names, chaoTable: .hongKongDefault)
         model.setInterfaceRegionPreference(.taiwan, systemRegion: .hongKong)
         XCTAssertEqual(model.data.regionPreference, .taiwan)
-        XCTAssertEqual(model.data.lastSettings.rulePreset, .taiwanCommon)
-        XCTAssertEqual(model.newSessionDraft(region: .taiwan).preset, .taiwanCommon)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, .taiwanDefault)
+        XCTAssertEqual(model.newSessionDraft(region: .taiwan).chaoTable, .taiwanDefault)
 
         model.setInterfaceRegionPreference(.system, systemRegion: .hongKong)
-        XCTAssertEqual(model.data.lastSettings.rulePreset, .hongKongDefault)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, .hongKongDefault)
 
-        // A non-default choice is kept when switching.
-        model.data.lastSettings.rulePreset = .noMultiplier
+        // Anything the players picked themselves is kept.
+        let custom = ChaoTable(multipliers: [2, 2, 2, 3, 3, 4])
+        model.data.lastSettings.chaoTable = custom
         model.setInterfaceRegionPreference(.taiwan, systemRegion: .hongKong)
-        XCTAssertEqual(model.data.lastSettings.rulePreset, .noMultiplier)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, custom)
+        model.data.lastSettings.chaoTable = .noMultiplier
+        model.setInterfaceRegionPreference(.hongKong, systemRegion: .hongKong)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, .noMultiplier)
+    }
+
+    func testSwitchingRegionWithNothingRememberedKeepsNil() {
+        var model = AppModel()
+        model.setInterfaceRegionPreference(.taiwan, systemRegion: .hongKong)
+        XCTAssertNil(model.data.lastSettings.chaoTable)
+        XCTAssertEqual(model.newSessionDraft(region: .taiwan).chaoTable, .taiwanDefault)
     }
 
     func testSwitchingToSameEffectiveRegionChangesNothing() throws {
         var model = AppModel()
-        _ = try model.startNewSession(players: names, preset: .hongKongDefault)
+        _ = try model.startNewSession(players: names, chaoTable: .hongKongDefault)
         model.setInterfaceRegionPreference(.hongKong, systemRegion: .hongKong)
-        XCTAssertEqual(model.data.lastSettings.rulePreset, .hongKongDefault)
+        XCTAssertEqual(model.data.lastSettings.chaoTable, .hongKongDefault)
     }
 
     // MARK: - Wording
@@ -158,8 +151,8 @@ final class InterfaceRegionTests: XCTestCase {
             tw.afterRoundTitle(0), tw.appTitle,
             tw.roundDetail(score: displays[1], winnerReceivedFrom: receipts),
             state.hintText(in: .taiwan), state.padPrompt(playerNames: names, region: .taiwan),
-            RulePreset.noMultiplier.summary(in: .taiwan),
-            RulePreset.noMultiplier.displayName(in: .taiwan),
+            tw.ruleSummary(ScoringRule.noMultiplier),
+            tw.ruleSummary(ScoringRule.taiwanCommon),
             InterfaceRegionPreference.system.title(in: .taiwan)
         ]
         for text in texts {
@@ -179,7 +172,8 @@ final class InterfaceRegionTests: XCTestCase {
         )
         let summary = ShareSummary(stored: stored, format: ScoreFormatting(region: .taiwan))
         XCTAssertEqual(summary.title, "大老二記分")
-        XCTAssertEqual(summary.ruleLine, "台灣常見（1-9張 ×1 · 10-12張 ×2 · 13張 ×3）")
+        XCTAssertEqual(summary.ruleLine, "10-12張×2 · 13張×3")
+        XCTAssertTrue(summary.text.contains("10-12張×2 · 13張×3"))
         XCTAssertFalse(summary.text.contains("$"))
     }
 
@@ -187,15 +181,71 @@ final class InterfaceRegionTests: XCTestCase {
 
     func testOldDataWithoutRegionOrMoneyFieldsStillDecodes() throws {
         var data = AppData()
-        data.lastSettings = LastSettings(playerNames: names, rulePreset: .classic)
+        data.lastSettings = LastSettings(playerNames: names)
         var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(data)) as! [String: Any]
         XCTAssertNil(object["interfaceRegionPreference"])
         var last = object["lastSettings"] as! [String: Any]
         last["pointValue"] = 2  // written by builds that still had 每分幾錢
+        last["rulePreset"] = "classic"  // written by builds with fixed presets
         object["lastSettings"] = last
         let decoded = try JSONDecoder().decode(AppData.self, from: JSONSerialization.data(withJSONObject: object))
         XCTAssertEqual(decoded.regionPreference, .system)
-        XCTAssertEqual(decoded.lastSettings.rulePreset, .classic)
+        XCTAssertEqual(decoded.lastSettings.playerNames, names)
+        XCTAssertEqual(decoded.lastSettings.chaoTable, .taiwanDefault)
+    }
+
+    func testEveryLegacyPresetMigrates() throws {
+        let expected: [String: ChaoTable] = [
+            "hongKongDefault": .hongKongDefault,
+            "noMultiplier": .noMultiplier,
+            "classic": .taiwanDefault,
+            "taiwanCommon": .taiwanDefault
+        ]
+        for (raw, table) in expected {
+            let json = #"{"playerNames":["A","B","C","D"],"rulePreset":"\#(raw)"}"#
+            let decoded = try JSONDecoder().decode(LastSettings.self, from: Data(json.utf8))
+            XCTAssertEqual(decoded.chaoTable, table, raw)
+        }
+        let unknown = #"{"playerNames":["A"],"rulePreset":"somethingNew"}"#
+        let decoded = try JSONDecoder().decode(LastSettings.self, from: Data(unknown.utf8))
+        XCTAssertNil(decoded.chaoTable)
+        XCTAssertEqual(decoded.playerNames, ["A", "", "", ""])
+    }
+
+    func testMigratedPresetWithoutSessionsStillShowsFirstTimeDefault() throws {
+        // Old builds always wrote a preset, even before the first session.
+        let json = #"{"schemaVersion":1,"sessions":[],"lastSettings":{"playerNames":["","","",""],"rulePreset":"hongKongDefault"},"knownPlayerNames":[],"adsRemoved":false,"chaoAnimationEnabled":true,"hapticsEnabled":true}"#
+        let data = try JSONDecoder().decode(AppData.self, from: Data(json.utf8))
+        let draft = AppModel(data: data).newSessionDraft(region: .taiwan)
+        XCTAssertEqual(draft.chaoTable, .taiwanDefault)
+        XCTAssertFalse(draft.usesRememberedChao)
+    }
+
+    func testOldSavedSessionWithClassicRuleLoadsAndSummarises() throws {
+        var session = try Session(players: names, rule: .classic)
+        try session.addRound(cardsLeft: [5, 0, 9, 11])
+        let stored = StoredSession(session: session, createdAt: Date(timeIntervalSince1970: 1_700_000_000))
+        var data = AppData(sessions: [stored])
+        data.lastSettings = LastSettings(playerNames: names)
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(data)) as! [String: Any]
+        var last = object["lastSettings"] as! [String: Any]
+        last["rulePreset"] = "classic"
+        object["lastSettings"] = last
+        let decoded = try JSONDecoder().decode(AppData.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(decoded.sessions.first?.session.rule, .classic)
+        XCTAssertEqual(decoded.sessions.first?.session.totals, session.totals)
+        XCTAssertEqual(ScoreFormatting().ruleSummary(decoded.sessions[0].session.rule), "10-12張×2 · 13張×3")
+        let draft = AppModel(data: decoded).newSessionDraft(region: .hongKong)
+        XCTAssertEqual(draft.chaoTable, .taiwanDefault)
+        XCTAssertTrue(draft.usesRememberedChao)
+    }
+
+    func testNewSettingsRoundTripWithoutLegacyKey() throws {
+        let settings = LastSettings(playerNames: names, chaoTable: ChaoTable(multipliers: [4, 1, 3, 1, 2, 1]))
+        let encoded = try JSONEncoder().encode(settings)
+        let object = try JSONSerialization.jsonObject(with: encoded) as! [String: Any]
+        XCTAssertNil(object["rulePreset"])
+        XCTAssertEqual(try JSONDecoder().decode(LastSettings.self, from: encoded), settings)
     }
 
     func testRegionPreferenceRoundTrips() throws {

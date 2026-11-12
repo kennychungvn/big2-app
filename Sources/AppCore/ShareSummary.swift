@@ -19,12 +19,10 @@ public struct ShareSummary: Equatable, Sendable {
 
     public init(stored: StoredSession, format: ScoreFormatting = .init()) {
         let session = stored.session
-        let region = format.region
-        let preset = RulePreset(matching: session.rule, in: region)
         self.title = format.appTitle
         self.dateLine = format.shortDate(stored.endedAt ?? stored.updatedAt)
         self.roundsLine = "\(session.roundsCompleted) 局"
-        self.ruleLine = "\(preset.displayName(in: region))（\(preset.summary(in: region))）"
+        self.ruleLine = format.ruleSummary(session.rule)
 
         self.rows = session.ranking.map { player in
             Row(

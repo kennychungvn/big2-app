@@ -14,6 +14,8 @@ struct RootView: View {
                         ScoreboardView(sessionID: id)
                     case .final(let id):
                         FinalView(sessionID: id)
+                    case .allSessions:
+                        AllSessionsView()
                     }
                 }
         }

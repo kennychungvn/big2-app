@@ -45,7 +45,11 @@ struct ScoreboardView: View {
         .alert(tr("確定完場？"), isPresented: $isConfirmingFinish) {
             Button(tr("取消"), role: .cancel) {}
             Button(tr("完場|nav"), role: .destructive) {
-                Task { await vm.finishCurrentSession() }
+                Task {
+                    // Let the alert finish dismissing before the interstitial / navigation.
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    await vm.finishCurrentSession()
+                }
             }
         } message: {
             Text(tr("完場後會計最終排名，之後唔可以再加局。"))

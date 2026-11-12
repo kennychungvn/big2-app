@@ -23,6 +23,14 @@ final class Big2UITests: XCTestCase {
         shotIndex = 0
     }
 
+    /// Temporary diagnostics: the app's window hierarchy as a text attachment.
+    private func dumpHierarchy(_ tag: String) {
+        let attachment = XCTAttachment(string: app.debugDescription)
+        attachment.name = "DBG-\(tag)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func snap(_ name: String) {
         shotIndex += 1
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -289,6 +297,7 @@ final class Big2UITests: XCTestCase {
         tap("scoreboard.finish")
         app.alerts.firstMatch.buttons["完場"].tap()
         closeFinishInterstitialIfShown()
+        dumpHierarchy("after-finish")
 
         // Final
         element("final.title")
@@ -306,8 +315,18 @@ final class Big2UITests: XCTestCase {
         element("home.allSessions")
         assertBanner("home-with-recent")
         snap("home-with-recent")
+        dumpHierarchy("home-before-allSessions")
         tap("home.allSessions")
-        element("all.row.0")
+        if !app.descendants(matching: .any)["all.row.0"].waitForExistence(timeout: 6) {
+            dumpHierarchy("after-allSessions-tap")
+            snap("allSessions-tap-did-nothing")
+            tap("home.recent.0")
+            sleep(2)
+            dumpHierarchy("after-recent-tap")
+            snap("after-recent-tap")
+            XCTFail("所有紀錄 tap did not navigate")
+            return
+        }
         assertBanner("all-sessions")
         snap("all-sessions")
         app.navigationBars.buttons.firstMatch.tap()

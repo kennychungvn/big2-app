@@ -69,7 +69,7 @@ struct NumberPad: View {
             }
             .buttonStyle(.plain)
             .disabled(!state.isPadEnabled)
-            .accessibilityLabel(multiplier >= 2 ? "\(value) 張，炒 \(multiplier) 倍" : "\(value) 張")
+            .accessibilityLabel(multiplier >= 2 ? tr("%@ 張，炒 %@ 倍", "\(value)", "\(multiplier)") : tr("%@ 張", "\(value)"))
 
         case .undo:
             Button(action: onUndo) {
@@ -83,11 +83,11 @@ struct NumberPad: View {
             }
             .buttonStyle(.plain)
             .disabled(!state.canUndo)
-            .accessibilityLabel("撤回")
+            .accessibilityLabel(tr("撤回"))
 
         case .clear:
             Button(action: onClear) {
-                Text("清除")
+                Text(tr("清除"))
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color(theme.secondaryText))
                     .frame(maxWidth: .infinity)
@@ -96,7 +96,7 @@ struct NumberPad: View {
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("清除")
+            .accessibilityLabel(tr("清除"))
         }
     }
 }
@@ -108,7 +108,7 @@ struct ChaoBadgeView: View {
     @Environment(\.appTheme) private var theme
 
     var body: some View {
-        Text(multiplier >= 4 ? "炒到盡！×\(multiplier)" : "×\(multiplier)")
+        Text(multiplier >= 4 ? tr("炒到盡！×%@", "\(multiplier)") : "×\(multiplier)")
             .font(.system(size: multiplier >= 4 ? 13 : 12, weight: .bold))
             .foregroundColor(.white)
             .padding(.vertical, 2)

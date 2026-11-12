@@ -165,15 +165,6 @@ final class ScoringEngineTests: XCTestCase {
         XCTAssertFalse(round.scores[0].heldTwoApplied)
     }
 
-    // MARK: - Money
-
-    func testMoneyConversion() {
-        XCTAssertEqual(ScoringEngine.money(fromPoints: 56, pointValue: 1), Decimal(56))
-        XCTAssertEqual(ScoringEngine.money(fromPoints: 56, pointValue: Decimal(string: "0.5")!), Decimal(28))
-        XCTAssertEqual(ScoringEngine.money(fromPoints: -18, pointValue: 2), Decimal(-36))
-        XCTAssertEqual(ScoringEngine.money(fromPoints: 0, pointValue: 10), 0)
-    }
-
     // MARK: - Codable
 
     func testRoundIsCodable() throws {

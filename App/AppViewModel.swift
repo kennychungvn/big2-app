@@ -30,7 +30,6 @@ struct ResultSheet: Identifiable, Equatable {
     var round: Round
     var players: [String]
     var totalsAfter: [Int]
-    var moneyAfter: [Decimal]?
     var roundNumber: Int
     var isEdit: Bool
 
@@ -39,7 +38,6 @@ struct ResultSheet: Identifiable, Equatable {
         round: Round,
         players: [String],
         totalsAfter: [Int],
-        moneyAfter: [Decimal]?,
         roundNumber: Int,
         isEdit: Bool
     ) {
@@ -47,7 +45,6 @@ struct ResultSheet: Identifiable, Equatable {
         self.round = round
         self.players = players
         self.totalsAfter = totalsAfter
-        self.moneyAfter = moneyAfter
         self.roundNumber = roundNumber
         self.isEdit = isEdit
     }
@@ -74,11 +71,13 @@ final class AppViewModel: ObservableObject {
     @Published var undoWindow: UndoWindow?
     @Published var errorMessage: String?
     @Published var storeMessage: String?
+    /// Effective 地區介面 (Hong Kong or Taiwan wording).
+    @Published private(set) var region: InterfaceRegion = .hongKong
 
     let store: AppStoring
     let ads: AdManaging
     let shop: StoreManaging
-    let format = ScoreFormatting()
+    var format: ScoreFormatting { ScoreFormatting(region: region) }
     let theme: Theme = .neighbourhood
 
     private var undoTask: Task<Void, Never>?
@@ -93,11 +92,16 @@ final class AppViewModel: ObservableObject {
         self.store = store
         self.ads = ads
         self.shop = shop
+        var loadFailed = false
         do {
             self.model = AppModel(data: try store.load())
         } catch {
             self.model = AppModel()
-            self.errorMessage = "存檔讀唔到，已經用空白資料重新開始。"
+            loadFailed = true
+        }
+        refreshRegion()
+        if loadFailed {
+            self.errorMessage = tr("存檔讀唔到，已經用空白資料重新開始。")
         }
         self.ads.adsRemoved = self.model.data.adsRemoved
         if !self.model.data.adsRemoved {
@@ -111,7 +115,7 @@ final class AppViewModel: ObservableObject {
         do {
             try store.save(model.data)
         } catch {
-            errorMessage = "儲存失敗，請稍後再試。"
+            errorMessage = tr("儲存失敗，請稍後再試。")
         }
         ads.adsRemoved = model.data.adsRemoved
     }
@@ -122,18 +126,15 @@ final class AppViewModel: ObservableObject {
         do {
             let stored = try model.startNewSession(
                 players: draft.names,
-                preset: draft.preset,
-                pointValue: draft.resolvedPointValue
+                preset: draft.preset
             )
             persist()
             isPresentingNewSession = false
             path = [.scoreboard(stored.id)]
         } catch AppModelError.emptyPlayerName {
-            errorMessage = "四個玩家都要填名。"
-        } catch AppModelError.invalidCustomPointValue {
-            errorMessage = "自訂每分幾錢要大於 0。"
+            errorMessage = tr("四個玩家都要填名。")
         } catch {
-            errorMessage = "開唔到場，請檢查資料。"
+            errorMessage = tr("開唔到場，請檢查資料。")
         }
     }
 
@@ -142,7 +143,7 @@ final class AppViewModel: ObservableObject {
             let stored = try model.continueUnfinished()
             path = [.scoreboard(stored.id)]
         } catch {
-            errorMessage = "搵唔到上一場。"
+            errorMessage = tr("搵唔到上一場。")
         }
     }
 
@@ -155,7 +156,7 @@ final class AppViewModel: ObservableObject {
                 path = [.scoreboard(stored.id)]
             }
         } catch {
-            errorMessage = "開唔到呢場。"
+            errorMessage = tr("開唔到呢場。")
         }
     }
 
@@ -174,7 +175,7 @@ final class AppViewModel: ObservableObject {
                 path = [.final(id)]
             }
         } catch {
-            errorMessage = "完場失敗。"
+            errorMessage = tr("完場失敗。")
         }
     }
 
@@ -245,7 +246,6 @@ final class AppViewModel: ObservableObject {
                 round: round,
                 players: current.session.players,
                 totalsAfter: current.session.totals,
-                moneyAfter: current.session.moneyTotals,
                 roundNumber: {
                     switch mode {
                     case .new: return current.session.roundsCompleted
@@ -258,7 +258,7 @@ final class AppViewModel: ObservableObject {
             startUndoWindow(kind: undoKind)
             startResultAutoDismiss(id: sheet.id)
         } catch {
-            errorMessage = "計分失敗，請檢查入咗嘅牌。"
+            errorMessage = tr("計分失敗，請檢查入咗嘅牌。")
         }
     }
 
@@ -293,7 +293,7 @@ final class AppViewModel: ObservableObject {
             }
             persist()
         } catch {
-            errorMessage = "撤回失敗。"
+            errorMessage = tr("撤回失敗。")
         }
         clearUndo()
         resultSheet = nil
@@ -342,16 +342,16 @@ final class AppViewModel: ObservableObject {
             if ok {
                 model.setAdsRemoved(true)
                 persist()
-                storeMessage = "已經移除廣告，多謝支持！"
+                storeMessage = tr("已經移除廣告，多謝支持！")
             }
         } catch StoreError.cancelled {
             storeMessage = nil
         } catch StoreError.productNotFound {
-            storeMessage = "暫時未設定 App Store 商品（product id：\(StoreProduct.removeAdsProductID)），上架前再接。"
+            storeMessage = tr("暫時未設定 App Store 商品（product id：%@），上架前再接。", StoreProduct.removeAdsProductID)
         } catch StoreError.purchasePending {
-            storeMessage = "購買等候批准，稍後會自動生效。"
+            storeMessage = tr("購買等候批准，稍後會自動生效。")
         } catch {
-            storeMessage = "購買失敗，請稍後再試或用「恢復購買」。"
+            storeMessage = tr("購買失敗，請稍後再試或用「恢復購買」。")
         }
     }
 
@@ -362,12 +362,12 @@ final class AppViewModel: ObservableObject {
             if ok {
                 model.setAdsRemoved(true)
                 persist()
-                storeMessage = "已經恢復購買，廣告已移除。"
+                storeMessage = tr("已經恢復購買，廣告已移除。")
             } else {
-                storeMessage = "搵唔到之前嘅購買記錄。"
+                storeMessage = tr("搵唔到之前嘅購買記錄。")
             }
         } catch {
-            storeMessage = "恢復購買失敗，請稍後再試。"
+            storeMessage = tr("恢復購買失敗，請稍後再試。")
         }
     }
 
@@ -381,6 +381,23 @@ final class AppViewModel: ObservableObject {
     func setChaoAnimationEnabled(_ enabled: Bool) {
         model.setChaoAnimationEnabled(enabled)
         persist()
+    }
+
+    // MARK: - 地區介面
+
+    /// Re-reads the setting and device locale, then points string lookups at that region.
+    func refreshRegion() {
+        let resolved = model.data.interfaceRegion(systemRegion: L10n.systemRegion)
+        L10n.region = resolved
+        if region != resolved {
+            region = resolved
+        }
+    }
+
+    func setRegionPreference(_ preference: InterfaceRegionPreference) {
+        model.setInterfaceRegionPreference(preference, systemRegion: L10n.systemRegion)
+        persist()
+        refreshRegion()
     }
 
     func setHapticsEnabled(_ enabled: Bool) {

@@ -10,12 +10,25 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
+                    Picker(tr("地區介面"), selection: regionBinding) {
+                        ForEach(InterfaceRegionPreference.allCases, id: \.self) { preference in
+                            Text(preference.title(in: vm.region)).tag(preference)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text(tr("地區介面"))
+                } footer: {
+                    Text(tr("揀「台灣」會用大老二用語；新開一場預設用台灣常見計分（1-9張 ×1 · 10-12張 ×2 · 13張 ×3）。"))
+                }
+
+                Section {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("一次過買斷，之後唔再見到廣告。")
+                        Text(tr("一次過買斷，之後唔再見到廣告。"))
                             .font(.system(size: 14))
                             .foregroundColor(Color(theme.secondaryText))
                         if vm.model.data.adsRemoved {
-                            Label("已經移除廣告", systemImage: "checkmark.seal.fill")
+                            Label(tr("已經移除廣告"), systemImage: "checkmark.seal.fill")
                                 .foregroundColor(Color(theme.positive))
                                 .font(.system(size: 16, weight: .semibold))
                         } else {
@@ -23,7 +36,7 @@ struct SettingsView: View {
                                 Task { await vm.purchaseRemoveAds() }
                             } label: {
                                 HStack {
-                                    Text("移除廣告")
+                                    Text(tr("移除廣告"))
                                         .font(.system(size: 17, weight: .semibold))
                                     Spacer()
                                     Text(StoreProduct.removeAdsDisplayPrice)
@@ -41,7 +54,7 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 6)
 
-                    Button("恢復購買") {
+                    Button(tr("恢復購買")) {
                         Task { await vm.restorePurchases() }
                     }
                     .foregroundColor(Color(theme.accentLink))
@@ -52,30 +65,30 @@ struct SettingsView: View {
                             .foregroundColor(Color(theme.secondaryText))
                     }
                 } header: {
-                    Text("購買")
+                    Text(tr("購買"))
                 } footer: {
-                    Text("\(StoreProduct.removeAdsDisplayName) 係一次性購買（非訂閱），商品編號暫時係 \(StoreProduct.removeAdsProductID)，上架前會喺 App Store Connect 設定。")
+                    Text(tr("%@ 係一次性購買（非訂閱），商品編號暫時係 %@，上架前會喺 App Store Connect 設定。", tr(StoreProduct.removeAdsDisplayName), StoreProduct.removeAdsProductID))
                 }
 
-                Section("體驗") {
+                Section(tr("體驗")) {
                     Toggle(isOn: animationBinding) {
-                        Text("炒倍動畫")
+                        Text(tr("炒倍動畫"))
                     }
                     Toggle(isOn: hapticsBinding) {
-                        Text("震機提示")
+                        Text(tr("震機提示"))
                     }
                 }
 
-                Section("關於") {
+                Section(tr("關於")) {
                     HStack {
-                        Text("版本")
+                        Text(tr("版本"))
                         Spacer()
                         Text(versionString)
                             .foregroundColor(Color(theme.secondaryText))
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("免責聲明")
+                        Text(tr("免責聲明"))
                             .font(.system(size: 14, weight: .semibold))
                         Text(LegalCopy.disclaimer)
                             .font(.system(size: 13))
@@ -83,18 +96,18 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
 
-                    Text("玩家名同分數只係儲喺你部手機，唔會上傳到我哋嘅伺服器。私隱政策同使用條款會喺上架前補上公開連結。")
+                    Text(tr("玩家名同分數只係儲喺你部手機，唔會上傳到我哋嘅伺服器。私隱政策同使用條款會喺上架前補上公開連結。"))
                         .font(.system(size: 13))
                         .foregroundColor(Color(theme.secondaryText))
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Color(theme.background).ignoresSafeArea())
-            .navigationTitle("設定")
+            .navigationTitle(tr("設定"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") { dismiss() }
+                    Button(tr("完成")) { dismiss() }
                         .foregroundColor(Color(theme.accentLink))
                 }
             }
@@ -108,6 +121,13 @@ struct SettingsView: View {
         Binding(
             get: { vm.model.data.chaoAnimationEnabled },
             set: { vm.setChaoAnimationEnabled($0) }
+        )
+    }
+
+    private var regionBinding: Binding<InterfaceRegionPreference> {
+        Binding(
+            get: { vm.model.data.regionPreference },
+            set: { vm.setRegionPreference($0) }
         )
     }
 

@@ -71,26 +71,28 @@ public struct RoundEntryState: Equatable, Sendable {
         return .enteringLosers
     }
 
-    public var hintText: String {
+    /// Hong Kong wording, kept for existing callers.
+    public var hintText: String { hintText(in: .hongKong) }
+
+    public func hintText(in region: InterfaceRegion) -> String {
+        let taiwan = region == .taiwan
         switch status {
         case .pickingWinner:
-            return "㩒「贏」揀邊個出清牌"
+            return taiwan ? "點「贏」選出誰先出完牌" : "㩒「贏」揀邊個出清牌"
         case .enteringLosers:
-            if let focusedIndex, cards[focusedIndex] == nil {
-                return "揀完一個自動跳下一個，㩒任何一行可以改"
-            }
-            return "揀完一個自動跳下一個，㩒任何一行可以改"
+            return taiwan ? "選完會自動跳到下一位，點任何一列都可以修改" : "揀完一個自動跳下一個，㩒任何一行可以改"
         case .complete:
-            return "入完喇，計緊分…"
+            return taiwan ? "輸入完成，正在記分…" : "入完喇，計緊分…"
         }
     }
 
-    public func padPrompt(playerNames: [String]) -> String {
-        if winnerIndex == nil { return "先揀贏家" }
+    public func padPrompt(playerNames: [String], region: InterfaceRegion = .hongKong) -> String {
+        let taiwan = region == .taiwan
+        if winnerIndex == nil { return taiwan ? "先選贏家" : "先揀贏家" }
         if let focusedIndex, focusedIndex < playerNames.count, cards[focusedIndex] != 0 {
-            return "\(playerNames[focusedIndex]) 剩幾多張？"
+            return taiwan ? "\(playerNames[focusedIndex]) 剩幾張？" : "\(playerNames[focusedIndex]) 剩幾多張？"
         }
-        return "剩幾多張？"
+        return taiwan ? "剩幾張？" : "剩幾多張？"
     }
 
     public func multiplier(forCardsLeft cardsLeft: Int) -> Int? {

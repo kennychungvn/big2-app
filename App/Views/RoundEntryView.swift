@@ -25,7 +25,7 @@ struct RoundEntryView: View {
         VStack(spacing: 0) {
             header(roundNumber: roundNumber)
 
-            Text(sheet.state.hintText)
+            Text(sheet.state.hintText(in: vm.region))
                 .font(.system(size: 13))
                 .foregroundColor(Color(theme.secondaryText))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -63,7 +63,7 @@ struct RoundEntryView: View {
 
     private func header(roundNumber: Int) -> some View {
         HStack {
-            Button("✕ 取消") { vm.cancelRoundEntry() }
+            Button(tr("✕ 取消")) { vm.cancelRoundEntry() }
                 .font(.system(size: 15))
                 .foregroundColor(Color(theme.accentLink))
             Spacer()
@@ -98,7 +98,7 @@ struct RoundEntryView: View {
                 sheet.state.markWinner(index)
                 syncLingeringBadges()
             } label: {
-                Text("贏")
+                Text(tr("贏"))
                     .font(.system(size: 15, weight: isWinner ? .bold : .regular))
                     .foregroundColor(isWinner ? Color(theme.primaryText) : Color(theme.secondaryText))
                     .frame(width: 62, height: 42)
@@ -133,7 +133,7 @@ struct RoundEntryView: View {
     private func countView(cards: Int?, isWinner: Bool, isFocused: Bool, badgeMultiplier: Int?, scale: CGFloat) -> some View {
         HStack(spacing: 4) {
             if isWinner {
-                Text("出清 👑")
+                Text(tr("出清 👑"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(Color(theme.primary))
             } else if let cards {
@@ -172,9 +172,9 @@ struct RoundEntryView: View {
         let enabled = sheet.state.winnerIndex != nil && vm.resultSheet == nil
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text(sheet.state.padPrompt(playerNames: names))
+                Text(sheet.state.padPrompt(playerNames: names, region: vm.region))
                 Spacer()
-                Text("顏色 = 炒倍")
+                Text(tr("顏色 = 炒倍"))
             }
             .font(.system(size: 13))
             .foregroundColor(Color(theme.secondaryText))

@@ -20,20 +20,23 @@ struct RootView: View {
         .tint(Color(theme.accentLink))
         .preferredColorScheme(.dark)
         .sheet(isPresented: $vm.isPresentingNewSession) {
-            NewSessionView(settings: vm.model.data.lastSettings)
+            NewSessionView(draft: vm.model.newSessionDraft(region: vm.region))
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
+                .environment(\.locale, vm.region.locale)
         }
         .sheet(isPresented: $vm.isPresentingSettings) {
             SettingsView()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
+                .environment(\.locale, vm.region.locale)
         }
         .fullScreenCover(item: $vm.roundEntry) { _ in
             if let binding = Binding($vm.roundEntry) {
                 RoundEntryView(sheet: binding)
                     .environmentObject(vm)
                     .environment(\.appTheme, theme)
+                .environment(\.locale, vm.region.locale)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -43,13 +46,16 @@ struct RootView: View {
                 BannerAdContainer(adsRemoved: false)
             }
         }
-        .alert("提示", isPresented: errorPresented) {
-            Button("知道") { vm.errorMessage = nil }
+        .alert(tr("提示"), isPresented: errorPresented) {
+            Button(tr("知道")) { vm.errorMessage = nil }
         } message: {
             Text(vm.errorMessage ?? "")
         }
         .onAppear {
             vm.syncPurchasesFromStore()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSLocale.currentLocaleDidChangeNotification)) { _ in
+            vm.refreshRegion()
         }
     }
 

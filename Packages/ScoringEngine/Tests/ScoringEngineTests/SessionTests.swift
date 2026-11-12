@@ -78,7 +78,6 @@ final class SessionTests: XCTestCase {
         XCTAssertEqual(ranking.map(\.rank), [1, 2, 3, 4])
         XCTAssertEqual(ranking.map(\.total), [56, -5, -18, -33])
         XCTAssertEqual(ranking.map(\.index), [0, 1, 2, 3])
-        XCTAssertEqual(ranking.map(\.money), [nil, nil, nil, nil])
     }
 
     func testRankingUsesCompetitionRankForTies() throws {
@@ -103,30 +102,21 @@ final class SessionTests: XCTestCase {
         XCTAssertEqual(ranking.map(\.rank), [1, 2, 2, 2])
     }
 
-    func testMoneyTotalsAndRankingMoney() throws {
-        var session = try Session(players: names, pointValue: Decimal(string: "0.5")!)
-        try session.addRound(cardsLeft: [0, 5, 9, 11])
-
-        XCTAssertEqual(session.moneyTotals, [Decimal(28), Decimal(string: "-2.5")!, Decimal(-9), Decimal(string: "-16.5")!])
-
-        let ranking = session.ranking
-        XCTAssertEqual(ranking[0].money, Decimal(28))
-        XCTAssertEqual(ranking[1].money, Decimal(string: "-2.5"))
-        XCTAssertEqual(ranking[2].money, Decimal(-9))
-        XCTAssertEqual(ranking[3].money, Decimal(string: "-16.5"))
-    }
-
-    func testMoneyTotalsNilWhenPointValueMissing() throws {
+    func testLegacySessionJSONWithPointValueStillDecodes() throws {
         var session = try Session(players: names)
-        try session.addRound(cardsLeft: [0, 1, 1, 1])
-        XCTAssertNil(session.moneyTotals)
+        try session.addRound(cardsLeft: [0, 5, 9, 11])
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(session)) as! [String: Any]
+        object["pointValue"] = 2  // field written by builds before 每分幾錢 was removed
+        let legacy = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(Session.self, from: legacy)
+        XCTAssertEqual(decoded, session)
+        XCTAssertEqual(decoded.totals, [56, -5, -18, -33])
     }
 
     func testSessionIsCodable() throws {
         var session = try Session(
             players: names,
-            rule: .classic.withDoubleOnHeldTwo(true),
-            pointValue: 2
+            rule: .classic.withDoubleOnHeldTwo(true)
         )
         try session.addRound(cardsLeft: [0, 5, 9, 11], heldTwo: [false, true, false, false])
 
@@ -134,7 +124,6 @@ final class SessionTests: XCTestCase {
         let decoded = try JSONDecoder().decode(Session.self, from: data)
         XCTAssertEqual(decoded, session)
         XCTAssertEqual(decoded.totals, session.totals)
-        XCTAssertEqual(decoded.pointValue, 2)
     }
 
     func testDefaultRuleIsHongKongDefault() throws {

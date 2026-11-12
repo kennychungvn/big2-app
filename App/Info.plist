@@ -3,7 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>zh-HK</string>
+	<string>zh-Hant-HK</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>zh-Hant-HK</string>
+		<string>zh-Hant-TW</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>鋤大Dee 計分</string>
 	<key>CFBundleExecutable</key>

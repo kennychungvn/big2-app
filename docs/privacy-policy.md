@@ -21,7 +21,7 @@ Contact / 聯絡（暫定，上架前會換成真實電郵）：`[YOUR-EMAIL@exa
 The app does not require registration or a user account. We do not ask you to create a login, and we do not collect your name, email, or phone number through the app itself.
 
 ### Information stored on your device
-Player names, scores, session history, and settings (for example, point value and animation preferences) are stored **only on your device**. This information is not uploaded to us. If you delete the app, this data is removed with it, unless iOS has a backup you control (for example, iCloud device backup). We do not run our own iCloud sync for this data.
+Player names, scores, session history, and settings (for example, interface region and animation preferences) are stored **only on your device**. This information is not uploaded to us. If you delete the app, this data is removed with it, unless iOS has a backup you control (for example, iCloud device backup). We do not run our own iCloud sync for this data.
 
 ### Advertising (Google AdMob)
 If you have not purchased “Remove Ads”, the app shows a banner and, after every 5 completed rounds, may show a skippable interstitial when you tap 「入今局」. Advertisements are provided by **Google AdMob**. Google may collect device identifiers, IP address, approximate location, device and usage data, and information about the ads that are shown or tapped, to provide, measure, and personalise ads, and to detect fraud. How long this data is kept and how it is used is described in [Google’s Privacy Policy](https://policies.google.com/privacy) and [Google’s advertising information](https://policies.google.com/technologies/ads).
@@ -60,7 +60,7 @@ Questions about this policy: `[YOUR-EMAIL@example.com]` (placeholder — replace
 呢個 app 唔需要註冊或者開帳戶。我哋唔會喺 app 入面要求你建立登入資料，亦唔會收集你嘅姓名、電郵或者電話號碼。
 
 ### 只儲喺你部裝置嘅資料
-玩家名稱、分數、場次紀錄同設定（例如每分幾錢、動畫開關）**只儲喺你部手機**，唔會上傳到我哋度。你刪除 app 之後，呢啲資料會一齊被刪除，除非你自己嘅 iOS 備份（例如 iCloud 裝置備份）保留咗。我哋冇為呢啲資料另外做 iCloud 同步。
+玩家名稱、分數、場次紀錄同設定（例如地區介面、動畫開關）**只儲喺你部手機**，唔會上傳到我哋度。你刪除 app 之後，呢啲資料會一齊被刪除，除非你自己嘅 iOS 備份（例如 iCloud 裝置備份）保留咗。我哋冇為呢啲資料另外做 iCloud 同步。
 
 ### 廣告（Google AdMob）
 如果你未購買「移除廣告」，app 會顯示橫額廣告；每完成 5 局，喺你撳「入今局」嗰下可能會顯示一則可略過嘅插頁廣告。廣告由 **Google AdMob** 提供。Google 可能會收集裝置識別碼、IP 地址、大概位置、裝置同使用資料，以及廣告曝光或點擊資料，用嚟提供、衡量同個人化廣告，以及防止欺詐。資料保留同用途請參閱 [Google 私隱政策](https://policies.google.com/privacy) 同 [Google 廣告資訊](https://policies.google.com/technologies/ads)。

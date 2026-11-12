@@ -28,7 +28,7 @@ struct RoundResultView: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(Color(theme.text))
                     Spacer()
-                    Button("編輯") { vm.editFromResult() }
+                    Button(tr("編輯")) { vm.editFromResult() }
                         .font(.system(size: 15))
                         .foregroundColor(Color(theme.accentLink))
                 }
@@ -46,12 +46,12 @@ struct RoundResultView: View {
 
                 if vm.undoWindow != nil {
                     HStack {
-                        Text("入錯？")
+                        Text(tr("入錯？"))
                         Spacer()
                         Button {
                             vm.performUndo()
                         } label: {
-                            Text("↶ 撤回（5 秒）")
+                            Text(tr("↶ 撤回（5 秒）"))
                                 .font(.system(size: 14, weight: .bold))
                         }
                         .buttonStyle(.plain)
@@ -65,7 +65,7 @@ struct RoundResultView: View {
                     .padding(.top, 10)
                 }
 
-                Text("累計排名（\(vm.format.afterRoundTitle(sheet.roundNumber))）")
+                Text(tr("累計排名（%@）", vm.format.afterRoundTitle(sheet.roundNumber)))
                     .font(.system(size: 14))
                     .foregroundColor(Color(theme.secondaryText))
                     .frame(maxWidth: .infinity, alignment: .leading)

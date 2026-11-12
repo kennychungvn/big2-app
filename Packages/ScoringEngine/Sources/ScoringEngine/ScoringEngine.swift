@@ -100,11 +100,6 @@ public enum ScoringEngine: Sendable {
         return Round(scores: scores)
     }
 
-    /// Converts a point total to money using a per-point value.
-    public static func money(fromPoints points: Int, pointValue: Decimal) -> Decimal {
-        Decimal(points) * pointValue
-    }
-
     static func validateInput(cardsLeft: [Int], heldTwo: [Bool]?) throws {
         guard cardsLeft.count == playerCount else {
             throw ScoringError.wrongPlayerCount(expected: playerCount, actual: cardsLeft.count)

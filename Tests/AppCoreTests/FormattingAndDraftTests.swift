@@ -12,15 +12,6 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(format.points(0), "0")
     }
 
-    func testMoneyFormatting() {
-        XCTAssertEqual(format.money(72), "+$72")
-        XCTAssertEqual(format.money(-9), "−$9")
-        XCTAssertEqual(format.money(0), "$0")
-        XCTAssertNil(format.money(nil))
-        XCTAssertEqual(format.money(Decimal(string: "-2.5")), "−$2.5")
-        XCTAssertEqual(format.money(Decimal(string: "0.5")), "+$0.5")
-    }
-
     func testRoundAndDateTitles() {
         XCTAssertEqual(format.roundTitle(6), "第 6 局")
         XCTAssertEqual(format.afterRoundTitle(6), "第 6 局後")
@@ -52,34 +43,17 @@ final class FormattingAndDraftTests: XCTestCase {
     }
 
     func testNewSessionDraftChipFillAndValidation() {
-        var draft = NewSessionDraft(from: LastSettings(playerNames: ["阿明", "Kenny", "", ""], rulePreset: .hongKongDefault, pointValue: 1))
-        XCTAssertEqual(draft.pointValue, .one)
+        var draft = NewSessionDraft(from: LastSettings(playerNames: ["阿明", "Kenny", "", ""], rulePreset: .hongKongDefault))
         XCTAssertFalse(draft.canStart)
         XCTAssertTrue(draft.applyChip("阿強"))
         XCTAssertTrue(draft.applyChip("阿May"))
         XCTAssertFalse(draft.applyChip("細佬"))
         XCTAssertEqual(draft.names, ["阿明", "Kenny", "阿強", "阿May"])
         XCTAssertTrue(draft.canStart)
-        XCTAssertEqual(draft.resolvedPointValue, 1)
-    }
-
-    func testCustomPointValueParsing() {
-        var draft = NewSessionDraft()
-        draft.names = ["A", "B", "C", "D"]
-        draft.pointValue = .custom(0)
-        draft.customAmountText = ""
-        XCTAssertFalse(draft.canStart)
-        draft.customAmountText = "$1.5"
-        XCTAssertEqual(draft.resolvedPointValue, Decimal(string: "1.5"))
-        XCTAssertTrue(draft.canStart)
-        draft.customAmountText = "0"
-        XCTAssertFalse(draft.canStart)
-        draft.customAmountText = "-3"
-        XCTAssertFalse(draft.canStart)
     }
 
     func testShareSummaryTextContainsStandings() throws {
-        var session = try Session(players: ["阿明", "Kenny", "阿強", "阿May"], pointValue: 1)
+        var session = try Session(players: ["阿明", "Kenny", "阿強", "阿May"])
         try session.addRound(cardsLeft: [5, 0, 9, 11])
         let stored = StoredSession(
             session: session,
@@ -93,6 +67,8 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertTrue(summary.text.contains("👑"))
         XCTAssertTrue(summary.rows.first?.isLeader == true)
         XCTAssertEqual(summary.rows.first?.name, "Kenny")
+        XCTAssertFalse(summary.text.contains("$"), "share text must be points only")
+        XCTAssertFalse(summary.text.contains("每分"))
     }
 
     func testNeighbourhoodThemeTokensMatchWireframe() {
@@ -107,14 +83,6 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(theme.keyColor(forMultiplier: 2).hexString, "#24493A")
         XCTAssertEqual(theme.keyColor(forMultiplier: 3).hexString, "#5A3E18")
         XCTAssertEqual(theme.keyColor(forMultiplier: 4).hexString, "#6B2222")
-    }
-
-    func testPointValueOptionChips() {
-        XCTAssertEqual(PointValueOption.none.chipTitle, "唔計")
-        XCTAssertEqual(PointValueOption.one.chipTitle, "$1")
-        XCTAssertEqual(PointValueOption(decimal: 2), .two)
-        XCTAssertEqual(PointValueOption(decimal: Decimal(string: "1.5")), .custom(Decimal(string: "1.5")!))
-        XCTAssertNil(PointValueOption.none.decimalValue)
     }
 
     func testStubStoreAndMockAds() async throws {

@@ -2,7 +2,7 @@
 
 打牌計分 app 嘅 SwiftUI 畫面層，用「街坊」皮（深灰底、黃色主掣），接住現成嘅 `ScoringEngine`。
 
-**免責聲明：** 呢個 app 淨係用嚟記分，唔涉及任何賭博或金錢交易。「每分幾錢」只係參考數字。
+**免責聲明：** 呢個 app 淨係用嚟記分，唔涉及任何賭博或金錢交易。
 
 冇 Mac 都可以繼續：用 GitHub Actions 喺雲端 compile，再用 TestFlight 裝落 iPhone。詳細步驟（用 iPhone 瀏覽器都做得）見 [`docs/SETUP_GITHUB_TESTFLIGHT.md`](docs/SETUP_GITHUB_TESTFLIGHT.md)。私隱政策同使用條款草稿見 [`docs/privacy-policy.md`](docs/privacy-policy.md) 同 [`docs/terms.md`](docs/terms.md)。
 
@@ -34,11 +34,11 @@ big2-app/
 畫面同核准咗嘅 wireframe 對齊：
 
 1. **HomeView** — 「新開一場」、有未完場就顯示「繼續上一場」、最近場次列表
-2. **NewSessionView** — 四個名、常用名 chips、香港炒／唔炒／經典、每分幾錢（記住上次設定）
+2. **NewSessionView** — 四個名、常用名 chips、計分規則（香港：香港炒／唔炒／經典；台灣：台灣常見／香港算法／不加倍），記住上次設定。只計分，冇金錢功能
 3. **ScoreboardView** — 2×2 累計分（領先者有皇冠）、每局紀錄（㩒一行可編輯）、「入今局」大掣、廣告安全距離
 4. **RoundEntryView** — 「贏」掣、1–13 數字鍵盤（顏色跟炒倍）、撤回／清除；最後一個入完自動計分；炒 ×2／×3／×4 喺同一行彈徽章（spring），再加震機
 5. **RoundResultView** — 每個人今局加減同炒詳情，3 秒自動收，5 秒內可以撤回
-6. **FinalView** — 完場排名同錢，可用 ShareLink 分享結果圖同文字
+6. **FinalView** — 完場排名同分數，可用 ShareLink 分享結果圖同文字
 
 進行中嘅場會保持屏幕常亮（`isIdleTimerDisabled`）。資料用 JSON 檔存喺本機，冇用 SwiftData，所以 iOS 16 都用得。
 
@@ -120,3 +120,11 @@ swift test
 - AdMob 真實 unit id、App Store Connect 商品、Developer Program 年費
 
 有問題喺 Xcode 第一次 build 嘅話，最常見係 Signing Team 未揀，或者 iPhone 未信任開發者證書。
+
+## 香港／台灣介面
+
+- 同一隻 app，兩套文字：`App/zh-Hant-HK.lproj`（廣東話：鋤大D、計分、炒、入今局）同 `App/zh-Hant-TW.lproj`（台灣華語：大老二、記分、加倍、記這一局）。
+- 文字表喺 `scripts/l10n_table.py`，改完跑 `python3 scripts/gen_l10n.py` 重新生成 `.strings`（會檢查有冇漏 key 同台灣版有冇廣東話字）。
+- 設定 →「地區介面」：跟系統（預設）／香港／台灣。跟系統規則：電話語言係 zh-Hant-TW 或者地區係台灣 → 台灣；語言明確係香港／澳門中文 → 香港；其他 → 香港。
+- 台灣介面新開一場預設「台灣常見」：1-9張 ×1 · 10-12張 ×2 · 13張 ×3。
+- 主畫面 app 名跟 iOS 語言：香港「鋤大Dee 計分」、台灣「大老二記分」（`InfoPlist.strings`）。

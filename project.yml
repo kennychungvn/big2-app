@@ -4,7 +4,7 @@ options:
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
-  developmentLanguage: zh-HK
+  developmentLanguage: zh-Hant-HK
   xcodeVersion: "15.0"
   defaultConfig: Debug
 configs:

@@ -13,7 +13,6 @@ final class AppModelTests: XCTestCase {
         _ = try model.startNewSession(
             players: names,
             preset: .hongKongDefault,
-            pointValue: 1,
             clock: clock
         )
         return (model, clock)
@@ -25,16 +24,13 @@ final class AppModelTests: XCTestCase {
         let stored = try model.startNewSession(
             players: [" 阿明 ", "Kenny", "阿強", "阿May"],
             preset: .classic,
-            pointValue: 2,
             clock: clock
         )
         XCTAssertEqual(stored.session.players, names)
         XCTAssertEqual(stored.session.rule, .classic)
-        XCTAssertEqual(stored.session.pointValue, 2)
         XCTAssertEqual(model.currentSessionID, stored.id)
         XCTAssertEqual(model.data.lastSettings.playerNames, names)
         XCTAssertEqual(model.data.lastSettings.rulePreset, .classic)
-        XCTAssertEqual(model.data.lastSettings.pointValue, 2)
         XCTAssertEqual(model.data.knownPlayerNames, ["阿明", "Kenny", "阿強", "阿May"])
         XCTAssertEqual(model.latestUnfinished?.id, stored.id)
     }
@@ -42,18 +38,9 @@ final class AppModelTests: XCTestCase {
     func testEmptyNameIsRejected() {
         var model = AppModel()
         XCTAssertThrowsError(
-            try model.startNewSession(players: ["阿明", "", "阿強", "阿May"], preset: .hongKongDefault, pointValue: nil)
+            try model.startNewSession(players: ["阿明", "", "阿強", "阿May"], preset: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? AppModelError, .emptyPlayerName(index: 1))
-        }
-    }
-
-    func testZeroOrNegativePointValueIsRejected() {
-        var model = AppModel()
-        XCTAssertThrowsError(
-            try model.startNewSession(players: names, preset: .hongKongDefault, pointValue: 0)
-        ) { error in
-            XCTAssertEqual(error as? AppModelError, .invalidCustomPointValue)
         }
     }
 
@@ -62,7 +49,6 @@ final class AppModelTests: XCTestCase {
         let round = try model.addRound(cardsLeft: [5, 0, 9, 11])
         XCTAssertEqual(round.points, [-5, 56, -18, -33])
         XCTAssertEqual(model.currentSession?.session.totals, [-5, 56, -18, -33])
-        XCTAssertEqual(model.currentSession?.session.moneyTotals, [-5, 56, -18, -33])
         XCTAssertEqual(model.currentSession?.session.ranking.first?.name, "Kenny")
     }
 
@@ -91,9 +77,9 @@ final class AppModelTests: XCTestCase {
     func testContinueUnfinishedOpensLatest() throws {
         var model = AppModel()
         let clock = MutableClock(start)
-        let first = try model.startNewSession(players: names, preset: .hongKongDefault, pointValue: nil, clock: clock)
+        let first = try model.startNewSession(players: names, preset: .hongKongDefault, clock: clock)
         clock.advance(by: 10)
-        let second = try model.startNewSession(players: ["A", "B", "C", "D"], preset: .noMultiplier, pointValue: nil, clock: clock)
+        let second = try model.startNewSession(players: ["A", "B", "C", "D"], preset: .noMultiplier, clock: clock)
         model.closeCurrentSession()
         XCTAssertEqual(model.latestUnfinished?.id, second.id)
         let opened = try model.continueUnfinished()
@@ -105,12 +91,11 @@ final class AppModelTests: XCTestCase {
     func testKnownNamesMostRecentFirstAndDeduped() throws {
         var model = AppModel()
         let clock = MutableClock(start)
-        _ = try model.startNewSession(players: names, preset: .hongKongDefault, pointValue: nil, clock: clock)
+        _ = try model.startNewSession(players: names, preset: .hongKongDefault, clock: clock)
         clock.advance(by: 1)
         _ = try model.startNewSession(
             players: ["阿May", "細佬", "Kenny", "Ben"],
             preset: .hongKongDefault,
-            pointValue: nil,
             clock: clock
         )
         XCTAssertEqual(model.data.knownPlayerNames, ["阿May", "細佬", "Kenny", "Ben", "阿明", "阿強"])

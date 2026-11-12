@@ -12,7 +12,7 @@ struct ScoreboardView: View {
             if let stored = stored {
                 content(stored)
             } else {
-                Text("搵唔到呢場。")
+                Text(tr("搵唔到呢場。"))
                     .foregroundColor(Color(theme.secondaryText))
             }
         }
@@ -21,7 +21,7 @@ struct ScoreboardView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("‹ 首頁") { vm.goHome() }
+                Button(tr("‹ 首頁")) { vm.goHome() }
                     .foregroundColor(Color(theme.accentLink))
             }
             ToolbarItem(placement: .principal) {
@@ -30,7 +30,7 @@ struct ScoreboardView: View {
                     .foregroundColor(Color(theme.text))
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("完場") { vm.finishCurrentSession() }
+                Button(tr("完場")) { vm.finishCurrentSession() }
                     .foregroundColor(Color(theme.accentLink))
             }
         }
@@ -58,7 +58,7 @@ struct ScoreboardView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 4)
 
-                    Text("每局紀錄（㩒一行可編輯）")
+                    Text(tr("每局紀錄（㩒一行可編輯）"))
                         .font(.system(size: 13))
                         .foregroundColor(Color(theme.secondaryText))
                         .padding(.horizontal, 18)
@@ -82,7 +82,7 @@ struct ScoreboardView: View {
                 undoToast(window)
             }
 
-            PrimaryButton(title: "＋ 入今局") {
+            PrimaryButton(title: tr("＋ 入今局")) {
                 Task { await vm.startEnteringRound() }
             }
             .padding(.top, 10)
@@ -104,7 +104,6 @@ struct ScoreboardView: View {
                     .lineLimit(1)
             }
             ScoreText(value: player.total, size: 34, format: vm.format)
-            MoneyText(value: player.money, format: vm.format)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -122,7 +121,7 @@ struct ScoreboardView: View {
 
     private func historyHeader(_ names: [String]) -> some View {
         HStack(spacing: 0) {
-            Text("局")
+            Text(tr("局"))
                 .frame(width: 52, alignment: .leading)
             ForEach(Array(names.enumerated()), id: \.offset) { _, name in
                 Text(name)
@@ -159,12 +158,12 @@ struct ScoreboardView: View {
 
     private func undoToast(_ window: UndoWindow) -> some View {
         HStack {
-            Text("入錯？")
+            Text(tr("入錯？"))
             Spacer()
             Button {
                 vm.performUndo()
             } label: {
-                Text("↶ 撤回")
+                Text(tr("↶ 撤回"))
                     .font(.system(size: 14, weight: .bold))
             }
             .buttonStyle(.plain)

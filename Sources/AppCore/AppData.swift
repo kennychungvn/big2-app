@@ -9,6 +9,8 @@ public struct AppData: Codable, Equatable, Sendable {
     public var adsRemoved: Bool
     public var chaoAnimationEnabled: Bool
     public var hapticsEnabled: Bool
+    /// 地區介面 setting. `nil` (also what older files decode to) means 跟系統.
+    public var interfaceRegionPreference: InterfaceRegionPreference?
 
     public static let currentSchemaVersion = 1
 
@@ -29,7 +31,8 @@ public struct AppData: Codable, Equatable, Sendable {
         knownPlayerNames: [String] = [],
         adsRemoved: Bool = false,
         chaoAnimationEnabled: Bool = true,
-        hapticsEnabled: Bool = true
+        hapticsEnabled: Bool = true,
+        interfaceRegionPreference: InterfaceRegionPreference? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.sessions = sessions
@@ -38,6 +41,17 @@ public struct AppData: Codable, Equatable, Sendable {
         self.adsRemoved = adsRemoved
         self.chaoAnimationEnabled = chaoAnimationEnabled
         self.hapticsEnabled = hapticsEnabled
+        self.interfaceRegionPreference = interfaceRegionPreference
+    }
+
+    /// The stored 地區介面 setting, defaulting to 跟系統.
+    public var regionPreference: InterfaceRegionPreference {
+        interfaceRegionPreference ?? .system
+    }
+
+    /// Interface region after applying 跟系統.
+    public func interfaceRegion(systemRegion: InterfaceRegion) -> InterfaceRegion {
+        regionPreference.resolved(systemRegion: systemRegion)
     }
 
     public var unfinishedSessions: [StoredSession] {

@@ -1,12 +1,16 @@
 import Foundation
 
-/// Traditional Chinese (Hong Kong) display helpers for points, money, dates, and rounds.
+/// Traditional Chinese display helpers for points, dates, and rounds, in Hong Kong or Taiwan wording.
 public struct ScoreFormatting: Equatable, Sendable {
+    public var region: InterfaceRegion
     public var locale: Locale
 
-    public init(locale: Locale = Locale(identifier: "zh_HK")) {
-        self.locale = locale
+    public init(region: InterfaceRegion = .hongKong) {
+        self.region = region
+        self.locale = region.locale
     }
+
+    private var isTaiwan: Bool { region == .taiwan }
 
     /// Uses a typographic minus, e.g. `+56`, `−5`, `0`.
     public func points(_ value: Int) -> String {
@@ -15,20 +19,12 @@ public struct ScoreFormatting: Equatable, Sendable {
         return "0"
     }
 
-    /// Wireframe style: `+$72`, `−$9`. Returns `nil` when there is no per-point value.
-    public func money(_ value: Decimal?) -> String? {
-        guard let value else { return nil }
-        if value > 0 { return "+$\(decimalString(value))" }
-        if value < 0 { return "−$\(decimalString(-value))" }
-        return "$0"
-    }
-
     public func roundTitle(_ number: Int) -> String {
         "第 \(number) 局"
     }
 
     public func afterRoundTitle(_ completed: Int) -> String {
-        if completed == 0 { return "未開局" }
+        if completed == 0 { return isTaiwan ? "尚未開局" : "未開局" }
         return "第 \(completed) 局後"
     }
 
@@ -40,7 +36,8 @@ public struct ScoreFormatting: Equatable, Sendable {
         let formatter = DateFormatter()
         formatter.locale = locale
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = TimeZone(identifier: "Asia/Hong_Kong") ?? TimeZone(secondsFromGMT: 8 * 3600)
+        let zone = isTaiwan ? "Asia/Taipei" : "Asia/Hong_Kong"
+        formatter.timeZone = TimeZone(identifier: zone) ?? TimeZone(secondsFromGMT: 8 * 3600)
         formatter.dateFormat = "M月d日"
         return formatter.string(from: date)
     }
@@ -51,12 +48,13 @@ public struct ScoreFormatting: Equatable, Sendable {
 
     /// Detail under a player on the result screen, e.g. `5 張 ×1`, `11 張 ×3 🔥`, `出清牌，收 5 + 18 + 33`.
     public func roundDetail(score: RoundScoreDisplay, winnerReceivedFrom: [Int] = []) -> String {
+        let cleared = isTaiwan ? "出完牌" : "出清牌"
         if score.cardsLeft == 0 {
             if winnerReceivedFrom.isEmpty {
-                return "出清牌"
+                return cleared
             }
             let parts = winnerReceivedFrom.map { "\($0)" }.joined(separator: " + ")
-            return "出清牌，收 \(parts)"
+            return "\(cleared)，收 \(parts)"
         }
         var text = "\(score.cardsLeft) 張 ×\(score.appliedMultiplier)"
         if score.appliedMultiplier >= 3 {
@@ -72,12 +70,9 @@ public struct ScoreFormatting: Equatable, Sendable {
         "玩家 \(index + 1)"
     }
 
-    public func decimalString(_ value: Decimal) -> String {
-        var v = value
-        if v < 0 { v = -v }
-        var rounded = Decimal()
-        NSDecimalRound(&rounded, &v, 2, .plain)
-        return NSDecimalNumber(decimal: rounded).stringValue
+    /// App name used in shared results.
+    public var appTitle: String {
+        isTaiwan ? "大老二記分" : "鋤大Dee 計分"
     }
 }
 

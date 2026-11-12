@@ -34,18 +34,3 @@ struct ScoreText: View {
         return Color(theme.text)
     }
 }
-
-struct MoneyText: View {
-    let value: Decimal?
-    var format: ScoreFormatting = ScoreFormatting()
-
-    @Environment(\.appTheme) private var theme
-
-    var body: some View {
-        if let text = format.money(value) {
-            Text(text)
-                .font(.system(size: 13))
-                .foregroundColor(Color(theme.secondaryText))
-        }
-    }
-}

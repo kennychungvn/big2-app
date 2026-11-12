@@ -18,9 +18,13 @@ The following sentence is shown in the app’s Settings (About section):
 
 以下一句會顯示喺 app「設定」嘅「關於」部分：
 
-> 呢個 app 淨係用嚟記分，唔涉及任何賭博或金錢交易。「每分幾錢」只係參考數字。
+> 呢個 app 淨係用嚟記分，唔涉及任何賭博或金錢交易。
 
-English equivalent: “This app is for score keeping only. It involves no gambling and no money transactions. Any money figures are for reference only.”
+Taiwan interface / 台灣介面：
+
+> 這個 App 只用來記分，不涉及任何賭博或金錢交易。
+
+English equivalent: “This app is for score keeping only. It involves no gambling and no money transactions.”
 
 ---
 
@@ -37,18 +41,18 @@ The app is **for score keeping only**. It does **not**:
 - provide a payment or wallet feature for winnings
 - settle or guarantee any real-money outcome
 
-If you type a point value（每分幾錢）or the app shows a dollar figure, that figure is **for reference only**. It is a calculator output based on the numbers you entered. It is not a payment request, not a transfer, and not a record of an actual money transaction.
+The app records **points only**. It has no money, currency, or point-value feature, and it does not show any dollar amounts for game results.
 
-How you and other players choose to use those numbers outside the app is your own responsibility. Do not use the app to advertise, organise, or operate gambling.
+How you and other players choose to use those points outside the app is your own responsibility. Do not use the app to advertise, organise, or operate gambling.
 
 ### 3. Your responsibility
 You are responsible for the names and numbers you enter, and for complying with the laws that apply to you. The developer is not a party to any game you play, and is not responsible for disputes between players.
 
 ### 4. No warranty
-The app is provided without warranties of any kind, to the extent permitted by law. We do not promise that scores, totals, or reference money figures will always be free of error, or that the app will always be available. You should still check important totals yourself.
+The app is provided without warranties of any kind, to the extent permitted by law. We do not promise that scores or totals will always be free of error, or that the app will always be available. You should still check important totals yourself.
 
 ### 5. Limitation of liability
-To the extent permitted by applicable law, the developer is not liable for any loss, dispute, or damages arising from your use of the app, including reliance on scores or reference money figures, or from ads or third-party services. Nothing in these terms excludes liability that cannot legally be excluded.
+To the extent permitted by applicable law, the developer is not liable for any loss, dispute, or damages arising from your use of the app, including reliance on scores or totals, or from ads or third-party services. Nothing in these terms excludes liability that cannot legally be excluded.
 
 ### 6. In-app purchases
 “Remove Ads” is an optional one-time purchase, billed by Apple as an in-app purchase. Apple is the merchant of record. Pricing is shown in the App Store or in the app in your local currency (the intended price is HK$8). Purchases can be restored with the Restore Purchases button. Refund requests are handled by Apple under Apple’s policies.
@@ -83,18 +87,18 @@ These terms are intended to be governed by the laws of the Hong Kong Special Adm
 - 提供用於派彩嘅付款或錢包功能
 - 結算或者保證任何真實金錢結果
 
-如果你輸入「每分幾錢」，或者 app 顯示金額，呢啲數字**只供參考**。它們只係根據你輸入嘅數字計算出嚟嘅結果，並唔係付款要求、轉帳，亦唔係實際金錢交易嘅紀錄。
+呢個 app **只記分數**，冇任何金錢、貨幣或者「每分幾錢」功能，亦唔會顯示牌局結果嘅金額。
 
-你同其他玩家喺 app 以外點樣使用呢啲數字，係你哋自己嘅責任。請唔好用呢個 app 去宣傳、組織或者經營賭博。
+你同其他玩家喺 app 以外點樣使用呢啲分數，係你哋自己嘅責任。請唔好用呢個 app 去宣傳、組織或者經營賭博。
 
 ### 3. 你嘅責任
 你要為自己輸入嘅名稱同數字負責，並遵守適用於你嘅法律。開發者並唔係你哋牌局嘅參與方，亦唔負責玩家之間嘅爭執。
 
 ### 4. 免責保證
-喺法律允許範圍內，app 不作任何明示或暗示保證。我哋唔保證分數、總分或者參考金額永遠無誤，亦唔保證 app 時刻可用。重要總數請你自己再核對。
+喺法律允許範圍內，app 不作任何明示或暗示保證。我哋唔保證分數或者總分永遠無誤，亦唔保證 app 時刻可用。重要總數請你自己再核對。
 
 ### 5. 責任限制
-喺適用法律允許範圍內，開發者毋須因為你使用本 app（包括依賴分數或參考金額），或者因為廣告或第三方服務，而承擔任何損失、糾紛或損害賠償。任何依法不能免除嘅責任，本條款不會排除。
+喺適用法律允許範圍內，開發者毋須因為你使用本 app（包括依賴分數或總分），或者因為廣告或第三方服務，而承擔任何損失、糾紛或損害賠償。任何依法不能免除嘅責任，本條款不會排除。
 
 ### 6. 應用程式內購買
 「移除廣告」係可選嘅一次性購買，由 Apple 以應用程式內購買方式收費。收款方係 Apple。價格會喺 App Store 或 app 內以你嘅當地貨幣顯示（原定價格為港幣 8 元）。你可以用「恢復購買」掣還原已買項目。退款申請由 Apple 按其政策處理。

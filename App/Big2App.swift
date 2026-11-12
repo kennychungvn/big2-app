@@ -14,6 +14,7 @@ struct Big2App: App {
             RootView()
                 .environmentObject(viewModel)
                 .environment(\.appTheme, viewModel.theme)
+                .environment(\.locale, viewModel.region.locale)
         }
     }
 

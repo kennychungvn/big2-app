@@ -11,7 +11,7 @@ struct HomeView: View {
                 VStack(spacing: 8) {
                     Text("🃏")
                         .font(.system(size: 64))
-                    Text("鋤大Dee 計分")
+                    Text(tr("鋤大Dee 計分"))
                         .font(.system(size: 28, weight: .heavy))
                         .foregroundColor(Color(theme.text))
                 }
@@ -19,14 +19,14 @@ struct HomeView: View {
                 .padding(.top, 40)
                 .padding(.bottom, 30)
 
-                PrimaryButton(title: "＋ 新開一場", height: 96, fontSize: 26) {
+                PrimaryButton(title: tr("＋ 新開一場"), height: 96, fontSize: 26) {
                     vm.isPresentingNewSession = true
                 }
 
                 if let unfinished = vm.model.latestUnfinished {
                     Color.clear.frame(height: 14)
                     SecondaryButton(
-                        title: "▶  繼續上一場",
+                        title: tr("▶  繼續上一場"),
                         subtitle: "\(unfinished.playerSummary) · \(vm.format.afterRoundTitle(unfinished.session.roundsCompleted))"
                     ) {
                         vm.continueUnfinished()
@@ -36,7 +36,7 @@ struct HomeView: View {
                 let recents = recentList
                 if !recents.isEmpty {
                     HStack {
-                        Text("最近場次")
+                        Text(tr("最近場次"))
                             .font(.system(size: 13))
                             .foregroundColor(Color(theme.secondaryText))
                         Spacer()
@@ -58,7 +58,7 @@ struct HomeView: View {
                                     Text(leader)
                                         .foregroundColor(leadingPoints >= 0 ? Color(theme.positive) : Color(theme.negative))
                                 } else if !stored.isFinished {
-                                    Text("未完")
+                                    Text(tr("未完"))
                                         .foregroundColor(Color(theme.secondaryText))
                                 }
                             }
@@ -85,7 +85,7 @@ struct HomeView: View {
                     Image(systemName: "gearshape")
                         .foregroundColor(Color(theme.accentLink))
                 }
-                .accessibilityLabel("設定")
+                .accessibilityLabel(tr("設定"))
             }
         }
         .toolbarBackground(Color(theme.background), for: .navigationBar)

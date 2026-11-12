@@ -8,16 +8,12 @@ public struct RankedPlayer: Codable, Equatable, Sendable {
     public let total: Int
     /// 1-based competition rank (ties share a rank; the next rank is skipped).
     public let rank: Int
-    /// `total` converted with the session's `pointValue`, or `nil` if none is set.
-    public let money: Decimal?
 }
 
 /// A four-player 鋤大Dee scoring session: rule, rounds, standings, and ad cadence.
 public struct Session: Codable, Equatable, Sendable {
     public var players: [String]
     public var rule: ScoringRule
-    /// Optional value of one point, used to convert cumulative totals into money.
-    public var pointValue: Decimal?
     public private(set) var rounds: [Round]
 
     /// Minimum time that must pass between two interstitials. Defaults to 180 seconds.
@@ -33,12 +29,10 @@ public struct Session: Codable, Equatable, Sendable {
     /// - Parameters:
     ///   - players: Exactly four display names.
     ///   - rule: Scoring rule. Defaults to `hongKongDefault`.
-    ///   - pointValue: Optional per-point money value.
     ///   - interstitialMinimumInterval: Minimum gap between ads. Defaults to 180 seconds.
     public init(
         players: [String],
         rule: ScoringRule = .hongKongDefault,
-        pointValue: Decimal? = nil,
         interstitialMinimumInterval: TimeInterval = InterstitialPolicy.defaultMinimumInterval
     ) throws {
         guard players.count == ScoringEngine.playerCount else {
@@ -49,7 +43,6 @@ public struct Session: Codable, Equatable, Sendable {
         }
         self.players = players
         self.rule = rule
-        self.pointValue = pointValue
         self.rounds = []
         self.interstitialMinimumInterval = interstitialMinimumInterval
         self.shownInterstitialMilestones = []
@@ -69,17 +62,10 @@ public struct Session: Codable, Equatable, Sendable {
         return result
     }
 
-    /// Cumulative money for each player, or `nil` when `pointValue` is not set.
-    public var moneyTotals: [Decimal]? {
-        guard let pointValue else { return nil }
-        return totals.map { ScoringEngine.money(fromPoints: $0, pointValue: pointValue) }
-    }
-
     /// Players sorted by total descending, then by original index for ties.
     /// Tied totals share a competition rank (1, 1, 3, 4).
     public var ranking: [RankedPlayer] {
         let totals = self.totals
-        let moneyTotals = self.moneyTotals
         let order = (0..<ScoringEngine.playerCount).sorted { lhs, rhs in
             if totals[lhs] != totals[rhs] {
                 return totals[lhs] > totals[rhs]
@@ -101,8 +87,7 @@ public struct Session: Codable, Equatable, Sendable {
                     index: index,
                     name: players[index],
                     total: totals[index],
-                    rank: rank,
-                    money: moneyTotals?[index]
+                    rank: rank
                 )
             )
         }

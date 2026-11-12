@@ -16,11 +16,6 @@ struct ShareCardView: View {
             Text(summary.ruleLine)
                 .font(.system(size: 13))
                 .foregroundColor(Color(theme.secondaryText))
-            if let moneyLine = summary.moneyLine {
-                Text(moneyLine)
-                    .font(.system(size: 13))
-                    .foregroundColor(Color(theme.secondaryText))
-            }
             VStack(spacing: 6) {
                 ForEach(Array(summary.rows.enumerated()), id: \.offset) { _, row in
                     HStack {
@@ -31,12 +26,6 @@ struct ShareCardView: View {
                         Text(row.points)
                             .font(ThemeFont.numeric(size: 17, weight: .bold))
                             .foregroundColor(row.points.hasPrefix("+") ? Color(theme.positive) : (row.points.hasPrefix("−") ? Color(theme.negative) : Color(theme.text)))
-                        if let money = row.money {
-                            Text(money)
-                                .font(.system(size: 13))
-                                .foregroundColor(Color(theme.secondaryText))
-                                .frame(minWidth: 56, alignment: .trailing)
-                        }
                     }
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)

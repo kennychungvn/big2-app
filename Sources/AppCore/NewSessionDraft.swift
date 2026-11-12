@@ -5,10 +5,10 @@ import ScoringEngine
 public struct NewSessionDraft: Equatable, Sendable {
     public var names: [String]
     public var preset: RulePreset
-    public var pointValue: PointValueOption
-    public var customAmountText: String
 
-    public init(from settings: LastSettings = LastSettings()) {
+    /// - Parameter region: The preset is mapped to one listed for this region
+    ///   (`classic` ↔ `taiwanCommon`), so the picker always has a selection.
+    public init(from settings: LastSettings = LastSettings(), region: InterfaceRegion = .hongKong) {
         self.names = settings.playerNames
         while self.names.count < ScoringEngine.playerCount {
             self.names.append("")
@@ -16,35 +16,11 @@ public struct NewSessionDraft: Equatable, Sendable {
         if self.names.count > ScoringEngine.playerCount {
             self.names = Array(self.names.prefix(ScoringEngine.playerCount))
         }
-        self.preset = settings.rulePreset
-        self.pointValue = settings.pointValueOption
-        if case .custom(let value) = self.pointValue {
-            self.customAmountText = NSDecimalNumber(decimal: value).stringValue
-        } else {
-            self.customAmountText = ""
-        }
+        self.preset = settings.rulePreset.equivalent(in: region)
     }
 
     public var canStart: Bool {
-        (try? AppModel.validatedNames(names)) != nil && resolvedPointValueError == nil
-    }
-
-    public var resolvedPointValue: Decimal? {
-        switch pointValue {
-        case .none, .one, .two, .five:
-            return pointValue.decimalValue
-        case .custom:
-            return Self.parseCustomAmount(customAmountText)
-        }
-    }
-
-    public var resolvedPointValueError: AppModelError? {
-        if case .custom = pointValue {
-            guard let value = Self.parseCustomAmount(customAmountText), value > 0 else {
-                return .invalidCustomPointValue
-            }
-        }
-        return nil
+        (try? AppModel.validatedNames(names)) != nil
     }
 
     /// Fills the first empty name field with a known-player chip. Returns `false` if every field is full.
@@ -55,13 +31,5 @@ public struct NewSessionDraft: Equatable, Sendable {
             return true
         }
         return false
-    }
-
-    public static func parseCustomAmount(_ text: String) -> Decimal? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "$", with: "")
-            .replacingOccurrences(of: ",", with: "")
-        guard !trimmed.isEmpty else { return nil }
-        return Decimal(string: trimmed)
     }
 }

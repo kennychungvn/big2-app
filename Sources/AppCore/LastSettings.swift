@@ -1,23 +1,19 @@
 import Foundation
 
 /// Remembered 開場設定 so the next session is mostly one tap.
+///
+/// Older builds also stored `pointValue` (每分幾錢). That feature is removed; the key is
+/// ignored when decoding old files.
 public struct LastSettings: Codable, Equatable, Sendable {
     public var playerNames: [String]
     public var rulePreset: RulePreset
-    public var pointValue: Decimal?
 
     public init(
         playerNames: [String] = ["", "", "", ""],
-        rulePreset: RulePreset = .hongKongDefault,
-        pointValue: Decimal? = nil
+        rulePreset: RulePreset = .hongKongDefault
     ) {
         self.playerNames = Self.padded(playerNames)
         self.rulePreset = rulePreset
-        self.pointValue = pointValue
-    }
-
-    public var pointValueOption: PointValueOption {
-        PointValueOption(decimal: pointValue)
     }
 
     private static func padded(_ names: [String]) -> [String] {

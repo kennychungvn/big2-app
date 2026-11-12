@@ -5,7 +5,6 @@ public enum AppModelError: Error, Equatable, Sendable {
     case emptyPlayerName(index: Int)
     case noCurrentSession
     case sessionNotFound(UUID)
-    case invalidCustomPointValue
 }
 
 /// All session / settings mutations the screens need, free of SwiftUI and Combine.
@@ -34,18 +33,14 @@ public struct AppModel: Equatable, Sendable {
     public mutating func startNewSession(
         players: [String],
         preset: RulePreset,
-        pointValue: Decimal?,
         clock: any Clock = SystemClock()
     ) throws -> StoredSession {
         let names = try Self.validatedNames(players)
-        if let pointValue, pointValue <= 0 {
-            throw AppModelError.invalidCustomPointValue
-        }
-        let session = try Session(players: names, rule: preset.rule, pointValue: pointValue)
+        let session = try Session(players: names, rule: preset.rule)
         let now = clock.now
         let stored = StoredSession(session: session, createdAt: now, updatedAt: now)
         data.sessions.append(stored)
-        data.lastSettings = LastSettings(playerNames: names, rulePreset: preset, pointValue: pointValue)
+        data.lastSettings = LastSettings(playerNames: names, rulePreset: preset)
         data.remember(playerNames: names)
         currentSessionID = stored.id
         return stored
@@ -128,6 +123,35 @@ public struct AppModel: Equatable, Sendable {
             }
         } catch {
             return
+        }
+    }
+
+    /// Draft for 新開一場 in `region`. Someone who has never started a session gets the
+    /// region's default table (香港炒 or 台灣常見); otherwise the remembered preset is kept,
+    /// mapped to the region's list.
+    public func newSessionDraft(region: InterfaceRegion) -> NewSessionDraft {
+        var draft = NewSessionDraft(from: data.lastSettings, region: region)
+        if data.sessions.isEmpty {
+            draft.preset = region.defaultRulePreset
+        }
+        return draft
+    }
+
+    /// Saves the 地區介面 setting. When the effective region changes and the remembered preset is
+    /// still the old region's default, it switches to the new region's default.
+    public mutating func setInterfaceRegionPreference(
+        _ preference: InterfaceRegionPreference,
+        systemRegion: InterfaceRegion
+    ) {
+        let oldRegion = data.interfaceRegion(systemRegion: systemRegion)
+        data.interfaceRegionPreference = preference
+        let newRegion = data.interfaceRegion(systemRegion: systemRegion)
+        guard oldRegion != newRegion else { return }
+        let remembered = data.lastSettings.rulePreset
+        if remembered == oldRegion.defaultRulePreset {
+            data.lastSettings.rulePreset = newRegion.defaultRulePreset
+        } else {
+            data.lastSettings.rulePreset = remembered.equivalent(in: newRegion)
         }
     }
 

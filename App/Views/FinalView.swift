@@ -15,7 +15,7 @@ struct FinalView: View {
             if let stored = stored {
                 content(stored)
             } else {
-                Text("搵唔到呢場。")
+                Text(tr("搵唔到呢場。"))
                     .foregroundColor(Color(theme.secondaryText))
             }
         }
@@ -23,11 +23,11 @@ struct FinalView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button("‹ 首頁") { vm.goHome() }
+                Button(tr("‹ 首頁")) { vm.goHome() }
                     .foregroundColor(Color(theme.accentLink))
             }
             ToolbarItem(placement: .principal) {
-                Text("完場")
+                Text(tr("完場"))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Color(theme.text))
             }
@@ -48,7 +48,7 @@ struct FinalView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("最終排名")
+                    Text(tr("最終排名"))
                         .font(.system(size: 13))
                         .foregroundColor(Color(theme.secondaryText))
                         .padding(.horizontal, 18)
@@ -68,12 +68,9 @@ struct FinalView: View {
                                 .foregroundColor(Color(theme.secondaryText))
                                 .frame(width: 24)
                             PlayerColorDot(index: player.index, height: 32)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(player.rank == 1 ? "👑 \(player.name)" : player.name)
-                                    .font(.system(size: 19, weight: .semibold))
-                                    .foregroundColor(Color(theme.text))
-                                MoneyText(value: player.money, format: vm.format)
-                            }
+                            Text(player.rank == 1 ? "👑 \(player.name)" : player.name)
+                                .font(.system(size: 19, weight: .semibold))
+                                .foregroundColor(Color(theme.text))
                             Spacer()
                             ScoreText(value: player.total, size: 28, format: vm.format)
                         }
@@ -83,14 +80,6 @@ struct FinalView: View {
                         .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
-                    }
-
-                    if stored.session.pointValue != nil {
-                        Text("每分 $\(NSDecimalNumber(decimal: stored.session.pointValue ?? 0).stringValue)")
-                            .font(.system(size: 13))
-                            .foregroundColor(Color(theme.secondaryText))
-                            .padding(.horizontal, 18)
-                            .padding(.top, 10)
                     }
                 }
                 .padding(.bottom, 16)
@@ -109,12 +98,12 @@ struct FinalView: View {
                     item: shareImage,
                     preview: SharePreview(summary.title, image: shareImage)
                 ) {
-                    shareLabel("分享結果圖")
+                    shareLabel(tr("分享結果圖"))
                 }
                 .padding(.horizontal, 18)
             }
             ShareLink(item: summary.text) {
-                Text("分享文字結果")
+                Text(tr("分享文字結果"))
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(Color(theme.text))
                     .frame(maxWidth: .infinity)

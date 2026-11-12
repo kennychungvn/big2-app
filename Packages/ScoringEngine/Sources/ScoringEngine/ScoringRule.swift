@@ -49,6 +49,21 @@ public struct ScoringRule: Codable, Equatable, Sendable {
         doubleOnHeldTwo: false
     )
 
+    /// Common Taiwan 大老二 table: 1–9 ×1, 10–12 ×2, 13 ×3 (一張都沒出「炒三」).
+    ///
+    /// Same tiers as `classic`; kept as its own name so the Taiwan interface can label it
+    /// 台灣常見. Source: MacePlay 大老二規則 guide (maceplay.com/zh-cn/guides/big-two-rules),
+    /// which calls 1–9 ×1, 10–12 ×2, 13 ×3 the common Taiwan scoring. Taiwan house rules vary
+    /// (madestudio.com.tw lists 8+ or 10+ doubling, 13 as ×3 or ×4), so custom tiers stay available.
+    public static let taiwanCommon = ScoringRule(
+        validatedTiers: [
+            MultiplierTier(minCards: 1, maxCards: 9, multiplier: 1),
+            MultiplierTier(minCards: 10, maxCards: 12, multiplier: 2),
+            MultiplierTier(minCards: 13, maxCards: 13, multiplier: 3)
+        ],
+        doubleOnHeldTwo: false
+    )
+
     /// Creates a rule from a custom tier list. Validates coverage of 1...13.
     public init(tiers: [MultiplierTier], doubleOnHeldTwo: Bool = false) throws {
         let normalized = try Self.validate(tiers: tiers)

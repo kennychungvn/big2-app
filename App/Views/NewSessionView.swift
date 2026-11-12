@@ -23,6 +23,7 @@ struct NewSessionView: View {
                         HStack(spacing: 10) {
                             PlayerColorDot(index: index, height: 30)
                             TextField(vm.format.placeholderName(at: index), text: $draft.names[index])
+                                .accessibilityIdentifier("setup.name.\(index)")
                                 .font(.system(size: 18))
                                 .foregroundColor(Color(theme.text))
                                 .tint(Color(theme.primary))
@@ -73,12 +74,14 @@ struct NewSessionView: View {
                 VStack(spacing: 8) {
                     if !draft.canStart {
                         Text(tr("要填齊 4 個玩家名先開到"))
+                            .accessibilityIdentifier("setup.namesHint")
                             .font(.system(size: 13))
                             .foregroundColor(Color(theme.negative))
                     }
                     PrimaryButton(title: tr("開波 ▶"), enabled: draft.canStart) {
                         vm.startSession(from: draft)
                     }
+                    .accessibilityIdentifier("setup.start")
                 }
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
@@ -89,6 +92,7 @@ struct NewSessionView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("✕") { dismiss() }
+                        .accessibilityIdentifier("setup.close")
                         .foregroundColor(Color(theme.accentLink))
                 }
             }
@@ -122,6 +126,8 @@ struct NewSessionView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("setup.tile.\(cards)")
+        .accessibilityValue("×\(multiplier)")
         .accessibilityLabel(tr("%@ 張，炒 %@ 倍", "\(cards)", "\(multiplier)"))
         .accessibilityHint(tr("㩒格轉倍數"))
     }

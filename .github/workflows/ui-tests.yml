@@ -1,0 +1,126 @@
+# Real UI run on an iPhone simulator: XCUITest full flow (HK + TW), screenshots exported
+# from the .xcresult and uploaded as the "ui-screenshots" artifact.
+name: UI Tests
+
+"on":
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ui-tests:
+    name: XCUITest (Simulator)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys, re
+          data = json.load(sys.stdin)["devices"]
+          best = None
+          for runtime, devices in data.items():
+              if "iOS" not in runtime:
+                  continue
+              m = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              ver = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+              for d in devices:
+                  name = d["name"]
+                  if not name.startswith("iPhone") or "SE" in name or "Plus" in name or "Max" in name:
+                      continue
+                  score = (ver, "Pro" not in name, name)
+                  if best is None or score > best[0]:
+                      best = (score, d["udid"], name, runtime)
+          if best is None:
+              sys.exit("no iPhone simulator")
+          print(best[1])
+          print(f"Using {best[2]} on {best[3]}", file=sys.stderr)
+          ')
+          echo "udid=${UDID}" >> "${GITHUB_OUTPUT}"
+          xcrun simctl boot "${UDID}" || true
+          xcrun simctl bootstatus "${UDID}" -b
+
+      - name: Run UI tests
+        run: |
+          set +e
+          xcodebuild test \
+            -project Big2.xcodeproj \
+            -scheme Big2 \
+            -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath UITestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            > xcodebuild-test.log 2>&1
+          status=$?
+          grep -E "Test Case|error:|XCTAssert|failed|\*\* TEST" xcodebuild-test.log | tail -200
+          exit $status
+
+      - name: Export screenshots
+        if: always()
+        run: |
+          set -uo pipefail
+          mkdir -p screenshots
+          if [ -d UITestResults.xcresult ]; then
+            if xcrun xcresulttool export attachments --path UITestResults.xcresult --output-path screenshots-raw 2>/dev/null; then
+              python3 - <<'PY'
+          import json, pathlib, shutil
+          raw = pathlib.Path("screenshots-raw")
+          out = pathlib.Path("screenshots")
+          manifest = json.loads((raw / "manifest.json").read_text())
+          for test in manifest:
+              for att in test.get("attachments", []):
+                  src = raw / att["exportedFileName"]
+                  name = att.get("suggestedHumanReadableName") or att["exportedFileName"]
+                  # names look like "HK-01-home-fresh_0_<uuid>.png"
+                  stem = name.split("_")[0]
+                  dest = out / (stem + src.suffix)
+                  shutil.copy(src, dest)
+                  print(dest)
+          PY
+            else
+              brew install chargepoint/xcparse/xcparse && xcparse screenshots UITestResults.xcresult screenshots
+            fi
+          fi
+          ls -la screenshots || true
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: screenshots
+          if-no-files-found: warn
+
+      - name: Upload test log and result bundle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: |
+            xcodebuild-test.log
+            UITestResults.xcresult
+          if-no-files-found: ignore

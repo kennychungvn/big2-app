@@ -9,10 +9,11 @@ struct AllSessionsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(vm.model.allSessions) { stored in
+                ForEach(Array(vm.model.allSessions.enumerated()), id: \.element.id) { position, stored in
                     SessionRow(stored: stored) {
                         vm.openSession(stored, push: true)
                     }
+                    .accessibilityIdentifier("all.row.\(position)")
                 }
             }
             .padding(.vertical, 12)

@@ -16,6 +16,7 @@ struct HomeView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .accessibilityHidden(true)
                     Text(tr("鋤大D計分"))
+                        .accessibilityIdentifier("home.title")
                         .font(.system(size: 28, weight: .heavy))
                         .foregroundColor(Color(theme.text))
                 }
@@ -26,6 +27,7 @@ struct HomeView: View {
                 PrimaryButton(title: tr("＋ 新開一場"), height: 96, fontSize: 26) {
                     vm.isPresentingNewSession = true
                 }
+                .accessibilityIdentifier("home.newSession")
 
                 if let unfinished = vm.model.latestUnfinished {
                     Color.clear.frame(height: 14)
@@ -35,6 +37,7 @@ struct HomeView: View {
                     ) {
                         vm.continueUnfinished()
                     }
+                    .accessibilityIdentifier("home.continue")
                 }
 
                 let recents = recentList
@@ -49,10 +52,11 @@ struct HomeView: View {
                     .padding(.top, 26)
                     .padding(.bottom, 6)
 
-                    ForEach(recents) { stored in
+                    ForEach(Array(recents.enumerated()), id: \.element.id) { position, stored in
                         SessionRow(stored: stored) {
                             vm.openSession(stored)
                         }
+                        .accessibilityIdentifier("home.recent.\(position)")
                     }
                 }
 
@@ -75,6 +79,7 @@ struct HomeView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.allSessions")
                     .padding(.horizontal, 14)
                     .padding(.top, recents.isEmpty ? 26 : 8)
                 }
@@ -91,6 +96,7 @@ struct HomeView: View {
                         .foregroundColor(Color(theme.accentLink))
                 }
                 .accessibilityLabel(tr("設定"))
+                .accessibilityIdentifier("home.settings")
             }
         }
         .toolbarBackground(Color(theme.background), for: .navigationBar)

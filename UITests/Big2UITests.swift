@@ -1,0 +1,305 @@
+import XCTest
+
+/// End-to-end flow on a real simulator. Launches with `-uiTesting` so the app starts from
+/// empty data, shows a closable stand-in interstitial after round 5, and uses the stub store.
+/// Screenshots are attached with `.keepAlways` and exported by CI.
+final class Big2UITests: XCTestCase {
+
+    private var app: XCUIApplication!
+    private var shotIndex = 0
+    private var shotPrefix = ""
+
+    override func setUp() {
+        continueAfterFailure = false
+    }
+
+    // MARK: - Helpers
+
+    private func launch(languages: String, locale: String, prefix: String) {
+        app = XCUIApplication()
+        app.launchArguments = ["-uiTesting", "-AppleLanguages", "(\(languages))", "-AppleLocale", locale]
+        app.launch()
+        shotPrefix = prefix
+        shotIndex = 0
+    }
+
+    private func snap(_ name: String) {
+        shotIndex += 1
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = String(format: "%@-%02d-%@", shotPrefix, shotIndex, name)
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @discardableResult
+    private func element(_ id: String, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let element = app.descendants(matching: .any)[id].firstMatch
+        XCTAssertTrue(element.waitForExistence(timeout: timeout), "missing \(id)", file: file, line: line)
+        return element
+    }
+
+    private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+        let target = element(id, file: file, line: line)
+        waitUntil(file: file, line: line) { target.isHittable }
+        target.tap()
+    }
+
+    private func waitUntil(timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line, _ condition: () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTFail("condition not met in \(timeout)s", file: file, line: line)
+    }
+
+    private func waitGone(_ id: String, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) {
+        let target = app.descendants(matching: .any)[id].firstMatch
+        waitUntil(timeout: timeout, file: file, line: line) { !target.exists }
+    }
+
+    private func label(_ id: String) -> String {
+        element(id).label
+    }
+
+    private func text(containing fragment: String) -> XCUIElement {
+        app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", fragment)).firstMatch
+    }
+
+    private func assertText(_ fragment: String, file: StaticString = #filePath, line: UInt = #line) {
+        let predicate = NSPredicate(format: "label CONTAINS %@", fragment)
+        let match = app.descendants(matching: .any).matching(predicate).firstMatch
+        XCTAssertTrue(match.waitForExistence(timeout: 10), "text not found: \(fragment)", file: file, line: line)
+    }
+
+    private func typeNames(_ names: [String]) {
+        for (index, name) in names.enumerated() {
+            let field = element("setup.name.\(index)")
+            field.tap()
+            field.typeText(name)
+        }
+    }
+
+    /// Enters one round, seat by seat (0 = 贏), and waits for the result overlay.
+    private func enterRound(_ cards: [Int], snapBeforeLast: String? = nil) {
+        element("entry.title")
+        for (seat, value) in cards.enumerated() {
+            if seat == cards.count - 1, let snapBeforeLast { snap(snapBeforeLast) }
+            tap(value == 0 ? "pad.win" : "pad.\(value)")
+        }
+        element("result.title")
+    }
+
+    private func waitForScoreboard() {
+        waitGone("entry.title", timeout: 12)
+        element("scoreboard.addRound")
+    }
+
+    private func assertTotals(_ totals: [String], file: StaticString = #filePath, line: UInt = #line) {
+        for (index, total) in totals.enumerated() {
+            let card = element("scoreboard.player.\(index)", file: file, line: line)
+            XCTAssertTrue(card.label.hasSuffix(" \(total)"), "player \(index): \(card.label) ≠ \(total)", file: file, line: line)
+        }
+    }
+
+    // MARK: - Hong Kong full flow
+
+    func testHongKongFullFlow() {
+        launch(languages: "zh-Hant-HK", locale: "zh_HK", prefix: "HK")
+
+        // Home (fresh)
+        XCTAssertEqual(label("home.title"), "鋤大D計分")
+        XCTAssertFalse(app.descendants(matching: .any)["home.allSessions"].exists)
+        snap("home-fresh")
+
+        // 開場設定
+        tap("home.newSession")
+        assertText("新開一場")
+        let tile8 = element("setup.tile.8")
+        XCTAssertEqual(tile8.value as? String, "×2")
+        XCTAssertEqual(element("setup.tile.10").value as? String, "×3")
+        XCTAssertEqual(element("setup.tile.13").value as? String, "×4")
+        XCTAssertTrue(element("setup.namesHint").label.contains("要填齊 4 個玩家名"))
+        XCTAssertFalse(element("setup.start").isEnabled)
+        snap("setup-empty")
+        tile8.tap()
+        XCTAssertEqual(tile8.value as? String, "×3")
+        tile8.tap(); tile8.tap()
+        XCTAssertEqual(tile8.value as? String, "×1")
+        tile8.tap()
+        XCTAssertEqual(tile8.value as? String, "×2", "tile cycles back to the HK default")
+        typeNames(["阿明", "阿強", "阿珍", "Kenny"])
+        snap("setup-filled")
+        tap("setup.start")
+
+        // Scoreboard, 0 rounds
+        XCTAssertEqual(label("scoreboard.title"), "未開始")
+        XCTAssertTrue(label("scoreboard.empty").contains("未有紀錄"))
+        snap("scoreboard-empty")
+
+        // Rounds 1–5
+        let rounds: [[Int]] = [
+            [0, 5, 9, 13],
+            [1, 0, 3, 10],
+            [2, 12, 0, 8],
+            [4, 6, 7, 0],
+            [0, 11, 13, 1]
+        ]
+        for (number, cards) in rounds.enumerated() {
+            tap("scoreboard.addRound")
+            if number == 0 {
+                XCTAssertTrue(label("entry.hint").contains("逐個入剩幾多張"))
+                XCTAssertTrue(label("entry.prompt").contains("阿明 剩幾多張？"))
+                snap("entry-start")
+                enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
+                snap("result-round1")
+            } else {
+                enterRound(cards)
+            }
+            waitForScoreboard()
+        }
+        XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
+        assertTotals(["+154", "−46", "−26", "−82"])
+        snap("scoreboard-5-rounds")
+
+        // Interstitial stand-in before round 6
+        tap("scoreboard.addRound")
+        element("interstitial.close", timeout: 10)
+        snap("interstitial")
+        tap("interstitial.close")
+
+        // Round 6, then undo it from the result screen
+        enterRound([13, 0, 2, 9])
+        XCTAssertEqual(label("result.title"), "第 6 局結果")
+        XCTAssertTrue(element("result.undoToast").label.contains("入錯咗？"))
+        snap("result-round6-undo-toast")
+        tap("result.undo")
+        waitForScoreboard()
+        XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
+        assertTotals(["+154", "−46", "−26", "−82"])
+
+        // Round 6 again (no second interstitial), let the result auto-close
+        tap("scoreboard.addRound")
+        XCTAssertFalse(app.descendants(matching: .any)["interstitial.close"].waitForExistence(timeout: 1.5))
+        enterRound([13, 0, 2, 9])
+        waitForScoreboard()
+        element("scoreboard.undoToast", timeout: 3)
+        snap("scoreboard-undo-toast")
+        XCTAssertEqual(label("scoreboard.title"), "打咗 6 局")
+        assertTotals(["+102", "+26", "−28", "−100"])
+
+        // Edit round 2: Kenny 10 → 13 cards
+        tap("scoreboard.history.1")
+        XCTAssertEqual(label("entry.title"), "第 2 局")
+        tap("entry.row.3")
+        snap("edit-round2")
+        tap("pad.13")
+        element("result.title")
+        waitForScoreboard()
+        assertTotals(["+102", "+48", "−28", "−122"])
+        snap("scoreboard-after-edit")
+
+        // 完場 with confirm (cancel first)
+        tap("scoreboard.finish")
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        XCTAssertTrue(alert.label.contains("確定完場？") || alert.staticTexts["確定完場？"].exists)
+        snap("finish-confirm")
+        alert.buttons["取消"].tap()
+        XCTAssertTrue(element("scoreboard.finish").exists, "cancel keeps the session open")
+        tap("scoreboard.finish")
+        app.alerts.firstMatch.buttons["完場"].tap()
+
+        // Final
+        element("final.title")
+        XCTAssertTrue(label("final.rank.1").contains("阿明"))
+        XCTAssertTrue(label("final.rank.1").contains("+102"))
+        XCTAssertTrue(label("final.rank.4").contains("Kenny"))
+        XCTAssertTrue(label("final.rank.4").contains("−122"))
+        snap("final")
+
+        // Back home: session in the recent list, 所有紀錄 available
+        tap("nav.home")
+        element("home.recent.0")
+        XCTAssertTrue(label("home.recent.0").contains("6 局"))
+        element("home.allSessions")
+        snap("home-with-recent")
+        tap("home.allSessions")
+        element("all.row.0")
+        snap("all-sessions")
+        app.navigationBars.buttons.firstMatch.tap()
+
+        // Settings: 去廣告 stub, then switch to 台灣
+        tap("home.settings")
+        element("settings.done")
+        snap("settings-hk")
+        tap("settings.removeAds")
+        XCTAssertTrue(element("settings.adsRemoved").label.contains("已經移除廣告"))
+        app.buttons["台灣"].firstMatch.tap()
+        assertText("選「台灣」會使用大老二用語")
+        XCTAssertTrue(element("settings.adsRemoved").label.contains("已移除廣告"))
+        snap("settings-tw")
+        tap("settings.done")
+        waitUntil { self.label("home.title") == "大老二記分" }
+        snap("home-tw")
+        tap("home.newSession")
+        assertText("開新牌局")
+        snap("setup-tw-after-switch")
+    }
+
+    // MARK: - Taiwan (system language zh-Hant-TW)
+
+    func testTaiwanFlow() {
+        launch(languages: "zh-Hant-TW", locale: "zh_TW", prefix: "TW")
+
+        XCTAssertEqual(label("home.title"), "大老二記分")
+        snap("home-fresh")
+
+        tap("home.newSession")
+        assertText("開新牌局")
+        XCTAssertEqual(element("setup.tile.8").value as? String, "×1")
+        XCTAssertEqual(element("setup.tile.10").value as? String, "×2")
+        XCTAssertEqual(element("setup.tile.13").value as? String, "×3")
+        XCTAssertTrue(element("setup.namesHint").label.contains("請填寫 4 位玩家名稱"))
+        snap("setup-empty")
+        typeNames(["小明", "阿強", "小美", "志明"])
+        snap("setup-filled")
+        tap("setup.start")
+
+        XCTAssertEqual(label("scoreboard.title"), "尚未開局")
+        XCTAssertTrue(label("scoreboard.empty").contains("還沒有紀錄"))
+        snap("scoreboard-empty")
+
+        tap("scoreboard.addRound")
+        XCTAssertTrue(label("entry.hint").contains("依序輸入剩幾張"))
+        XCTAssertTrue(label("entry.prompt").contains("小明 剩幾張？"))
+        snap("entry-start")
+        tap("pad.13")
+        XCTAssertTrue(label("entry.row.0").contains("最高 ×3！"), label("entry.row.0"))
+        tap("pad.win")
+        XCTAssertFalse(element("pad.win").isEnabled, "only one winner")
+        tap("pad.10")
+        snap("entry-before-last")
+        tap("pad.5")
+        element("result.title")
+        XCTAssertTrue(element("result.undoToast").label.contains("輸入錯誤？"))
+        snap("result")
+        waitForScoreboard()
+        // 13×3 + 10×2 + 5 = 64 to 阿強
+        assertTotals(["−39", "+64", "−20", "−5"])
+        XCTAssertEqual(label("scoreboard.title"), "已進行 1 局")
+        snap("scoreboard-1-round")
+
+        tap("scoreboard.finish")
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        snap("finish-confirm")
+        alert.buttons["結束"].tap()
+        element("final.title")
+        XCTAssertTrue(label("final.rank.1").contains("阿強"))
+        snap("final")
+        tap("nav.home")
+        element("home.recent.0")
+        snap("home-with-recent")
+    }
+}

@@ -24,10 +24,12 @@ struct FinalView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(tr("‹ 首頁")) { vm.goHome() }
+                    .accessibilityIdentifier("nav.home")
                     .foregroundColor(Color(theme.accentLink))
             }
             ToolbarItem(placement: .principal) {
                 Text(tr("完場"))
+                    .accessibilityIdentifier("final.title")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Color(theme.text))
             }
@@ -80,6 +82,8 @@ struct FinalView: View {
                         .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 5)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("final.rank.\(player.rank)")
                     }
                 }
                 .padding(.bottom, 16)

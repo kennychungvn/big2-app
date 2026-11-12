@@ -16,6 +16,7 @@ struct SettingsView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    .accessibilityIdentifier("settings.region")
                 } header: {
                     Text(tr("地區介面"))
                 } footer: {
@@ -29,6 +30,7 @@ struct SettingsView: View {
                             .foregroundColor(Color(theme.secondaryText))
                         if vm.model.data.adsRemoved {
                             Label(tr("已經移除廣告"), systemImage: "checkmark.seal.fill")
+                                .accessibilityIdentifier("settings.adsRemoved")
                                 .foregroundColor(Color(theme.positive))
                                 .font(.system(size: 16, weight: .semibold))
                         } else {
@@ -50,6 +52,7 @@ struct SettingsView: View {
                             }
                             .buttonStyle(.plain)
                             .disabled(vm.shop.isPurchasing)
+                            .accessibilityIdentifier("settings.removeAds")
                         }
                     }
                     .padding(.vertical, 6)
@@ -108,6 +111,7 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(tr("完成")) { dismiss() }
+                        .accessibilityIdentifier("settings.done")
                         .foregroundColor(Color(theme.accentLink))
                 }
             }

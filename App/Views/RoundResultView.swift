@@ -25,10 +25,12 @@ struct RoundResultView: View {
                         .disabled(true)
                     Spacer()
                     Text(vm.format.resultTitle(sheet.roundNumber))
+                        .accessibilityIdentifier("result.title")
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(Color(theme.text))
                     Spacer()
                     Button(tr("編輯")) { vm.editFromResult() }
+                        .accessibilityIdentifier("result.edit")
                         .font(.system(size: 15))
                         .foregroundColor(Color(theme.accentLink))
                 }
@@ -47,6 +49,7 @@ struct RoundResultView: View {
                 if vm.undoWindow != nil {
                     HStack {
                         Text(tr("入錯咗？"))
+                            .accessibilityIdentifier("result.undoToast")
                         Spacer()
                         Button {
                             vm.performUndo()
@@ -55,6 +58,7 @@ struct RoundResultView: View {
                                 .font(.system(size: 14, weight: .bold))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("result.undo")
                     }
                     .font(.system(size: 14))
                     .foregroundColor(Color(hexResult: 0xCFE0FF))
@@ -125,6 +129,8 @@ struct RoundResultView: View {
         .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
         .padding(.horizontal, 14)
         .padding(.vertical, 5)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("result.row.\(index)")
     }
 }
 

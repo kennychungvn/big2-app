@@ -24,15 +24,18 @@ struct ScoreboardView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(tr("‹ 首頁")) { vm.goHome() }
+                    .accessibilityIdentifier("nav.home")
                     .foregroundColor(Color(theme.accentLink))
             }
             ToolbarItem(placement: .principal) {
                 Text(vm.format.homeProgress(stored?.session.roundsCompleted ?? 0))
+                    .accessibilityIdentifier("scoreboard.title")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Color(theme.text))
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(tr("完場|nav")) { isConfirmingFinish = true }
+                    .accessibilityIdentifier("scoreboard.finish")
                     .foregroundColor(Color(theme.accentLink))
             }
         }
@@ -75,6 +78,7 @@ struct ScoreboardView: View {
 
                     if session.roundsCompleted == 0 {
                         Text(tr("未有紀錄，打完第一局㩒下面「入今局」"))
+                            .accessibilityIdentifier("scoreboard.empty")
                             .font(.system(size: 14))
                             .foregroundColor(Color(theme.secondaryText))
                             .multilineTextAlignment(.center)
@@ -91,6 +95,7 @@ struct ScoreboardView: View {
                             historyRow(row, names: session.players)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("scoreboard.history.\(row.index)")
                     }
                 }
                 .padding(.bottom, 8)
@@ -103,6 +108,7 @@ struct ScoreboardView: View {
             PrimaryButton(title: tr("＋ 入今局")) {
                 Task { await vm.startEnteringRound() }
             }
+            .accessibilityIdentifier("scoreboard.addRound")
             .padding(.top, 10)
             .padding(.bottom, 0)
 
@@ -135,6 +141,9 @@ struct ScoreboardView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                 .offset(y: -16)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(player.name) \(vm.format.points(player.total))")
+        .accessibilityIdentifier("scoreboard.player.\(player.index)")
     }
 
     private func historyHeader(_ names: [String]) -> some View {
@@ -177,6 +186,7 @@ struct ScoreboardView: View {
     private func undoToast(_ window: UndoWindow) -> some View {
         HStack {
             Text(tr("入錯咗？"))
+                .accessibilityIdentifier("scoreboard.undoToast")
             Spacer()
             Button {
                 vm.performUndo()
@@ -185,6 +195,7 @@ struct ScoreboardView: View {
                     .font(.system(size: 14, weight: .bold))
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("scoreboard.undo")
         }
         .font(.system(size: 14))
         .foregroundColor(Color(hexText: 0xCFE0FF))

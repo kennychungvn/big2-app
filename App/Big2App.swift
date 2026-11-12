@@ -23,7 +23,16 @@ struct Big2App: App {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Big2", isDirectory: true)
         try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
-        let store = JSONFileStore(fileURL: support.appendingPathComponent("app-data.json"))
+        let fileURL = support.appendingPathComponent("app-data.json")
+        if UITestSupport.isActive {
+            try? FileManager.default.removeItem(at: fileURL)
+            return AppViewModel(
+                store: JSONFileStore(fileURL: fileURL),
+                ads: UITestInterstitialAdManager(),
+                shop: StubStoreManager()
+            )
+        }
+        let store = JSONFileStore(fileURL: fileURL)
         return AppViewModel(
             store: store,
             ads: NoOpAdManager(),

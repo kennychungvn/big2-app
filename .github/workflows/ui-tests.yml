@@ -16,9 +16,7 @@ concurrency:
 jobs:
   ui-tests:
     name: XCUITest (Simulator)
-    # macos-latest (arm64) jobs were never picked up on 2026-11-12 ("not acquired by Runner of
-    # type hosted", arm64 capacity notice). Intel image as a fallback; switch back when stable.
-    runs-on: macos-15-intel
+    runs-on: macos-latest
     timeout-minutes: 60
     steps:
       - name: Checkout

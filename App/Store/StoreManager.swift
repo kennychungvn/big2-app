@@ -120,6 +120,7 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
     }
 }
 
+@MainActor
 extension StoreManaging {
     /// App Store price when StoreKit has loaded it, else the HK$8 fallback label.
     var removeAdsPriceLabel: String {

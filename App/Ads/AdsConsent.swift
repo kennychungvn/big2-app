@@ -66,9 +66,9 @@ final class AdsRuntime: ObservableObject {
         let tracking = await Self.requestTrackingAuthorization()
         personalizedAdsAllowed = tracking == .authorized
 
-        // Google's rule: request ads only when UMP allows it. With Google's TEST app id UMP can
-        // report a misconfiguration; test builds still start (non-personalised) so the test ads
-        // remain visible during development.
+        // Google's rule: request ads only when UMP allows it. If UMP itself errors (e.g. a
+        // privacy message not yet published in AdMob), Debug/TestFlight builds still start
+        // non-personalised so the test ads remain visible during development.
         let mayRequest = consent.canRequestAds
             || (umpFailed && AdConfig.isUsingTestAds && consent.consentStatus != .required)
         guard mayRequest else {

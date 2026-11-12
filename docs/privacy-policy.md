@@ -8,7 +8,7 @@ This policy is provided in English and Traditional Chinese. If there is a confli
 
 本政策同時提供英文同繁體中文。如有歧義，香港用戶以繁體中文版本同英文一併理解。
 
-Contact / 聯絡（暫定，上架前會換成真實電郵）：`[YOUR-EMAIL@example.com]`
+Contact / 聯絡：`kenny@vcm-inter.com`
 
 ---
 
@@ -47,7 +47,7 @@ The app is a score-keeping tool. We do not knowingly collect personal informatio
 We may update this policy when the app’s features or legal requirements change. The “Last updated” date at the top will be revised. If a public web version of this policy is published, that page will also be updated.
 
 ### Contact
-Questions about this policy: `[YOUR-EMAIL@example.com]` (placeholder — replace before publication).
+Questions about this policy: `kenny@vcm-inter.com`.
 
 ---
 
@@ -86,4 +86,4 @@ Questions about this policy: `[YOUR-EMAIL@example.com]` (placeholder — replace
 如果 app 功能或者法律要求有變，我哋可能會更新本政策，並修訂文首更新日期。如果之後有公開網頁版本，亦會一併更新。
 
 ### 聯絡
-有關本政策嘅查詢：`[YOUR-EMAIL@example.com]`（暫定，公開前會換成真實電郵）。
+有關本政策嘅查詢：`kenny@vcm-inter.com`。

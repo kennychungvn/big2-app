@@ -8,7 +8,7 @@ This document is provided in English and Traditional Chinese. For Hong Kong user
 
 本文件同時提供英文同繁體中文。香港用戶請將兩個版本一併閱讀。
 
-Contact / 聯絡（暫定，上架前會換成真實電郵）：`[YOUR-EMAIL@example.com]`
+Contact / 聯絡：`kenny@vcm-inter.com`
 
 ---
 
@@ -70,7 +70,7 @@ We may update the app or these terms. Continued use after an update means you ac
 These terms are intended to be governed by the laws of the Hong Kong Special Administrative Region, without affecting any mandatory consumer rights that apply to you.
 
 ### 11. Contact
-`[YOUR-EMAIL@example.com]` (placeholder — replace before publication).
+`kenny@vcm-inter.com`.
 
 ---
 
@@ -116,4 +116,4 @@ These terms are intended to be governed by the laws of the Hong Kong Special Adm
 本條款擬受中華人民共和國香港特別行政區法律管轄，但不影響你依法享有、不可排除嘅消費者權益。
 
 ### 11. 聯絡
-`[YOUR-EMAIL@example.com]`（暫定，公開前會換成真實電郵）。
+`kenny@vcm-inter.com`。

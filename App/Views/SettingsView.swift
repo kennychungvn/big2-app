@@ -2,6 +2,8 @@ import SwiftUI
 import AppCore
 
 struct SettingsView: View {
+    static let privacyPolicyURL = URL(string: "https://kennychungvn.github.io/daidee-site/privacy.html")!
+
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
     @Environment(\.dismiss) private var dismiss
@@ -114,9 +116,15 @@ struct SettingsView: View {
                     }
                     .padding(.vertical, 4)
 
-                    Text(tr("玩家名同分數只係儲喺你部手機，唔會上傳到我哋嘅伺服器。私隱政策同使用條款會喺上架前補上公開連結。"))
+                    Text(tr("玩家名同分數只係儲喺你部手機，唔會上傳到我哋嘅伺服器。廣告同當機報告由 Google 處理，詳情請睇私隱政策。"))
                         .font(.system(size: 13))
                         .foregroundColor(Color(theme.secondaryText))
+
+                    Link(destination: Self.privacyPolicyURL) {
+                        Text(tr("私隱政策"))
+                    }
+                    .foregroundColor(Color(theme.accentLink))
+                    .accessibilityIdentifier("settings.privacyPolicy")
                 }
             }
             .scrollContentBackground(.hidden)

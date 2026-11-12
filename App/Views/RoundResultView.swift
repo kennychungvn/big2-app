@@ -14,8 +14,12 @@ struct RoundResultView: View {
             return [winner] + (0..<sheet.players.count).filter { $0 != winner }
         }()
 
+        let breakdown = sheet.scoringMode == .pairwise ? RoundPresentation.pairwiseBreakdown(from: sheet.round) : nil
+
         ZStack {
-            Color.black.opacity(0.55).ignoresSafeArea()
+            if !sheet.isReview {
+                Color.black.opacity(0.55).ignoresSafeArea()
+            }
 
             VStack(spacing: 0) {
                 HStack {
@@ -28,7 +32,9 @@ struct RoundResultView: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundColor(Color(theme.text))
                     Spacer()
-                    Button(tr("編輯")) { vm.editFromResult() }
+                    Button(tr("編輯")) {
+                        if sheet.isReview { vm.editFromReview() } else { vm.editFromResult() }
+                    }
                         .accessibilityIdentifier("result.edit")
                         .font(.system(size: 15))
                         .foregroundColor(Color(theme.accentLink))
@@ -37,69 +43,77 @@ struct RoundResultView: View {
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
-                ForEach(rankingOrder, id: \.self) { index in
-                    resultRow(index: index, display: displays[index])
-                }
-
-                if vm.undoWindow != nil {
-                    HStack {
-                        Text(tr("入錯咗？"))
-                            .accessibilityIdentifier("result.undoToast")
-                        Spacer()
-                        Button {
-                            vm.performUndo()
-                        } label: {
-                            Text(tr("↶ 撤回"))
-                                .font(.system(size: 14, weight: .bold))
+                ScrollView {
+                    VStack(spacing: 0) {
+                        ForEach(rankingOrder, id: \.self) { index in
+                            resultRow(
+                                index: index,
+                                display: displays[index],
+                                breakdown: breakdown.map { vm.format.pairwiseBreakdown($0[index], names: sheet.players) }
+                            )
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("result.undo")
+
+                        if vm.undoWindow != nil, !sheet.isReview {
+                            HStack {
+                                Text(tr("入錯咗？"))
+                                    .accessibilityIdentifier("result.undoToast")
+                                Spacer()
+                                Button {
+                                    vm.performUndo()
+                                } label: {
+                                    Text(tr("↶ 撤回"))
+                                        .font(.system(size: 14, weight: .bold))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("result.undo")
+                            }
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hexResult: 0xCFE0FF))
+                            .padding(14)
+                            .background(Color(theme.toastBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .padding(.horizontal, 14)
+                            .padding(.top, 10)
+                        }
+
+                        Text(vm.format.resultTotalsHeader(sheet.roundsCompleted))
+                            .accessibilityIdentifier("result.totalsHeader")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(theme.secondaryText))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 14)
+
+                        let order = zip(sheet.players.indices, sheet.totalsAfter)
+                            .sorted { lhs, rhs in
+                                if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+                                return lhs.0 < rhs.0
+                            }
+                        ForEach(Array(order.enumerated()), id: \.offset) { position, pair in
+                            let (index, total) = pair
+                            HStack {
+                                Text("\(position + 1). \(sheet.players[index])")
+                                    .foregroundColor(Color(theme.text))
+                                Spacer()
+                                ScoreText(value: total, size: 17, format: vm.format)
+                            }
+                            .font(.system(size: 17))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color(theme.historyRow))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 3)
+                        }
+
                     }
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(hexResult: 0xCFE0FF))
-                    .padding(14)
-                    .background(Color(theme.toastBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .padding(.horizontal, 14)
-                    .padding(.top, 10)
+                    .padding(.bottom, 8)
                 }
-
-                Text(vm.format.resultTotalsHeader(sheet.roundsCompleted))
-                    .accessibilityIdentifier("result.totalsHeader")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color(theme.secondaryText))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 18)
-                    .padding(.top, 14)
-
-                let order = zip(sheet.players.indices, sheet.totalsAfter)
-                    .sorted { lhs, rhs in
-                        if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
-                        return lhs.0 < rhs.0
-                    }
-                ForEach(Array(order.enumerated()), id: \.offset) { position, pair in
-                    let (index, total) = pair
-                    HStack {
-                        Text("\(position + 1). \(sheet.players[index])")
-                            .foregroundColor(Color(theme.text))
-                        Spacer()
-                        ScoreText(value: total, size: 17, format: vm.format)
-                    }
-                    .font(.system(size: 17))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(theme.historyRow))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 3)
-                }
-
-                Spacer(minLength: 8)
 
                 Button {
-                    vm.dismissResult()
+                    if sheet.isReview { vm.reviewSheet = nil } else { vm.dismissResult() }
                 } label: {
-                    Text(tr("下一局"))
+                    Text(sheet.isReview ? tr("返回") : tr("下一局"))
                         .font(.system(size: 19, weight: .bold))
                         .foregroundColor(Color(theme.primaryText))
                         .frame(maxWidth: .infinity, minHeight: 54)
@@ -107,19 +121,17 @@ struct RoundResultView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                .accessibilityIdentifier("result.next")
+                .accessibilityIdentifier(sheet.isReview ? "result.close" : "result.next")
                 .padding(.horizontal, 14)
                 .padding(.bottom, 12)
             }
             .background(Color(theme.background))
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .padding(.top, 8)
-            .padding(.horizontal, 0)
-            .padding(.bottom, 0)
+            .padding(.top, sheet.isReview ? 0 : 8)
         }
     }
 
-    private func resultRow(index: Int, display: RoundScoreDisplay) -> some View {
+    private func resultRow(index: Int, display: RoundScoreDisplay, breakdown: String?) -> some View {
         let isWinner = display.cardsLeft == 0
         return HStack(spacing: 10) {
             PlayerColorDot(index: index, height: 36)
@@ -130,6 +142,12 @@ struct RoundResultView: View {
                 Text(vm.format.roundDetail(score: display))
                     .font(.system(size: 13))
                     .foregroundColor(Color(theme.secondaryText))
+                if let breakdown, !breakdown.isEmpty {
+                    Text(breakdown)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(theme.secondaryText))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer()
             ScoreText(value: display.points, size: 28, format: vm.format)

@@ -92,7 +92,7 @@ struct ScoreboardView: View {
                     }
                     ForEach(vm.model.historyRows()) { row in
                         Button {
-                            vm.editRound(at: row.index)
+                            vm.reviewRound(at: row.index)
                         } label: {
                             historyRow(row, names: session.players)
                         }

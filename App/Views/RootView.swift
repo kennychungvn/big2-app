@@ -33,6 +33,12 @@ struct RootView: View {
                 .environment(\.appTheme, theme)
                 .environment(\.locale, vm.region.locale)
         }
+        .sheet(item: $vm.reviewSheet) { sheet in
+            RoundResultView(sheet: sheet)
+                .environmentObject(vm)
+                .environment(\.appTheme, theme)
+                .environment(\.locale, vm.region.locale)
+        }
         .fullScreenCover(item: $vm.roundEntry) { _ in
             if let binding = Binding($vm.roundEntry) {
                 RoundEntryView(sheet: binding)

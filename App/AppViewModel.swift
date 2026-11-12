@@ -34,6 +34,11 @@ struct ResultSheet: Identifiable, Equatable {
     var totalsAfter: [Int]
     var roundNumber: Int
     var isEdit: Bool
+    /// Pairwise sessions show 「贏/輸{name} {n} 張」 under each row.
+    var scoringMode: ScoringMode
+    var roundIndex: Int?
+    /// Opened from the scoreboard history (read-only, no 撤回).
+    var isReview: Bool
     /// Rounds in the session after this result, for 「累計 · 打咗 N 局」.
     var roundsCompleted: Int
 
@@ -44,9 +49,15 @@ struct ResultSheet: Identifiable, Equatable {
         totalsAfter: [Int],
         roundNumber: Int,
         isEdit: Bool,
-        roundsCompleted: Int
+        roundsCompleted: Int,
+        scoringMode: ScoringMode = .winnerTakesAll,
+        roundIndex: Int? = nil,
+        isReview: Bool = false
     ) {
         self.roundsCompleted = roundsCompleted
+        self.scoringMode = scoringMode
+        self.roundIndex = roundIndex
+        self.isReview = isReview
         self.id = id
         self.round = round
         self.players = players
@@ -75,6 +86,8 @@ final class AppViewModel: ObservableObject {
     @Published var roundEntry: RoundEntrySheet?
     @Published var resultSheet: ResultSheet?
     @Published var undoWindow: UndoWindow?
+    /// Past round opened from the scoreboard history.
+    @Published var reviewSheet: ResultSheet?
     @Published var errorMessage: String?
     @Published var storeMessage: String?
     /// Effective 地區介面 (Hong Kong or Taiwan wording).
@@ -227,6 +240,38 @@ final class AppViewModel: ObservableObject {
         )
     }
 
+    /// Scoreboard history tap: shows that round's result (with the pairwise breakdown);
+    /// 編輯 from there opens the entry screen.
+    func reviewRound(at index: Int) {
+        guard let session = model.currentSession?.session,
+              session.rounds.indices.contains(index) else { return }
+        var totals = Array(repeating: 0, count: session.players.count)
+        for round in session.rounds[...index] {
+            for (i, p) in round.points.enumerated() where i < totals.count { totals[i] += p }
+        }
+        reviewSheet = ResultSheet(
+            round: session.rounds[index],
+            players: session.players,
+            totalsAfter: totals,
+            roundNumber: index + 1,
+            isEdit: false,
+            roundsCompleted: index + 1,
+            scoringMode: session.scoringMode,
+            roundIndex: index,
+            isReview: true
+        )
+    }
+
+    func editFromReview() {
+        guard let index = reviewSheet?.roundIndex else { return }
+        reviewSheet = nil
+        Task { @MainActor [weak self] in
+            // Let the review sheet finish dismissing before presenting the entry cover.
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            self?.editRound(at: index)
+        }
+    }
+
     func cancelRoundEntry() {
         resultTask?.cancel()
         resultSheet = nil
@@ -271,7 +316,14 @@ final class AppViewModel: ObservableObject {
                     }
                 }(),
                 isEdit: isEdit,
-                roundsCompleted: current.session.roundsCompleted
+                roundsCompleted: current.session.roundsCompleted,
+                scoringMode: current.session.scoringMode,
+                roundIndex: {
+                    switch mode {
+                    case .new: return current.session.roundsCompleted - 1
+                    case .edit(let index, _): return index
+                    }
+                }()
             )
             resultSheet = sheet
             // 撤回 stays available for as long as the result sheet is open (no auto-dismiss).

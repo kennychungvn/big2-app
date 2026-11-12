@@ -68,6 +68,20 @@ public struct ScoreFormatting: Equatable, Sendable {
         "累計 · \(homeProgress(completed))"
     }
 
+    /// Pairwise settlement line, e.g. `贏阿珍 52 張、贏阿強 33 張、贏阿芬 3 張`.
+    /// Same wording in both regions; equal penalties read `和{name}`.
+    public func pairwiseBreakdown(_ items: [PairwiseItem], names: [String]) -> String {
+        items.map { item in
+            let name = item.opponent < names.count ? names[item.opponent] : placeholderName(at: item.opponent)
+            switch item.outcome {
+            case .win: return "贏\(name) \(item.amount) 張"
+            case .lose: return "輸\(name) \(item.amount) 張"
+            case .tie: return "和\(name)"
+            }
+        }
+        .joined(separator: "、")
+    }
+
     public func placeholderName(at index: Int) -> String {
         "玩家 \(index + 1)"
     }

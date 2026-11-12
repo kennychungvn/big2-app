@@ -34,10 +34,6 @@ final class StoreKitStoreManager: ObservableObject, StoreManaging {
         }
     }
 
-    deinit {
-        updatesTask?.cancel()
-    }
-
     func purchaseRemoveAds() async throws -> Bool {
         isPurchasing = true
         defer { isPurchasing = false }

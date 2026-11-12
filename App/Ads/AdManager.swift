@@ -33,20 +33,18 @@ final class AdMobAdManager: NSObject, AdManaging, FullScreenContentDelegate {
             return
         }
         isLoading = true
-        InterstitialAd.load(
-            with: AdConfig.interstitialUnitID,
-            request: AdsRuntime.shared.makeRequest()
-        ) { [weak self] ad, error in
-            Task { @MainActor in
+        let request = AdsRuntime.shared.makeRequest()
+        Task { [weak self] in
+            do {
+                let ad = try await InterstitialAd.load(with: AdConfig.interstitialUnitID, request: request)
                 guard let self else { return }
                 self.isLoading = false
-                if let error {
-                    NSLog("[Ads] Interstitial failed to load: \(error.localizedDescription)")
-                    return
-                }
                 guard !self.adsRemoved else { return }
-                ad?.fullScreenContentDelegate = self
+                ad.fullScreenContentDelegate = self
                 self.interstitial = ad
+            } catch {
+                self?.isLoading = false
+                NSLog("[Ads] Interstitial failed to load: \(error.localizedDescription)")
             }
         }
     }

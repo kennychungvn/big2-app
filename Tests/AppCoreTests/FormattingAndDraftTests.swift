@@ -105,6 +105,7 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(theme.keyTextColor(forMultiplier: 4), theme.text)
     }
 
+    @MainActor
     func testStubStoreAndMockAds() async throws {
         let store = StubStoreManager()
         XCTAssertFalse(store.adsRemoved)

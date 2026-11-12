@@ -10,8 +10,9 @@ import AppCore
 /// context suffix (`"完場|nav"`) when Taiwan needs a different word for the same HK text.
 enum L10n {
     private static let lock = NSLock()
-    private static var storedRegion: InterfaceRegion = .hongKong
-    private static var bundleCache: [InterfaceRegion: Bundle] = [:]
+    // Guarded by `lock`.
+    nonisolated(unsafe) private static var storedRegion: InterfaceRegion = .hongKong
+    nonisolated(unsafe) private static var bundleCache: [InterfaceRegion: Bundle] = [:]
 
     /// Region used by `tr(_:)`. Set by `AppViewModel.refreshRegion()`.
     static var region: InterfaceRegion {

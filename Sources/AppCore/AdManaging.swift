@@ -1,6 +1,8 @@
 import Foundation
 
 /// Abstraction over banner + interstitial ads. The iOS app supplies a real or mock implementation.
+/// Main-actor isolated: implementations present UI (interstitials) and are driven by the view model.
+@MainActor
 public protocol AdManaging: AnyObject {
     var adsRemoved: Bool { get set }
     /// `true` when a skippable interstitial is already loaded and can be shown without waiting.

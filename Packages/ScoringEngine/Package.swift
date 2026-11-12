@@ -2,6 +2,8 @@
 
 import PackageDescription
 
+let strictConcurrency: [SwiftSetting] = [.enableExperimentalFeature("StrictConcurrency")]
+
 let package = Package(
     name: "ScoringEngine",
     platforms: [
@@ -12,10 +14,11 @@ let package = Package(
         .library(name: "ScoringEngine", targets: ["ScoringEngine"])
     ],
     targets: [
-        .target(name: "ScoringEngine"),
+        .target(name: "ScoringEngine", swiftSettings: strictConcurrency),
         .testTarget(
             name: "ScoringEngineTests",
-            dependencies: ["ScoringEngine"]
+            dependencies: ["ScoringEngine"],
+            swiftSettings: strictConcurrency
         )
     ]
 )

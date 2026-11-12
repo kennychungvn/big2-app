@@ -78,7 +78,7 @@ final class AdsRuntime: ObservableObject {
         if !personalizedAdsAllowed || consent.consentStatus == .required {
             personalizedAdsAllowed = false
         }
-        MobileAds.shared.start(completionHandler: nil)
+        Task { _ = await MobileAds.shared.start() }
         isReady = true
         let actions = readyActions
         readyActions.removeAll()

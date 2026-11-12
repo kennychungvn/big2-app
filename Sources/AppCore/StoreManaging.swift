@@ -15,6 +15,8 @@ public enum StoreError: Error, Equatable, Sendable {
     case cancelled
 }
 
+/// Main-actor isolated: purchase state is shown in Settings and owned by the view model.
+@MainActor
 public protocol StoreManaging: AnyObject {
     var isPurchasing: Bool { get }
     var adsRemoved: Bool { get }

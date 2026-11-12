@@ -319,7 +319,8 @@ final class Big2UITests: XCTestCase {
         assertBanner("settings")
         snap("settings")
         tap("settings.removeAds")
-        XCTAssertTrue(element("settings.adsRemoved").label.contains("已經移除廣告"))
+        let removed = element("settings.adsRemoved").label
+        XCTAssertTrue(removed.contains("已經移除廣告"), removed)
         assertNoBanner("settings-ads-removed")
         snap("settings-ads-removed")
         tap("settings.done")

@@ -32,6 +32,9 @@ struct SettingsView: View {
                             .foregroundColor(Color(theme.secondaryText))
                         if vm.model.data.adsRemoved {
                             Label(tr("已經移除廣告"), systemImage: "checkmark.seal.fill")
+                                // One element reading the text (the id alone landed on the icon).
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel(tr("已經移除廣告"))
                                 .accessibilityIdentifier("settings.adsRemoved")
                                 .foregroundColor(Color(theme.positive))
                                 .font(.system(size: 16, weight: .semibold))

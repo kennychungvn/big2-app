@@ -46,7 +46,7 @@ struct RoundResultView: View {
 
                 if vm.undoWindow != nil {
                     HStack {
-                        Text(tr("入錯？"))
+                        Text(tr("入錯咗？"))
                         Spacer()
                         Button {
                             vm.performUndo()
@@ -65,7 +65,7 @@ struct RoundResultView: View {
                     .padding(.top, 10)
                 }
 
-                Text(tr("累計排名（%@）", vm.format.afterRoundTitle(sheet.roundNumber)))
+                Text(tr("累計排名（%@）", vm.format.homeProgress(vm.model.currentSession?.session.roundsCompleted ?? sheet.roundNumber)))
                     .font(.system(size: 14))
                     .foregroundColor(Color(theme.secondaryText))
                     .frame(maxWidth: .infinity, alignment: .leading)

@@ -23,12 +23,8 @@ public struct ScoreFormatting: Equatable, Sendable {
         "第 \(number) 局"
     }
 
-    public func afterRoundTitle(_ completed: Int) -> String {
-        if completed == 0 { return isTaiwan ? "尚未開局" : "未開局" }
-        return "第 \(completed) 局後"
-    }
-
-    /// Progress line under the home screen's 繼續上一場 button.
+    /// Progress line: under the home screen's 繼續上一場 button, the scoreboard title and
+    /// 累計排名（…） on the result screen.
     public func homeProgress(_ completed: Int) -> String {
         if completed == 0 { return isTaiwan ? "尚未開局" : "未開始" }
         return isTaiwan ? "已進行 \(completed) 局" : "打咗 \(completed) 局"

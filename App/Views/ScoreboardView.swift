@@ -7,6 +7,8 @@ struct ScoreboardView: View {
     @Environment(\.appTheme) private var theme
     let sessionID: UUID
 
+    @State private var isConfirmingFinish = false
+
     var body: some View {
         Group {
             if let stored = stored {
@@ -25,18 +27,24 @@ struct ScoreboardView: View {
                     .foregroundColor(Color(theme.accentLink))
             }
             ToolbarItem(placement: .principal) {
-                Text(vm.format.afterRoundTitle(stored?.session.roundsCompleted ?? 0))
+                Text(vm.format.homeProgress(stored?.session.roundsCompleted ?? 0))
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Color(theme.text))
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(tr("完場")) { vm.finishCurrentSession() }
+                Button(tr("完場|nav")) { isConfirmingFinish = true }
                     .foregroundColor(Color(theme.accentLink))
             }
         }
         .toolbarBackground(Color(theme.background), for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
+        .alert(tr("確定完場？"), isPresented: $isConfirmingFinish) {
+            Button(tr("取消"), role: .cancel) {}
+            Button(tr("完場|nav"), role: .destructive) { vm.finishCurrentSession() }
+        } message: {
+            Text(tr("完場後會計最終排名，之後唔可以再加局。"))
+        }
     }
 
     private var stored: StoredSession? {
@@ -58,14 +66,24 @@ struct ScoreboardView: View {
                     .padding(.horizontal, 14)
                     .padding(.top, 4)
 
-                    Text(tr("每局紀錄（㩒一行可編輯）"))
+                    Text(tr("每局紀錄 · 㩒一行改分"))
                         .font(.system(size: 13))
                         .foregroundColor(Color(theme.secondaryText))
                         .padding(.horizontal, 18)
                         .padding(.top, 14)
                         .padding(.bottom, 6)
 
-                    historyHeader(session.players)
+                    if session.roundsCompleted == 0 {
+                        Text(tr("未有紀錄，打完第一局㩒下面「入今局」"))
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(theme.secondaryText))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 28)
+                    } else {
+                        historyHeader(session.players)
+                    }
                     ForEach(vm.model.historyRows()) { row in
                         Button {
                             vm.editRound(at: row.index)
@@ -158,7 +176,7 @@ struct ScoreboardView: View {
 
     private func undoToast(_ window: UndoWindow) -> some View {
         HStack {
-            Text(tr("入錯？"))
+            Text(tr("入錯咗？"))
             Spacer()
             Button {
                 vm.performUndo()

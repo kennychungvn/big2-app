@@ -2,7 +2,7 @@
 """Generates App/zh-Hant-HK.lproj and App/zh-Hant-TW.lproj strings files and checks key coverage."""
 import pathlib, re, sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from l10n_table import TW, INFO_PLIST
+from l10n_table import TW, HK, INFO_PLIST
 
 root = pathlib.Path(__file__).resolve().parent.parent
 app = root / "App"
@@ -29,7 +29,7 @@ def write(lang, pairs, name):
     (d / name).write_text(body, encoding="utf-8")
 
 keys = sorted(TW)
-write("zh-Hant-HK", [(k, k) for k in keys], "Localizable.strings")
+write("zh-Hant-HK", [(k, HK.get(k, k)) for k in keys], "Localizable.strings")
 write("zh-Hant-TW", [(k, TW[k]) for k in keys], "Localizable.strings")
 for lang, pairs in INFO_PLIST.items():
     write(lang, sorted(pairs.items()), "InfoPlist.strings")

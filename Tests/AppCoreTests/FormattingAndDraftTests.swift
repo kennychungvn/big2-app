@@ -14,8 +14,6 @@ final class FormattingAndDraftTests: XCTestCase {
 
     func testRoundAndDateTitles() {
         XCTAssertEqual(format.roundTitle(6), "第 6 局")
-        XCTAssertEqual(format.afterRoundTitle(6), "第 6 局後")
-        XCTAssertEqual(format.afterRoundTitle(0), "未開局")
         XCTAssertEqual(format.homeProgress(0), "未開始")
         XCTAssertEqual(format.homeProgress(5), "打咗 5 局")
         XCTAssertEqual(format.resultTitle(6), "第 6 局結果")

@@ -146,3 +146,33 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(rows.map(\.index), [1, 0])
     }
 }
+
+final class ScoreboardTitleTests: XCTestCase {
+    private let names = ["阿明", "Kenny", "阿強", "阿May"]
+
+    /// The scoreboard title and 累計排名（…） use the home progress wording.
+    func testScoreboardTitleFollowsRoundsInBothRegions() throws {
+        let hk = ScoreFormatting(region: .hongKong)
+        let tw = ScoreFormatting(region: .taiwan)
+        var model = AppModel()
+        let stored = try model.startNewSession(players: names, chaoTable: .hongKongDefault)
+        XCTAssertEqual(hk.homeProgress(stored.session.roundsCompleted), "未開始")
+        XCTAssertEqual(tw.homeProgress(stored.session.roundsCompleted), "尚未開局")
+        XCTAssertTrue(model.historyRows().isEmpty, "0 rounds shows the empty state, not the history header")
+
+        for _ in 0..<5 { _ = try model.addRound(cardsLeft: [0, 3, 8, 13]) }
+        let rounds = try XCTUnwrap(model.currentSession).session.roundsCompleted
+        XCTAssertEqual(hk.homeProgress(rounds), "打咗 5 局")
+        XCTAssertEqual(tw.homeProgress(rounds), "已進行 5 局")
+        XCTAssertEqual(model.historyRows().count, 5)
+    }
+
+    func testFinishOnlyHappensWhenCalled() throws {
+        var model = AppModel()
+        _ = try model.startNewSession(players: names, chaoTable: .hongKongDefault)
+        _ = try model.addRound(cardsLeft: [0, 3, 8, 13])
+        XCTAssertFalse(try XCTUnwrap(model.currentSession).isFinished)
+        try model.finishCurrentSession()
+        XCTAssertTrue(try XCTUnwrap(model.currentSession).isFinished)
+    }
+}

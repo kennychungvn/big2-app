@@ -136,7 +136,6 @@ final class InterfaceRegionTests: XCTestCase {
         let displays = RoundPresentation.displays(from: round)
         let receipts = RoundPresentation.winnerReceipts(from: round)
         XCTAssertEqual(tw.roundDetail(score: displays[1], winnerReceivedFrom: receipts), "出完牌，收 5 + 9 + 22")
-        XCTAssertEqual(tw.afterRoundTitle(0), "尚未開局")
         XCTAssertEqual(tw.homeProgress(0), "尚未開局")
         XCTAssertEqual(tw.homeProgress(5), "已進行 5 局")
         XCTAssertEqual(tw.appTitle, "大老二記分")
@@ -148,7 +147,7 @@ final class InterfaceRegionTests: XCTestCase {
 
         let cantonese = ["㩒", "揀", "嘅", "咗", "唔", "係", "喇", "緊", "幾多", "呢", "嚟", "冇"]
         let texts = [
-            tw.afterRoundTitle(0), tw.appTitle,
+            tw.homeProgress(0), tw.homeProgress(3), tw.appTitle,
             tw.roundDetail(score: displays[1], winnerReceivedFrom: receipts),
             state.hintText(in: .taiwan), state.padPrompt(playerNames: names, region: .taiwan),
             tw.ruleSummary(ScoringRule.noMultiplier),

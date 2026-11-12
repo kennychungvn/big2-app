@@ -91,6 +91,7 @@ final class Big2UITests: XCTestCase {
     private func closeFinishInterstitialIfShown() {
         let close = app.descendants(matching: .any)["interstitial.close"].firstMatch
         if close.waitForExistence(timeout: 4) {
+            assertNoBanner("finish-interstitial")
             snap("finish-interstitial")
             close.tap()
         }
@@ -110,6 +111,21 @@ final class Big2UITests: XCTestCase {
     private func tapNextRound() {
         tap("result.next")
         waitForScoreboard()
+    }
+
+    /// Kenny: the bottom banner is visible on every screen, sheets and covers included.
+    /// A covered banner (e.g. the root one under a sheet) is not hittable, so require a hittable one.
+    private func assertBanner(_ screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        let banners = app.descendants(matching: .any).matching(identifier: "banner")
+        XCTAssertTrue(banners.firstMatch.waitForExistence(timeout: 5), "no banner on \(screen)", file: file, line: line)
+        let visible = banners.allElementsBoundByIndex.contains { $0.exists && $0.isHittable }
+        XCTAssertTrue(visible, "banner not visible on \(screen)", file: file, line: line)
+    }
+
+    private func assertNoBanner(_ screen: String, file: StaticString = #filePath, line: UInt = #line) {
+        let banners = app.descendants(matching: .any).matching(identifier: "banner")
+        let visible = banners.allElementsBoundByIndex.contains { $0.exists && $0.isHittable }
+        XCTAssertFalse(visible, "banner should be hidden on \(screen)", file: file, line: line)
     }
 
     private func waitForScoreboard() {
@@ -132,6 +148,7 @@ final class Big2UITests: XCTestCase {
         // Home (fresh)
         XCTAssertEqual(label("home.title"), "鋤大D計分")
         XCTAssertFalse(app.descendants(matching: .any)["home.allSessions"].exists)
+        assertBanner("home-fresh")
         snap("home-fresh")
 
         // 開場設定
@@ -143,6 +160,7 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(element("setup.tile.13").value as? String, "×4")
         XCTAssertTrue(element("setup.namesHint").label.contains("要填齊 4 個玩家名"))
         XCTAssertFalse(element("setup.start").isEnabled)
+        assertBanner("setup-empty")
         snap("setup-empty")
         tile8.tap()
         XCTAssertEqual(tile8.value as? String, "×3")
@@ -157,6 +175,7 @@ final class Big2UITests: XCTestCase {
         // Scoreboard, 0 rounds
         XCTAssertEqual(label("scoreboard.title"), "未開始")
         XCTAssertTrue(label("scoreboard.empty").contains("未有紀錄"))
+        assertBanner("scoreboard-empty")
         snap("scoreboard-empty")
 
         // Rounds 1–5
@@ -172,6 +191,7 @@ final class Big2UITests: XCTestCase {
             if number == 0 {
                 XCTAssertTrue(label("entry.hint").contains("逐個入剩幾多張"))
                 XCTAssertTrue(label("entry.prompt").contains("阿明 剩幾多張？"))
+                assertBanner("entry-start")
                 snap("entry-start")
                 enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
                 // Pairwise: penalties 0/5/18/52 → +75 / +55 / +3 / −133; a loser can be positive.
@@ -189,6 +209,7 @@ final class Big2UITests: XCTestCase {
                 XCTAssertTrue(label("result.row.2").contains("贏Kenny 34 張、輸阿明 18 張、輸阿強 13 張"), label("result.row.2"))
                 XCTAssertTrue(element("result.undo").label.contains("撤回"))
                 XCTAssertFalse(element("result.undo").label.contains("秒"))
+                assertBanner("result-round1")
                 snap("result-round1")
                 // No auto-dismiss: sheet and 撤回 are still there after 4 s.
                 XCTAssertFalse(element("result.title").waitForNonExistence(timeout: 4))
@@ -201,11 +222,13 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(label("scoreboard.title"), "打咗 5 局")
         // Pairwise (HK): score_i = P − 4·p_i each round.
         assertTotals(["+238", "−54", "−54", "−130"])
+        assertBanner("scoreboard-5-rounds")
         snap("scoreboard-5-rounds")
 
         // Interstitial stand-in before round 6
         tap("scoreboard.addRound")
         element("interstitial.close", timeout: 10)
+        assertNoBanner("interstitial")
         snap("interstitial")
         tap("interstitial.close")
 
@@ -214,6 +237,7 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(label("result.title"), "第 6 局結果")
         XCTAssertTrue(element("result.undoToast").label.contains("入錯咗？"))
         XCTAssertEqual(label("result.totalsHeader"), "累計 · 打咗 6 局")
+        assertBanner("result-round6-undo-toast")
         snap("result-round6-undo-toast")
         XCTAssertTrue(label("result.row.2").contains("+64"), label("result.row.2"))
         XCTAssertTrue(label("result.row.0").contains("−136"), label("result.row.0"))
@@ -239,12 +263,14 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(label("result.row.3").contains("輸阿強 30 張、輸阿明 29 張、輸阿珍 27 張"), label("result.row.3"))
         XCTAssertFalse(app.descendants(matching: .any)["result.undo"].exists, "no 撤回 when reviewing")
         XCTAssertEqual(label("result.totalsHeader"), "累計 · 打咗 2 局")
+        assertBanner("history-round2-breakdown")
         snap("history-round2-breakdown")
 
         // 編輯 from there: Kenny 10 → 13 cards
         tap("result.edit")
         XCTAssertEqual(label("entry.title"), "第 2 局")
         tap("entry.row.3")
+        assertBanner("edit-round2")
         snap("edit-round2")
         tap("pad.13")
         element("result.title")
@@ -270,6 +296,7 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(label("final.rank.1").contains("+124"))
         XCTAssertTrue(label("final.rank.4").contains("Kenny"))
         XCTAssertTrue(label("final.rank.4").contains("−196"))
+        assertBanner("final")
         snap("final")
 
         // Back home: session in the recent list, 所有紀錄 available
@@ -277,9 +304,11 @@ final class Big2UITests: XCTestCase {
         element("home.recent.0")
         XCTAssertTrue(label("home.recent.0").contains("6 局"))
         element("home.allSessions")
+        assertBanner("home-with-recent")
         snap("home-with-recent")
         tap("home.allSessions")
         element("all.row.0")
+        assertBanner("all-sessions")
         snap("all-sessions")
         app.navigationBars.buttons.firstMatch.tap()
 
@@ -287,12 +316,15 @@ final class Big2UITests: XCTestCase {
         tap("home.settings")
         element("settings.done")
         XCTAssertFalse(app.descendants(matching: .any)["settings.region"].exists)
+        assertBanner("settings")
         snap("settings")
         tap("settings.removeAds")
         XCTAssertTrue(element("settings.adsRemoved").label.contains("已經移除廣告"))
+        assertNoBanner("settings-ads-removed")
         snap("settings-ads-removed")
         tap("settings.done")
         XCTAssertEqual(label("home.title"), "鋤大D計分")
+        assertNoBanner("home-ads-removed")
         snap("home-ads-removed")
     }
 
@@ -304,11 +336,13 @@ final class Big2UITests: XCTestCase {
         tap("home.newSession")
         assertText("新開一場")
         XCTAssertEqual(element("setup.tile.8").value as? String, "×2", "HK 炒法 default")
+        assertBanner("setup")
         snap("setup")
         tap("setup.close")
         tap("home.settings")
         element("settings.done")
         XCTAssertFalse(app.descendants(matching: .any)["settings.region"].exists)
+        assertBanner("settings")
         snap("settings")
     }
 
@@ -318,6 +352,7 @@ final class Big2UITests: XCTestCase {
         launch(languages: "zh-Hant-TW", locale: "zh_TW", prefix: "TW", extra: ["-enableTaiwan"])
 
         XCTAssertEqual(label("home.title"), "大老二記分")
+        assertBanner("home-fresh")
         snap("home-fresh")
 
         tap("home.newSession")
@@ -326,6 +361,7 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(element("setup.tile.10").value as? String, "×2")
         XCTAssertEqual(element("setup.tile.13").value as? String, "×3")
         XCTAssertTrue(element("setup.namesHint").label.contains("請填寫 4 位玩家名稱"))
+        assertBanner("setup-empty")
         snap("setup-empty")
         typeNames(["小明", "阿強", "小美", "志明"])
         snap("setup-filled")
@@ -333,11 +369,13 @@ final class Big2UITests: XCTestCase {
 
         XCTAssertEqual(label("scoreboard.title"), "尚未開局")
         XCTAssertTrue(label("scoreboard.empty").contains("還沒有紀錄"))
+        assertBanner("scoreboard-empty")
         snap("scoreboard-empty")
 
         tap("scoreboard.addRound")
         XCTAssertTrue(label("entry.hint").contains("依序輸入剩幾張"))
         XCTAssertTrue(label("entry.prompt").contains("小明 剩幾張？"))
+        assertBanner("entry-start")
         snap("entry-start")
         tap("pad.13")
         XCTAssertTrue(label("entry.row.0").contains("×3"), label("entry.row.0"))
@@ -352,11 +390,13 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(label("result.row.0").contains("13 張 ×3"), label("result.row.0"))
         XCTAssertFalse(label("result.row.0").contains("最高"))
         XCTAssertEqual(label("result.totalsHeader"), "累計 · 已進行 1 局")
+        assertBanner("result")
         snap("result")
         tapNextRound()
         // 13×3 + 10×2 + 5 = 64 to 阿強
         assertTotals(["−39", "+64", "−20", "−5"])
         XCTAssertEqual(label("scoreboard.title"), "已進行 1 局")
+        assertBanner("scoreboard-1-round")
         snap("scoreboard-1-round")
 
         tap("scoreboard.finish")
@@ -366,13 +406,16 @@ final class Big2UITests: XCTestCase {
         alert.buttons["結束"].tap()
         // First ad of this session, 1 round played → the 完場 interstitial shows.
         element("interstitial.close")
+        assertNoBanner("finish-interstitial")
         snap("finish-interstitial")
         tap("interstitial.close")
         element("final.title")
         XCTAssertTrue(label("final.rank.1").contains("阿強"))
+        assertBanner("final")
         snap("final")
         tap("nav.home")
         element("home.recent.0")
+        assertBanner("home-with-recent")
         snap("home-with-recent")
     }
 }

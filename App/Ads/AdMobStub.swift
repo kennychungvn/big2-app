@@ -106,7 +106,9 @@ struct BannerPlaceholderView: View {
                 .foregroundColor(Color(theme.bannerPlaceholderText).opacity(0.4))
                 .frame(height: 1)
         }
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("廣告橫額位置")
+        .accessibilityIdentifier("banner")
     }
 }
 
@@ -122,6 +124,26 @@ struct BannerAdContainer: View {
             // AdMobBannerView()
             //     .frame(height: 50)
         }
+    }
+}
+
+/// The bottom banner every screen shows, including sheets and full-screen covers (they
+/// cover the root's banner, so each hosts its own). Hidden only when ads are removed or
+/// while an interstitial is showing. Accessibility id `banner`.
+struct BannerSlot: View {
+    @EnvironmentObject private var vm: AppViewModel
+
+    var body: some View {
+        if !vm.model.data.adsRemoved && !vm.isShowingInterstitial {
+            BannerAdContainer(adsRemoved: false)
+        }
+    }
+}
+
+extension View {
+    /// Pins `BannerSlot` to the bottom safe area of this screen.
+    func bannerSlot() -> some View {
+        safeAreaInset(edge: .bottom, spacing: 0) { BannerSlot() }
     }
 }
 

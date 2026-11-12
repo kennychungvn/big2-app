@@ -40,7 +40,6 @@ struct RoundEntryView: View {
             Spacer(minLength: 8)
 
             padSection(names: names)
-            BannerAdContainer(adsRemoved: vm.model.data.adsRemoved)
         }
         .background(Color(theme.background).ignoresSafeArea())
         .keepAwake(true)
@@ -60,6 +59,9 @@ struct RoundEntryView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: vm.resultSheet != nil)
+        // Own banner (the full-screen cover hides the root one), outside the result
+        // overlay so the RoundResult sheet never covers it.
+        .bannerSlot()
     }
 
     private func header(roundNumber: Int) -> some View {

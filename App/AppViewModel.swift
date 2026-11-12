@@ -86,6 +86,8 @@ final class AppViewModel: ObservableObject {
     @Published var roundEntry: RoundEntrySheet?
     @Published var resultSheet: ResultSheet?
     @Published var undoWindow: UndoWindow?
+    /// True while a full-screen interstitial is up; every BannerSlot hides meanwhile.
+    @Published private(set) var isShowingInterstitial = false
     /// Past round opened from the scoreboard history.
     @Published var reviewSheet: ResultSheet?
     @Published var errorMessage: String?
@@ -193,7 +195,7 @@ final class AppViewModel: ObservableObject {
     /// (see `AppModel.shouldShowFinishInterstitial`).
     func finishCurrentSession() async {
         if model.shouldShowFinishInterstitial() {
-            _ = await ads.showInterstitialIfReady()
+            _ = await presentInterstitial()
             model.recordInterstitialShown()
             if !model.data.adsRemoved {
                 ads.preloadInterstitial()
@@ -210,12 +212,18 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    private func presentInterstitial() async -> Bool {
+        isShowingInterstitial = true
+        defer { isShowingInterstitial = false }
+        return await ads.showInterstitialIfReady()
+    }
+
     // MARK: - Round entry
 
     func startEnteringRound() async {
         guard let current = model.currentSession, !current.isFinished else { return }
         if model.shouldShowInterstitial() {
-            _ = await ads.showInterstitialIfReady()
+            _ = await presentInterstitial()
             model.recordInterstitialShown()
             persist()
             if !model.data.adsRemoved {

@@ -23,18 +23,21 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $vm.isPresentingNewSession) {
             NewSessionView(draft: vm.model.newSessionDraft(region: vm.region))
+                .bannerSlot()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
                 .environment(\.locale, vm.region.locale)
         }
         .sheet(isPresented: $vm.isPresentingSettings) {
             SettingsView()
+                .bannerSlot()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
                 .environment(\.locale, vm.region.locale)
         }
         .sheet(item: $vm.reviewSheet) { sheet in
             RoundResultView(sheet: sheet)
+                .bannerSlot()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
                 .environment(\.locale, vm.region.locale)
@@ -47,13 +50,8 @@ struct RootView: View {
                 .environment(\.locale, vm.region.locale)
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if vm.roundEntry == nil {
-                BannerAdContainer(adsRemoved: vm.model.data.adsRemoved)
-            } else if !vm.model.data.adsRemoved {
-                BannerAdContainer(adsRemoved: false)
-            }
-        }
+        // Home, Scoreboard, Final and 所有紀錄 (navigation pushes) share the root banner.
+        .bannerSlot()
         .alert(tr("提示"), isPresented: errorPresented) {
             Button(tr("知道")) { vm.errorMessage = nil }
         } message: {

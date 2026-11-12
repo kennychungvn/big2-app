@@ -18,7 +18,7 @@ struct RoundResultView: View {
 
         ZStack {
             if !sheet.isReview {
-                Color.black.opacity(0.55).ignoresSafeArea()
+                Color.black.opacity(0.55).ignoresSafeArea(edges: .top)
             }
 
             VStack(spacing: 0) {

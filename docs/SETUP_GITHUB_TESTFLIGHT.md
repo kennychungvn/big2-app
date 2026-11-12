@@ -78,7 +78,7 @@
 
 1. 去 [Identifiers](https://developer.apple.com/account/resources/identifiers/list)。
 2. 撳 **+** → 揀 **App IDs** → Continue → 揀 **App**。
-3. Description 填 `Daidee Scoring` 或者 `鋤大Dee 計分`。
+3. Description 填 `Daidee Scoring` 或者 `鋤大D計分`。
 4. Bundle ID 揀 **Explicit**，填 `com.kenny.daidee`。
 5. Capabilities 暫時唔使額外剔，Continue → Register。
 
@@ -88,7 +88,7 @@
 
 1. 去 [https://appstoreconnect.apple.com](https://appstoreconnect.apple.com) → **My Apps** → **+** → **New App**。
 2. Platforms 剔 **iOS**。
-3. Name 填 `鋤大Dee 計分`（App Store 顯示名，之後都可以改）。
+3. Name 填 `鋤大D計分`（App Store 顯示名，之後都可以改）。
 4. Primary Language 建議揀 **Chinese (Traditional)**。
 5. Bundle ID 揀先先登記咗嘅 `com.kenny.daidee`。
 6. SKU 填 `daidee-scoring`（只用嚟內部對帳，用家睇唔到）。

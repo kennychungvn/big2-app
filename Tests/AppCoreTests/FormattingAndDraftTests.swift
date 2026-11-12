@@ -61,7 +61,7 @@ final class FormattingAndDraftTests: XCTestCase {
             endedAt: Date(timeIntervalSince1970: 1_700_000_000)
         )
         let summary = ShareSummary(stored: stored)
-        XCTAssertTrue(summary.text.contains("鋤大Dee 計分"))
+        XCTAssertTrue(summary.text.contains("鋤大D計分"))
         XCTAssertTrue(summary.text.contains("Kenny"))
         XCTAssertTrue(summary.text.contains("+56"))
         XCTAssertTrue(summary.text.contains("👑"))

@@ -1,6 +1,6 @@
 # Terms of Use / 使用條款
 
-**鋤大Dee 計分** (Big Two Scoring)
+**鋤大D計分** (Big Two Scoring)
 
 Last updated: 12 November 2026 / 更新日期：2026年11月12日
 
@@ -31,7 +31,7 @@ English equivalent: “This app is for score keeping only. It involves no gambli
 ## English
 
 ### 1. What this app is
-「鋤大Dee 計分」is a tool for recording and totalling scores in a game of Big Two. It is provided “as is” for personal, non-commercial use, unless we agree otherwise in writing.
+「鋤大D計分」is a tool for recording and totalling scores in a game of Big Two. It is provided “as is” for personal, non-commercial use, unless we agree otherwise in writing.
 
 ### 2. No gambling and no money transactions
 The app is **for score keeping only**. It does **not**:
@@ -77,7 +77,7 @@ These terms are intended to be governed by the laws of the Hong Kong Special Adm
 ## 繁體中文
 
 ### 1. 呢個 app 係做咩
-「鋤大Dee 計分」係用嚟記錄同累積鋤大Dee 分數嘅工具。喺法律允許範圍內，app 按「現況」提供，供個人使用（另有書面約定除外）。
+「鋤大D計分」係用嚟記錄同累積鋤大Dee 分數嘅工具。喺法律允許範圍內，app 按「現況」提供，供個人使用（另有書面約定除外）。
 
 ### 2. 唔涉及賭博，亦唔處理金錢交易
 呢個 app **只供記分**。它**不會**：

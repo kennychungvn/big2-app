@@ -72,7 +72,7 @@ public struct ScoreFormatting: Equatable, Sendable {
 
     /// App name used in shared results.
     public var appTitle: String {
-        isTaiwan ? "大老二記分" : "鋤大Dee 計分"
+        isTaiwan ? "大老二記分" : "鋤大D計分"
     }
 }
 

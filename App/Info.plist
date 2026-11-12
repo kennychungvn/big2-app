@@ -10,7 +10,7 @@
 		<string>zh-Hant-TW</string>
 	</array>
 	<key>CFBundleDisplayName</key>
-	<string>鋤大Dee 計分</string>
+	<string>鋤大D計分</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

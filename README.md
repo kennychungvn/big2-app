@@ -1,4 +1,4 @@
-# 鋤大Dee 計分（iOS 16+）
+# 鋤大D計分（iOS 16+）
 
 打牌計分 app 嘅 SwiftUI 畫面層，用「街坊」皮（深灰底、黃色主掣），接住現成嘅 `ScoringEngine`。
 
@@ -127,4 +127,4 @@ swift test
 - 文字表喺 `scripts/l10n_table.py`，改完跑 `python3 scripts/gen_l10n.py` 重新生成 `.strings`（會檢查有冇漏 key 同台灣版有冇廣東話字）。
 - 設定 →「地區介面」：跟系統（預設）／香港／台灣。跟系統規則：電話語言係 zh-Hant-TW 或者地區係台灣 → 台灣；語言明確係香港／澳門中文 → 香港；其他 → 香港。
 - 台灣介面新開一場預設「台灣常見」：1-9張 ×1 · 10-12張 ×2 · 13張 ×3。
-- 主畫面 app 名跟 iOS 語言：香港「鋤大Dee 計分」、台灣「大老二記分」（`InfoPlist.strings`）。
+- 主畫面 app 名跟 iOS 語言：香港「鋤大D計分」、台灣「大老二記分」（`InfoPlist.strings`）。

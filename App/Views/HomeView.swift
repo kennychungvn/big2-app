@@ -11,7 +11,7 @@ struct HomeView: View {
                 VStack(spacing: 8) {
                     Text("🃏")
                         .font(.system(size: 64))
-                    Text(tr("鋤大Dee 計分"))
+                    Text(tr("鋤大D計分"))
                         .font(.system(size: 28, weight: .heavy))
                         .foregroundColor(Color(theme.text))
                 }

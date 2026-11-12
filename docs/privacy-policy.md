@@ -1,6 +1,6 @@
 # Privacy Policy / 私隱政策
 
-**鋤大Dee 計分** (Big Two Scoring)
+**鋤大D計分** (Big Two Scoring)
 
 Last updated: 12 November 2026 / 更新日期：2026年11月12日
 
@@ -15,7 +15,7 @@ Contact / 聯絡（暫定，上架前會換成真實電郵）：`[YOUR-EMAIL@exa
 ## English
 
 ### Who we are
-「鋤大Dee 計分」is a score-keeping app for the card game Big Two (鋤大Dee). The developer will be listed on the App Store under the individual Apple Developer account used to publish the app. We do not operate our own servers for this app.
+「鋤大D計分」is a score-keeping app for the card game Big Two (鋤大Dee). The developer will be listed on the App Store under the individual Apple Developer account used to publish the app. We do not operate our own servers for this app.
 
 ### No accounts
 The app does not require registration or a user account. We do not ask you to create a login, and we do not collect your name, email, or phone number through the app itself.
@@ -54,7 +54,7 @@ Questions about this policy: `[YOUR-EMAIL@example.com]` (placeholder — replace
 ## 繁體中文
 
 ### 我哋係邊個
-「鋤大Dee 計分」係一款用嚟記錄鋤大Dee（Big Two）分數嘅 app。App Store 上嘅開發者名稱，會用上架時嗰個個人 Apple Developer 帳戶顯示。呢個 app 冇我哋自己嘅伺服器。
+「鋤大D計分」係一款用嚟記錄鋤大Dee（Big Two）分數嘅 app。App Store 上嘅開發者名稱，會用上架時嗰個個人 Apple Developer 帳戶顯示。呢個 app 冇我哋自己嘅伺服器。
 
 ### 唔使註冊
 呢個 app 唔需要註冊或者開帳戶。我哋唔會喺 app 入面要求你建立登入資料，亦唔會收集你嘅姓名、電郵或者電話號碼。

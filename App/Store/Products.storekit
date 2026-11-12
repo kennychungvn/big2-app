@@ -1,0 +1,42 @@
+{
+  "identifier" : "Products",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "8.00",
+      "familyShareable" : false,
+      "internalID" : "A1B2C3D4E5F60718",
+      "localizations" : [
+        {
+          "description" : "一次過買斷，永久移除廣告。",
+          "displayName" : "移除廣告",
+          "locale" : "zh_HK"
+        },
+        {
+          "description" : "One-time purchase to remove all ads.",
+          "displayName" : "Remove Ads",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.kenny.daidee.removeads",
+      "referenceName" : "Remove Ads",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "",
+    "applicationExpiresDate" : 0,
+    "failTransactionsEnabled" : false,
+    "storefront" : "HKG",
+    "storeKitError" : 0,
+    "subscriptionRenewalRate" : 0,
+    "_failTransactionsEnabled" : false
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0,
+    "patch" : 0
+  }
+}

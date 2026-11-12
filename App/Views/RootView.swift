@@ -42,13 +42,19 @@ struct RootView: View {
                 .environment(\.appTheme, theme)
                 .environment(\.locale, vm.region.locale)
         }
-        .fullScreenCover(item: $vm.roundEntry) { _ in
-            if let binding = Binding($vm.roundEntry) {
-                RoundEntryView(sheet: binding)
-                    .environmentObject(vm)
-                    .environment(\.appTheme, theme)
-                .environment(\.locale, vm.region.locale)
-            }
+        .fullScreenCover(item: $vm.roundEntry) { entry in
+            // Not `Binding($vm.roundEntry)`: that force-unwraps, and the cover's content
+            // still updates once more after roundEntry becomes nil (下一局 / 撤回 / 取消),
+            // which crashed the app (EXC_BREAKPOINT in BindingOperations.ForceUnwrapping).
+            RoundEntryView(sheet: Binding(
+                get: { vm.roundEntry ?? entry },
+                set: { newValue in
+                    if vm.roundEntry != nil { vm.roundEntry = newValue }
+                }
+            ))
+            .environmentObject(vm)
+            .environment(\.appTheme, theme)
+            .environment(\.locale, vm.region.locale)
         }
         // Home, Scoreboard, Final and 所有紀錄 (navigation pushes) share the root banner.
         .bannerSlot()

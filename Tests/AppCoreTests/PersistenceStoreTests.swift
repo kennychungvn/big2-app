@@ -54,6 +54,36 @@ final class PersistenceStoreTests: XCTestCase {
         XCTAssertEqual(try store.load().adsRemoved, false)
     }
 
+    /// App killed mid-session: a fresh AppModel from the saved file resumes it via 繼續上一場
+    /// (pairwise mode and rule kept) and can keep adding rounds.
+    func testInProgressSessionSurvivesRelaunch() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("big2-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("app-data.json")
+        let clock = MutableClock(Date(timeIntervalSince1970: 1_700_000_000))
+
+        var before = AppModel()
+        _ = try before.startNewSession(players: ["阿明", "阿強", "阿珍", "阿芬"], chaoTable: .hongKongDefault, clock: clock)
+        try before.addRound(cardsLeft: [0, 11, 13, 3], clock: clock)
+        try JSONFileStore(fileURL: url).save(before.data)
+
+        // "Relaunch": nothing in memory, only the file.
+        var after = AppModel(data: try JSONFileStore(fileURL: url).load())
+        XCTAssertNil(after.currentSession)
+        let unfinished = try XCTUnwrap(after.latestUnfinished)
+        XCTAssertEqual(unfinished.session.roundsCompleted, 1)
+        XCTAssertFalse(unfinished.isFinished)
+        XCTAssertEqual(unfinished.session.scoringMode, .pairwise)
+        XCTAssertEqual(unfinished.session.totals, [88, -44, -120, 76])
+
+        let resumed = try after.continueUnfinished()
+        XCTAssertEqual(resumed.id, unfinished.id)
+        try after.addRound(cardsLeft: [4, 0, 2, 9], clock: clock)
+        XCTAssertEqual(after.currentSession?.session.roundsCompleted, 2)
+    }
+
     func testCorruptFileThrowsUnreadable() throws {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("big2-tests-\(UUID().uuidString)", isDirectory: true)

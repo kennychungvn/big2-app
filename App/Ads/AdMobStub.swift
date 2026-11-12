@@ -141,9 +141,23 @@ struct BannerSlot: View {
 }
 
 extension View {
-    /// Pins `BannerSlot` to the bottom safe area of this screen.
+    /// Puts `BannerSlot` under this screen. A VStack rather than `safeAreaInset`: an inset
+    /// applied outside a NavigationStack does not reach pushed screens or the sheet's own
+    /// bottom inset, so the banner covered 入今局 / 開波 (seen in UI test screenshots).
     func bannerSlot() -> some View {
-        safeAreaInset(edge: .bottom, spacing: 0) { BannerSlot() }
+        modifier(BannerSlotModifier())
+    }
+}
+
+private struct BannerSlotModifier: ViewModifier {
+    @Environment(\.appTheme) private var theme
+
+    func body(content: Content) -> some View {
+        VStack(spacing: 0) {
+            content
+            BannerSlot()
+        }
+        .background(Color(theme.background).ignoresSafeArea())
     }
 }
 

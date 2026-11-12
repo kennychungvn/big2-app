@@ -14,6 +14,9 @@ public struct RankedPlayer: Codable, Equatable, Sendable {
 public struct Session: Codable, Equatable, Sendable {
     public var players: [String]
     public var rule: ScoringRule
+    /// How rounds are settled. Sessions saved before this field existed decode as
+    /// `winnerTakesAll`, which is how their rounds were scored.
+    public let scoringMode: ScoringMode
     public private(set) var rounds: [Round]
 
     /// Minimum time that must pass between two interstitials. Defaults to 180 seconds.
@@ -29,10 +32,12 @@ public struct Session: Codable, Equatable, Sendable {
     /// - Parameters:
     ///   - players: Exactly four display names.
     ///   - rule: Scoring rule. Defaults to `hongKongDefault`.
+    ///   - scoringMode: Settlement. Defaults to `pairwise` (Hong Kong).
     ///   - interstitialMinimumInterval: Minimum gap between ads. Defaults to 180 seconds.
     public init(
         players: [String],
         rule: ScoringRule = .hongKongDefault,
+        scoringMode: ScoringMode = .pairwise,
         interstitialMinimumInterval: TimeInterval = InterstitialPolicy.defaultMinimumInterval
     ) throws {
         guard players.count == ScoringEngine.playerCount else {
@@ -43,6 +48,7 @@ public struct Session: Codable, Equatable, Sendable {
         }
         self.players = players
         self.rule = rule
+        self.scoringMode = scoringMode
         self.rounds = []
         self.interstitialMinimumInterval = interstitialMinimumInterval
         self.shownInterstitialMilestones = []
@@ -97,7 +103,7 @@ public struct Session: Codable, Equatable, Sendable {
     /// Scores and appends a round. See `ScoringEngine.score(cardsLeft:rule:heldTwo:)`.
     @discardableResult
     public mutating func addRound(cardsLeft: [Int], heldTwo: [Bool]? = nil) throws -> Round {
-        let round = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule, heldTwo: heldTwo)
+        let round = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule, heldTwo: heldTwo, mode: scoringMode)
         rounds.append(round)
         return round
     }
@@ -121,7 +127,7 @@ public struct Session: Codable, Equatable, Sendable {
         guard rounds.indices.contains(index) else {
             throw ScoringError.invalidRoundIndex(index)
         }
-        let round = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule, heldTwo: heldTwo)
+        let round = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule, heldTwo: heldTwo, mode: scoringMode)
         rounds[index] = round
         return round
     }
@@ -162,5 +168,21 @@ public struct Session: Codable, Equatable, Sendable {
             shownInterstitialMilestones.insert(completed)
         }
         lastInterstitialShownAt = clock.now
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case players, rule, scoringMode, rounds, interstitialMinimumInterval
+        case shownInterstitialMilestones, lastInterstitialShownAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        players = try container.decode([String].self, forKey: .players)
+        rule = try container.decode(ScoringRule.self, forKey: .rule)
+        scoringMode = try container.decodeIfPresent(ScoringMode.self, forKey: .scoringMode) ?? .winnerTakesAll
+        rounds = try container.decode([Round].self, forKey: .rounds)
+        interstitialMinimumInterval = try container.decode(TimeInterval.self, forKey: .interstitialMinimumInterval)
+        shownInterstitialMilestones = try container.decode(Set<Int>.self, forKey: .shownInterstitialMilestones)
+        lastInterstitialShownAt = try container.decodeIfPresent(Date.self, forKey: .lastInterstitialShownAt)
     }
 }

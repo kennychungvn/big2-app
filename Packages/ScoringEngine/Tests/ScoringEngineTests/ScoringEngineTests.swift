@@ -8,7 +8,7 @@ final class ScoringEngineTests: XCTestCase {
 
     func testHongKongDefaultExampleRound_losers5_9_11() throws {
         // Winner, then losers with 5, 9, and 11 cards.
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [0, 5, 9, 11],
             rule: .hongKongDefault
         )
@@ -25,7 +25,7 @@ final class ScoringEngineTests: XCTestCase {
     }
 
     func testWinnerInAnySeatReceivesTheSum() throws {
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [5, 9, 0, 11],
             rule: .hongKongDefault
         )
@@ -53,10 +53,10 @@ final class ScoringEngineTests: XCTestCase {
 
         for rule in rules {
             for cardsLeft in hands {
-                let withoutTwos = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule)
+                let withoutTwos = try ScoringEngine.scoreWinnerTakesAll(cardsLeft: cardsLeft, rule: rule)
                 XCTAssertEqual(withoutTwos.points.reduce(0, +), 0, "Failed for \(cardsLeft) under \(ruleLabel(rule))")
 
-                let withTwos = try ScoringEngine.score(
+                let withTwos = try ScoringEngine.scoreWinnerTakesAll(
                     cardsLeft: cardsLeft,
                     rule: rule,
                     heldTwo: [true, true, true, true]
@@ -70,7 +70,7 @@ final class ScoringEngineTests: XCTestCase {
 
     func testNoWinner() {
         XCTAssertThrowsError(
-            try ScoringEngine.score(cardsLeft: [1, 2, 3, 4], rule: .hongKongDefault)
+            try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [1, 2, 3, 4], rule: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? ScoringError, .noWinner)
         }
@@ -78,7 +78,7 @@ final class ScoringEngineTests: XCTestCase {
 
     func testMultipleWinners() {
         XCTAssertThrowsError(
-            try ScoringEngine.score(cardsLeft: [0, 0, 3, 4], rule: .hongKongDefault)
+            try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [0, 0, 3, 4], rule: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? ScoringError, .multipleWinners)
         }
@@ -86,12 +86,12 @@ final class ScoringEngineTests: XCTestCase {
 
     func testCardsOutOfRange() {
         XCTAssertThrowsError(
-            try ScoringEngine.score(cardsLeft: [0, 14, 3, 4], rule: .hongKongDefault)
+            try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [0, 14, 3, 4], rule: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? ScoringError, .cardsOutOfRange(playerIndex: 1, cardsLeft: 14))
         }
         XCTAssertThrowsError(
-            try ScoringEngine.score(cardsLeft: [0, 1, -1, 4], rule: .hongKongDefault)
+            try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [0, 1, -1, 4], rule: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? ScoringError, .cardsOutOfRange(playerIndex: 2, cardsLeft: -1))
         }
@@ -99,12 +99,12 @@ final class ScoringEngineTests: XCTestCase {
 
     func testWrongPlayerCount() {
         XCTAssertThrowsError(
-            try ScoringEngine.score(cardsLeft: [0, 1, 2], rule: .hongKongDefault)
+            try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [0, 1, 2], rule: .hongKongDefault)
         ) { error in
             XCTAssertEqual(error as? ScoringError, .wrongPlayerCount(expected: 4, actual: 3))
         }
         XCTAssertThrowsError(
-            try ScoringEngine.score(
+            try ScoringEngine.scoreWinnerTakesAll(
                 cardsLeft: [0, 1, 2, 3],
                 rule: .hongKongDefault,
                 heldTwo: [false, true]
@@ -117,7 +117,7 @@ final class ScoringEngineTests: XCTestCase {
     // MARK: - Held two (大Dee)
 
     func testHeldTwoIgnoredWhenRuleToggleIsOff() throws {
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [0, 5, 9, 11],
             rule: .hongKongDefault, // toggle off
             heldTwo: [false, true, true, true]
@@ -131,7 +131,7 @@ final class ScoringEngineTests: XCTestCase {
     func testHeldTwoDoublesLoserPenaltyWhenRuleToggleIsOn() throws {
         let rule = ScoringRule.hongKongDefault.withDoubleOnHeldTwo(true)
         // Only the 9-card loser held a 2: 9 × 2 × 2 = 36
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [0, 5, 9, 11],
             rule: rule,
             heldTwo: [false, false, true, false]
@@ -146,7 +146,7 @@ final class ScoringEngineTests: XCTestCase {
 
     func testHeldTwoDoesNotApplyToPlayersWhoDidNotHoldATwo() throws {
         let rule = ScoringRule.hongKongDefault.withDoubleOnHeldTwo(true)
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [0, 5, 9, 11],
             rule: rule,
             heldTwo: [false, false, false, false]
@@ -156,7 +156,7 @@ final class ScoringEngineTests: XCTestCase {
 
     func testHeldTwoFlagOnWinnerIsIgnored() throws {
         let rule = ScoringRule.hongKongDefault.withDoubleOnHeldTwo(true)
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [0, 5, 9, 11],
             rule: rule,
             heldTwo: [true, false, false, false]
@@ -168,7 +168,7 @@ final class ScoringEngineTests: XCTestCase {
     // MARK: - Codable
 
     func testRoundIsCodable() throws {
-        let round = try ScoringEngine.score(cardsLeft: [0, 5, 9, 11], rule: .hongKongDefault)
+        let round = try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [0, 5, 9, 11], rule: .hongKongDefault)
         let data = try JSONEncoder().encode(round)
         let decoded = try JSONDecoder().decode(Round.self, from: data)
         XCTAssertEqual(decoded, round)

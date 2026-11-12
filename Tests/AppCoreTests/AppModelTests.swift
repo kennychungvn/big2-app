@@ -47,8 +47,10 @@ final class AppModelTests: XCTestCase {
     func testAddRoundMatchesWireframeExample() throws {
         var (model, _) = try model()
         let round = try model.addRound(cardsLeft: [5, 0, 9, 11])
-        XCTAssertEqual(round.points, [-5, 56, -18, -33])
-        XCTAssertEqual(model.currentSession?.session.totals, [-5, 56, -18, -33])
+        // Pairwise (HK default): penalties 5 / 0 / 18 / 33, P = 56 → 56 − 4p.
+        XCTAssertEqual(model.currentSession?.session.scoringMode, .pairwise)
+        XCTAssertEqual(round.points, [36, 56, -16, -76])
+        XCTAssertEqual(model.currentSession?.session.totals, [36, 56, -16, -76])
         XCTAssertEqual(model.currentSession?.session.ranking.first?.name, "Kenny")
     }
 
@@ -174,5 +176,46 @@ final class ScoreboardTitleTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(model.currentSession).isFinished)
         try model.finishCurrentSession()
         XCTAssertTrue(try XCTUnwrap(model.currentSession).isFinished)
+    }
+}
+
+final class FinishInterstitialTests: XCTestCase {
+    private let names = ["阿明", "Kenny", "阿強", "阿May"]
+
+    func testRegionScoringModes() {
+        XCTAssertEqual(InterfaceRegion.hongKong.defaultScoringMode, .pairwise)
+        XCTAssertEqual(InterfaceRegion.taiwan.defaultScoringMode, .winnerTakesAll)
+    }
+
+    func testFinishInterstitialGating() throws {
+        let clock = MutableClock(Date(timeIntervalSince1970: 1_700_000_000))
+        var model = AppModel()
+        _ = try model.startNewSession(players: names, chaoTable: .hongKongDefault, clock: clock)
+        XCTAssertFalse(model.shouldShowFinishInterstitial(clock: clock), "no rounds → skip")
+
+        _ = try model.addRound(cardsLeft: [0, 3, 8, 13], clock: clock)
+        XCTAssertTrue(model.shouldShowFinishInterstitial(clock: clock), "1 round, nothing shown yet")
+
+        model.recordInterstitialShown(clock: clock)
+        clock.advance(by: 179)
+        XCTAssertFalse(model.shouldShowFinishInterstitial(clock: clock), "within 3 minutes of the last ad")
+        clock.advance(by: 1)
+        XCTAssertTrue(model.shouldShowFinishInterstitial(clock: clock), "gap of 3 minutes reached")
+
+        model.setAdsRemoved(true)
+        XCTAssertFalse(model.shouldShowFinishInterstitial(clock: clock), "ads removed")
+    }
+
+    func testRoundFiveInterstitialBlocksFinishInterstitialForThreeMinutes() throws {
+        let clock = MutableClock(Date(timeIntervalSince1970: 1_700_000_000))
+        var model = AppModel()
+        _ = try model.startNewSession(players: names, chaoTable: .hongKongDefault, clock: clock)
+        for _ in 0..<5 { _ = try model.addRound(cardsLeft: [0, 3, 8, 13], clock: clock) }
+        XCTAssertTrue(model.shouldShowInterstitial(clock: clock))
+        model.recordInterstitialShown(clock: clock)
+        clock.advance(by: 60)
+        XCTAssertFalse(model.shouldShowFinishInterstitial(clock: clock))
+        clock.advance(by: 120)
+        XCTAssertTrue(model.shouldShowFinishInterstitial(clock: clock))
     }
 }

@@ -43,7 +43,7 @@ final class PersistenceStoreTests: XCTestCase {
         XCTAssertEqual(loaded.adsRemoved, true)
         XCTAssertEqual(loaded.hapticsEnabled, false)
         XCTAssertEqual(loaded.sessions.count, 1)
-        XCTAssertEqual(loaded.sessions[0].session.totals, [-5, 56, -18, -33])
+        XCTAssertEqual(loaded.sessions[0].session.totals, [36, 56, -16, -76])
         XCTAssertEqual(loaded.lastSettings.playerNames, ["阿明", "Kenny", "阿強", "阿May"])
         XCTAssertEqual(loaded.knownPlayerNames.first, "阿明")
 

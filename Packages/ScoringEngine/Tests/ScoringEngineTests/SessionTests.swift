@@ -13,7 +13,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testAddRoundUpdatesTotalsAndRoundsCompleted() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         XCTAssertEqual(session.roundsCompleted, 0)
         XCTAssertEqual(session.totals, [0, 0, 0, 0])
 
@@ -27,7 +27,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testUndoLastRound() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         try session.addRound(cardsLeft: [0, 5, 9, 11])
         try session.addRound(cardsLeft: [1, 0, 1, 1])
 
@@ -38,14 +38,14 @@ final class SessionTests: XCTestCase {
     }
 
     func testUndoWithNoRoundsThrows() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         XCTAssertThrowsError(try session.undoLastRound()) { error in
             XCTAssertEqual(error as? ScoringError, .noRoundsToUndo)
         }
     }
 
     func testEditRoundRecalculatesTotals() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         try session.addRound(cardsLeft: [0, 5, 9, 11])
         try session.addRound(cardsLeft: [1, 0, 1, 1])
 
@@ -58,7 +58,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testEditInvalidIndexThrows() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         try session.addRound(cardsLeft: [0, 1, 1, 1])
         XCTAssertThrowsError(try session.editRound(at: 1, cardsLeft: [0, 2, 2, 2])) { error in
             XCTAssertEqual(error as? ScoringError, .invalidRoundIndex(1))
@@ -69,7 +69,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testRankingSortedByTotalDescending() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         // Kenny +56, Ming -5, Keung -18, May -33
         try session.addRound(cardsLeft: [0, 5, 9, 11])
 
@@ -103,13 +103,15 @@ final class SessionTests: XCTestCase {
     }
 
     func testLegacySessionJSONWithPointValueStillDecodes() throws {
-        var session = try Session(players: names)
+        var session = try Session(players: names, scoringMode: .winnerTakesAll)
         try session.addRound(cardsLeft: [0, 5, 9, 11])
         var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(session)) as! [String: Any]
         object["pointValue"] = 2  // field written by builds before 每分幾錢 was removed
+        object.removeValue(forKey: "scoringMode")  // builds before pairwise scoring
         let legacy = try JSONSerialization.data(withJSONObject: object)
         let decoded = try JSONDecoder().decode(Session.self, from: legacy)
         XCTAssertEqual(decoded, session)
+        XCTAssertEqual(decoded.scoringMode, .winnerTakesAll, "old saves keep the mode they were scored with")
         XCTAssertEqual(decoded.totals, [56, -5, -18, -33])
     }
 
@@ -127,7 +129,7 @@ final class SessionTests: XCTestCase {
     }
 
     func testDefaultRuleIsHongKongDefault() throws {
-        let session = try Session(players: names)
+        let session = try Session(players: names, scoringMode: .winnerTakesAll)
         XCTAssertEqual(session.rule, .hongKongDefault)
         XCTAssertEqual(session.interstitialMinimumInterval, InterstitialPolicy.defaultMinimumInterval)
     }

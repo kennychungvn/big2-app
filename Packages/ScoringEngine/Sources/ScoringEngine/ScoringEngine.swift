@@ -1,5 +1,15 @@
 import Foundation
 
+/// How a round's penalties are settled between the four players.
+public enum ScoringMode: String, Codable, CaseIterable, Sendable {
+    /// Hong Kong 鋤大D: every pair of players settles the difference of their penalties.
+    /// With `p_i = cardsLeft_i × multiplier_i` (winner `p = 0`),
+    /// `score_i = Σ_{j≠i} (p_j − p_i)`. A loser with few cards can finish the round positive.
+    case pairwise
+    /// Only the winner collects: each loser pays `p_i` to the winner.
+    case winnerTakesAll
+}
+
 /// One player's result in a single round.
 public struct RoundScore: Codable, Equatable, Sendable {
     /// Cards left at the end of the round. `0` for the winner.
@@ -8,12 +18,17 @@ public struct RoundScore: Codable, Equatable, Sendable {
     public let baseMultiplier: Int
     /// `true` when the rule's held-two toggle was on and this loser flagged `heldTwo`.
     public let heldTwoApplied: Bool
-    /// Signed points for this round. Losers are negative; the winner is positive.
+    /// Signed net points for this round under the session's `ScoringMode`.
     public let points: Int
 
-    /// Effective multiplier applied to `cardsLeft` to produce `abs(points)` for losers.
+    /// Effective multiplier applied to `cardsLeft` (tier × held-two extra).
     public var appliedMultiplier: Int {
         baseMultiplier * (heldTwoApplied ? 2 : 1)
+    }
+
+    /// `cardsLeft × appliedMultiplier`; `0` for the winner.
+    public var penalty: Int {
+        cardsLeft * appliedMultiplier
     }
 }
 
@@ -44,13 +59,16 @@ public enum ScoringEngine: Sendable {
     ///   - rule: Multiplier table and held-two toggle.
     ///   - heldTwo: Optional per-player flags (same order as `cardsLeft`). Ignored when
     ///     `rule.doubleOnHeldTwo` is `false`. A `nil` value is treated as all `false`.
-    /// - Returns: A `Round` whose points sum to zero. Each loser pays
-    ///   `cardsLeft × multiplier` (×2 again if the held-two rule applies); the winner
-    ///   receives the sum of those penalties.
+    ///   - mode: Settlement. `pairwise` (Hong Kong, default) or `winnerTakesAll`.
+    /// - Returns: A `Round` whose points sum to zero. Each player's penalty is
+    ///   `cardsLeft × multiplier` (×2 again if the held-two rule applies). In `pairwise`
+    ///   mode `score_i = Σ_{j≠i} (p_j − p_i) = P − 4·p_i` where `P` is the sum of penalties;
+    ///   in `winnerTakesAll` mode losers score `−p_i` and the winner `P`.
     public static func score(
         cardsLeft: [Int],
         rule: ScoringRule,
-        heldTwo: [Bool]? = nil
+        heldTwo: [Bool]? = nil,
+        mode: ScoringMode = .pairwise
     ) throws -> Round {
         try validateInput(cardsLeft: cardsLeft, heldTwo: heldTwo)
 
@@ -96,6 +114,18 @@ public enum ScoringEngine: Sendable {
             heldTwoApplied: false,
             points: winnerGain
         )
+
+        if mode == .pairwise {
+            let total = winnerGain
+            scores = scores.map { score in
+                RoundScore(
+                    cardsLeft: score.cardsLeft,
+                    baseMultiplier: score.baseMultiplier,
+                    heldTwoApplied: score.heldTwoApplied,
+                    points: total - ScoringEngine.playerCount * score.penalty
+                )
+            }
+        }
 
         return Round(scores: scores)
     }

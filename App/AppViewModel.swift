@@ -128,7 +128,8 @@ final class AppViewModel: ObservableObject {
         do {
             let stored = try model.startNewSession(
                 players: draft.names,
-                chaoTable: draft.chaoTable
+                chaoTable: draft.chaoTable,
+                scoringMode: region.defaultScoringMode
             )
             persist()
             isPresentingNewSession = false
@@ -171,7 +172,16 @@ final class AppViewModel: ObservableObject {
         path = []
     }
 
-    func finishCurrentSession() {
+    /// Called after the 完場 confirm. May show one skippable interstitial first
+    /// (see `AppModel.shouldShowFinishInterstitial`).
+    func finishCurrentSession() async {
+        if model.shouldShowFinishInterstitial() {
+            _ = await ads.showInterstitialIfReady()
+            model.recordInterstitialShown()
+            if !model.data.adsRemoved {
+                ads.preloadInterstitial()
+            }
+        }
         do {
             try model.finishCurrentSession()
             persist()
@@ -391,7 +401,10 @@ final class AppViewModel: ObservableObject {
 
     /// Re-reads the setting and device locale, then points string lookups at that region.
     func refreshRegion() {
-        let resolved = model.data.interfaceRegion(systemRegion: L10n.systemRegion)
+        let resolved = model.data.interfaceRegion(
+            systemRegion: L10n.systemRegion,
+            taiwanEnabled: L10n.taiwanEnabled
+        )
         L10n.region = resolved
         if region != resolved {
             region = resolved
@@ -399,6 +412,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func setRegionPreference(_ preference: InterfaceRegionPreference) {
+        guard L10n.taiwanEnabled else { return }
         model.setInterfaceRegionPreference(preference, systemRegion: L10n.systemRegion)
         persist()
         refreshRegion()

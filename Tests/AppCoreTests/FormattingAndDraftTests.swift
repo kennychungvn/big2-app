@@ -24,12 +24,13 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(ScoreFormatting(region: .taiwan).sessionListSubtitle(date: date, rounds: 18), "2023/11/15 · 18 局")
     }
 
-    func testRoundDetailAndWinnerReceipts() throws {
-        let round = try ScoringEngine.score(cardsLeft: [5, 0, 9, 11], rule: .hongKongDefault)
+    func testRoundDetailShowsCardsAndNetPointsSeparately() throws {
+        let round = try ScoringEngine.score(cardsLeft: [5, 0, 9, 11], rule: .hongKongDefault, mode: .pairwise)
         let displays = RoundPresentation.displays(from: round)
-        let receipts = RoundPresentation.winnerReceipts(from: round)
-        XCTAssertEqual(receipts, [5, 18, 33])
-        XCTAssertEqual(format.roundDetail(score: displays[1], winnerReceivedFrom: receipts), "出清牌，收 5 + 18 + 33")
+        // penalties 5 / 0 / 18 / 33, P = 56 → 56 − 4p
+        XCTAssertEqual(displays.map(\.points), [36, 56, -16, -76])
+        XCTAssertEqual(format.roundDetail(score: displays[1]), "出清牌")
+        XCTAssertFalse(format.roundDetail(score: displays[1]).contains("收"))
         XCTAssertEqual(format.roundDetail(score: displays[0]), "5 張 ×1")
         XCTAssertEqual(format.roundDetail(score: displays[2]), "9 張 ×2")
         XCTAssertEqual(format.roundDetail(score: displays[3]), "11 張 ×3 🔥")

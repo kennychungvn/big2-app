@@ -52,10 +52,11 @@ public struct AppModel: Equatable, Sendable {
     public mutating func startNewSession(
         players: [String],
         chaoTable: ChaoTable,
+        scoringMode: ScoringMode = .pairwise,
         clock: any Clock = SystemClock()
     ) throws -> StoredSession {
         let names = try Self.validatedNames(players)
-        let session = try Session(players: names, rule: chaoTable.rule)
+        let session = try Session(players: names, rule: chaoTable.rule, scoringMode: scoringMode)
         let now = clock.now
         let stored = StoredSession(session: session, createdAt: now, updatedAt: now)
         data.sessions.append(stored)
@@ -132,6 +133,19 @@ public struct AppModel: Equatable, Sendable {
             beforeStartingRound: session.roundsCompleted + 1,
             clock: clock
         )
+    }
+
+    /// One skippable interstitial when entering the 完場 screen, after confirming 完場.
+    /// Skipped when ads are removed, when the session has no rounds, or when another
+    /// interstitial was shown less than the session's minimum gap (3 minutes) ago.
+    public func shouldShowFinishInterstitial(clock: any Clock = SystemClock()) -> Bool {
+        guard !data.adsRemoved else { return false }
+        guard let session = currentSession?.session, session.roundsCompleted >= 1 else { return false }
+        if let lastShown = session.lastInterstitialShownAt,
+           clock.now.timeIntervalSince(lastShown) < session.interstitialMinimumInterval {
+            return false
+        }
+        return true
     }
 
     public mutating func recordInterstitialShown(clock: any Clock = SystemClock()) {

@@ -55,7 +55,8 @@ final class ChaoTableTests: XCTestCase {
         var model = AppModel()
         _ = try model.startNewSession(players: ["A", "B", "C", "D"], chaoTable: table)
         let round = try model.addRound(cardsLeft: [0, 8, 12, 13])
-        XCTAssertEqual(round.points, [24 + 48 + 26, -24, -48, -26])
+        // penalties 0 / 24 / 48 / 26, P = 98, pairwise → 98 − 4p
+        XCTAssertEqual(round.points, [98, 2, -94, -6])
     }
 
     func testSummaryGroupsEqualConsecutiveMultipliers() throws {

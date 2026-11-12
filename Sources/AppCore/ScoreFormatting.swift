@@ -49,15 +49,11 @@ public struct ScoreFormatting: Equatable, Sendable {
         "\(shortDate(date)) · \(rounds) 局"
     }
 
-    /// Detail under a player on the result screen, e.g. `5 張 ×1`, `11 張 ×3 🔥`, `出清牌，收 5 + 18 + 33`.
-    public func roundDetail(score: RoundScoreDisplay, winnerReceivedFrom: [Int] = []) -> String {
-        let cleared = isTaiwan ? "出完牌" : "出清牌"
+    /// Detail under a player on the result screen, e.g. `出清牌`, `5 張 ×1`, `11 張 ×3 🔥`.
+    /// The round's net points are shown separately.
+    public func roundDetail(score: RoundScoreDisplay) -> String {
         if score.cardsLeft == 0 {
-            if winnerReceivedFrom.isEmpty {
-                return cleared
-            }
-            let parts = winnerReceivedFrom.map { "\($0)" }.joined(separator: " + ")
-            return "\(cleared)，收 \(parts)"
+            return isTaiwan ? "出完牌" : "出清牌"
         }
         var text = "\(score.cardsLeft) 張 ×\(score.appliedMultiplier)"
         if score.appliedMultiplier >= 3 {

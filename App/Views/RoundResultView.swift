@@ -9,7 +9,6 @@ struct RoundResultView: View {
 
     var body: some View {
         let displays = RoundPresentation.displays(from: sheet.round)
-        let receipts = RoundPresentation.winnerReceipts(from: sheet.round)
         let rankingOrder: [Int] = {
             let winner = sheet.round.winnerIndex
             return [winner] + (0..<sheet.players.count).filter { $0 != winner }
@@ -39,11 +38,7 @@ struct RoundResultView: View {
                 .padding(.bottom, 12)
 
                 ForEach(rankingOrder, id: \.self) { index in
-                    resultRow(
-                        index: index,
-                        display: displays[index],
-                        receipts: receipts
-                    )
+                    resultRow(index: index, display: displays[index])
                 }
 
                 if vm.undoWindow != nil {
@@ -108,7 +103,7 @@ struct RoundResultView: View {
         }
     }
 
-    private func resultRow(index: Int, display: RoundScoreDisplay, receipts: [Int]) -> some View {
+    private func resultRow(index: Int, display: RoundScoreDisplay) -> some View {
         let isWinner = display.cardsLeft == 0
         return HStack(spacing: 10) {
             PlayerColorDot(index: index, height: 36)
@@ -116,7 +111,7 @@ struct RoundResultView: View {
                 Text(isWinner ? "\(sheet.players[index]) 👑" : sheet.players[index])
                     .font(.system(size: 19, weight: .semibold))
                     .foregroundColor(Color(theme.text))
-                Text(vm.format.roundDetail(score: display, winnerReceivedFrom: isWinner ? receipts : []))
+                Text(vm.format.roundDetail(score: display))
                     .font(.system(size: 13))
                     .foregroundColor(Color(theme.secondaryText))
             }

@@ -65,7 +65,7 @@ final class ScoringRuleTests: XCTestCase {
         ]
 
         for (rule, cards, expectedPenalty) in cases {
-            let round = try ScoringEngine.score(cardsLeft: [0, cards, 1, 1], rule: rule)
+            let round = try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [0, cards, 1, 1], rule: rule)
             XCTAssertEqual(
                 round.points[1],
                 -expectedPenalty,
@@ -213,14 +213,14 @@ final class TaiwanRuleTests: XCTestCase {
 
     func testTaiwanCommonRoundPenalties() throws {
         // Winner seat 1; losers hold 9, 10 and 13 cards → 9, 20, 39; winner collects 68.
-        let round = try ScoringEngine.score(cardsLeft: [9, 0, 10, 13], rule: .taiwanCommon)
+        let round = try ScoringEngine.scoreWinnerTakesAll(cardsLeft: [9, 0, 10, 13], rule: .taiwanCommon)
         XCTAssertEqual(round.scores.map(\.points), [-9, 68, -20, -39])
         XCTAssertEqual(round.scores.map(\.points).reduce(0, +), 0)
     }
 
     func testTaiwanCommonWithHeldTwoDoubling() throws {
         let rule = ScoringRule.taiwanCommon.withDoubleOnHeldTwo(true)
-        let round = try ScoringEngine.score(
+        let round = try ScoringEngine.scoreWinnerTakesAll(
             cardsLeft: [0, 11, 3, 5],
             rule: rule,
             heldTwo: [false, true, false, false]

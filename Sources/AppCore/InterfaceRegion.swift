@@ -1,4 +1,5 @@
 import Foundation
+import ScoringEngine
 
 /// Which wording and default 計分 table the interface uses.
 ///
@@ -32,6 +33,15 @@ public enum InterfaceRegion: String, Codable, CaseIterable, Sendable {
         switch self {
         case .hongKong: return .hongKongDefault
         case .taiwan: return .taiwanDefault
+        }
+    }
+
+    /// Settlement for sessions started in this region: Hong Kong 鋤大D settles pairwise;
+    /// Taiwan stays winner-takes-all for now (house rules still being researched).
+    public var defaultScoringMode: ScoringMode {
+        switch self {
+        case .hongKong: return .pairwise
+        case .taiwan: return .winnerTakesAll
         }
     }
 

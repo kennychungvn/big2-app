@@ -61,7 +61,11 @@ struct HomeView: View {
                 }
 
                 if !vm.model.allSessions.isEmpty {
-                    NavigationLink(value: AppRoute.allSessions) {
+                    // Button + path append rather than NavigationLink(value:): the link was
+                    // ignored after the path had been reset programmatically (完場 → 首頁).
+                    Button {
+                        vm.path.append(.allSessions)
+                    } label: {
                         HStack {
                             Text(tr("所有紀錄"))
                             Spacer()

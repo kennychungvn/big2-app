@@ -250,9 +250,13 @@ final class Big2UITests: XCTestCase {
         tap("scoreboard.addRound")
         XCTAssertFalse(app.descendants(matching: .any)["interstitial.close"].waitForExistence(timeout: 1.5))
         enterRound([13, 0, 2, 9])
-        tapNextRound()
-        element("scoreboard.undoToast", timeout: 3)
+        // The scoreboard toast only lasts 5s. Assert it right after 下一局;
+        // waitForScoreboard()'s CI polling can eat the whole window (it took 5.6s
+        // in run 43259144182, so the toast was already gone).
+        tap("result.next")
+        element("scoreboard.undoToast", timeout: 5)
         snap("scoreboard-undo-toast")
+        waitForScoreboard()
         XCTAssertEqual(label("scoreboard.title"), "打咗 6 局")
         assertTotals(["+102", "+18", "+10", "−130"])
 

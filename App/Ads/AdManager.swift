@@ -32,10 +32,9 @@ final class AdMobAdManager: NSObject, AdManaging, FullScreenContentDelegate {
             }
             return
         }
-        guard let unitID = AdConfig.interstitialUnitID else { return }
         isLoading = true
         InterstitialAd.load(
-            with: unitID,
+            with: AdConfig.interstitialUnitID,
             request: AdsRuntime.shared.makeRequest()
         ) { [weak self] ad, error in
             Task { @MainActor in

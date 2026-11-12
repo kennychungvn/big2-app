@@ -8,16 +8,12 @@ import Foundation
 /// - Debug builds and TestFlight builds → Google's official TEST units (no invalid traffic).
 /// - App Store (Release, not TestFlight) → the real units below.
 ///
-/// TODO(Kenny): create the Interstitial unit in AdMob (app 鋤大D計分, publisher
-/// pub-3610638329659252) and paste it into `releaseInterstitialUnitID`. Until then App Store
-/// builds simply show no interstitial (banner still works).
 enum AdConfig {
     // MARK: Real ids (AdMob publisher pub-3610638329659252)
 
     static let releaseAppID = "ca-app-pub-3610638329659252~9118674558"
     static let releaseBannerUnitID = "ca-app-pub-3610638329659252/6728314939"
-    /// PLACEHOLDER: replace with the real Interstitial unit id, e.g. "ca-app-pub-3610638329659252/0987654321".
-    static let releaseInterstitialUnitID = "ca-app-pub-3610638329659252/REPLACE_INTERSTITIAL_UNIT_ID"
+    static let releaseInterstitialUnitID = "ca-app-pub-3610638329659252/4651835990"
 
     // MARK: Google's official test ids (https://developers.google.com/admob/ios/test-ads)
 
@@ -46,11 +42,8 @@ enum AdConfig {
         isUsingTestAds ? testAdaptiveBannerUnitID : releaseBannerUnitID
     }
 
-    /// `nil` in App Store builds until the real interstitial unit exists (never fall back to a
-    /// test unit in production).
-    static var interstitialUnitID: String? {
-        if isUsingTestAds { return testInterstitialUnitID }
-        return releaseInterstitialUnitID.contains("REPLACE_") ? nil : releaseInterstitialUnitID
+    static var interstitialUnitID: String {
+        isUsingTestAds ? testInterstitialUnitID : releaseInterstitialUnitID
     }
 
     // MARK: UI tests

@@ -111,7 +111,7 @@ swift test
 - **插頁廣告**：每完成 5 局，下一次㩒「入今局」先考慮播（唔會喺剛計完分嗰下彈出）。兩次之間最少隔 180 秒。廣告未 load 好就直接入去入牌，唔會等人。真正嘅 AdMob 寫法註解喺 `App/Ads/AdMobStub.swift`，到時加 Google Mobile Ads package 再打開就得。
 - **內購**：一次性 HK$8 永久無廣告，唔做訂閱。`StoreKitStoreManager` 用 StoreKit 2，有「移除廣告」同「恢復購買」。設定入面仲有炒動畫／震機開關。
 
-上架前要喺 App Store Connect 放私隱政策同使用條款嘅公開連結（Apple 審 IAP 會睇）。草稿已經寫咗喺 `docs/privacy-policy.md` 同 `docs/terms.md`，聯絡電郵係 `kenny@vcm-inter.com`；公開版本喺 https://kennychungvn.github.io/daidee-site/privacy.html 。設定頁「關於」已經有免責聲明。
+上架前要喺 App Store Connect 放私隱政策同使用條款嘅公開連結（Apple 審 IAP 會睇）。草稿已經寫咗喺 `docs/privacy-policy.md` 同 `docs/terms.md`，聯絡電郵係 `enquiry@vcm-inter.com`；公開版本喺 https://kennychungvn.github.io/daidee-site/privacy.html 。設定頁「關於」已經有免責聲明。
 
 ## 之後先做嘅 side quest
 

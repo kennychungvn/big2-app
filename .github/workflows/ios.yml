@@ -58,6 +58,15 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             build
 
+      - name: Check privacy manifests (source + built app)
+        run: |
+          set -euo pipefail
+          python3 scripts/check_privacy_manifests.py App/PrivacyInfo.xcprivacy
+          APP=DerivedData/Build/Products/Debug-iphonesimulator/Big2.app
+          echo "Every PrivacyInfo.xcprivacy in the simulator build:"
+          find "${APP}" -name PrivacyInfo.xcprivacy -print
+          python3 scripts/check_privacy_manifests.py "${APP}"
+
       - name: Run AppCore tests
         run: swift test --package-path .
 
@@ -279,6 +288,31 @@ jobs:
             echo "::error::IPA is not fully distribution-signed; refusing to upload."
             exit 1
           fi
+
+      - name: Check privacy manifests in IPA
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          # ITMS-91064 is reported by path; list and validate every manifest that ships,
+          # and make sure the bundle-root one is our App/PrivacyInfo.xcprivacy.
+          CHECK_DIR="${RUNNER_TEMP}/ipa-check"
+          APP=$(ls -d "${CHECK_DIR}"/Payload/*.app)
+          echo "Every PrivacyInfo.xcprivacy in ${APP#${CHECK_DIR}/}:"
+          find "${APP}" -name PrivacyInfo.xcprivacy -print | sed "s|^${APP}/|  |"
+          python3 scripts/check_privacy_manifests.py "${APP}"
+          ROOT="${APP}/PrivacyInfo.xcprivacy"
+          if [ ! -f "${ROOT}" ]; then
+            echo "::error::No PrivacyInfo.xcprivacy at the app bundle root."
+            exit 1
+          fi
+          python3 - "${ROOT}" App/PrivacyInfo.xcprivacy <<'PY'
+          import plistlib, sys
+          a, b = (plistlib.load(open(p, "rb")) for p in sys.argv[1:3])
+          if a != b:
+              sys.exit("::error::Bundle-root PrivacyInfo.xcprivacy is not App/PrivacyInfo.xcprivacy.")
+          print("Bundle-root PrivacyInfo.xcprivacy matches App/PrivacyInfo.xcprivacy.")
+          PY
+          echo "Privacy manifest check passed."
 
       - name: Upload IPA to TestFlight
         if: steps.check.outputs.skip != 'true'

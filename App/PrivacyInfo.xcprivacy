@@ -5,9 +5,14 @@
      UMP 3.1.0 and Firebase Crashlytics 13.1.0 (GMA/UMP checked in the
      SDK xcframeworks; Crashlytics from firebase-ios-sdk 13.1.0 source).
      Only Device ID is marked used for tracking, matching Google's Mobile
-     Ads SDK. That SDK lists no NSPrivacyTrackingDomains, so this file
-     leaves the array empty. NSPrivacyTracking stays true because Device
-     ID may be used for tracking (ATT is already implemented).
+     Ads SDK. That SDK lists no NSPrivacyTrackingDomains (and declares no
+     NSPrivacyTracking key), so this file leaves the array empty.
+     NSPrivacyTracking is false: Apple's validator (ITMS-91064) rejects
+     true with an empty domain list, and listing ad-serving domains would
+     make iOS block ad requests for every user who declines ATT. Tracking
+     via Device ID is still declared per data type above, ATT is still
+     requested, and App Store Connect "App Privacy" still answers Yes to
+     tracking. Checked in CI by scripts/check_privacy_manifests.py.
      Purposes are the union of the SDKs, using Third-Party Advertising,
      Analytics and App Functionality (not Developer's Advertising or
      Marketing, which the privacy policy does not describe).
@@ -15,7 +20,7 @@
 <plist version="1.0">
 <dict>
 	<key>NSPrivacyTracking</key>
-	<true/>
+	<false/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>

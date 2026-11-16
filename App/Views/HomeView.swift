@@ -4,6 +4,7 @@ import AppCore
 struct HomeView: View {
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
+    @State private var pendingDelete: StoredSession?
 
     var body: some View {
         ScrollView {
@@ -53,10 +54,18 @@ struct HomeView: View {
                     .padding(.bottom, 6)
 
                     ForEach(Array(recents.enumerated()), id: \.element.id) { position, stored in
-                        SessionRow(stored: stored) {
+                        SessionRow(stored: stored, showsDay: true) {
                             vm.openSession(stored)
                         }
                         .accessibilityIdentifier("home.recent.\(position)")
+                        // A ScrollView has no swipe actions; long-press offers 刪除 instead.
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                pendingDelete = stored
+                            } label: {
+                                Label(tr("刪除"), systemImage: "trash")
+                            }
+                        }
                     }
                 }
 
@@ -90,6 +99,7 @@ struct HomeView: View {
             .padding(.bottom, 12)
         }
         .background(Color(theme.background).ignoresSafeArea())
+        .deleteSessionAlert(pending: $pendingDelete) { vm.deleteSession($0.id) }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

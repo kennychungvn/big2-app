@@ -86,7 +86,7 @@ final class ChaoTableTests: XCTestCase {
 
     // MARK: - Home lists
 
-    func testHomeRecentCapsAtNineAndSkipsContinueSession() throws {
+    func testHomeRecentCapsAtNineAndPutsUnfinishedFirst() throws {
         var model = AppModel()
         let clock = MutableClock(Date(timeIntervalSince1970: 1_700_000_000))
         var ids: [UUID] = []
@@ -94,14 +94,16 @@ final class ChaoTableTests: XCTestCase {
             clock.advance(by: 60)
             let stored = try model.startNewSession(players: ["A", "B", "C", "\(index)"], chaoTable: .hongKongDefault, clock: clock)
             ids.append(stored.id)
+            try model.addRound(cardsLeft: [0, 1, 2, 3], clock: clock)
             if index < 11 { try model.finishCurrentSession(clock: clock) }
         }
         XCTAssertEqual(model.latestUnfinished?.id, ids[11])
         let recent = model.homeRecentSessions
         XCTAssertEqual(recent.count, AppModel.homeRecentLimit)
         XCTAssertEqual(recent.count, 9)
-        XCTAssertFalse(recent.contains { $0.id == ids[11] })
-        XCTAssertEqual(recent.first?.id, ids[10])
+        // Unfinished session on top in both lists (v1.1: same handling on home and 所有紀錄).
+        XCTAssertEqual(recent.first?.id, ids[11])
+        XCTAssertEqual(recent.dropFirst().first?.id, ids[10])
         XCTAssertEqual(model.allSessions.count, 12)
         XCTAssertEqual(model.allSessions.first?.id, ids[11])
         XCTAssertEqual(model.allSessions.map(\.updatedAt), model.allSessions.map(\.updatedAt).sorted(by: >))

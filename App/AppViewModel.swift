@@ -120,6 +120,10 @@ final class AppViewModel: ObservableObject {
             self.model = AppModel()
             loadFailed = true
         }
+        // v1.1: 0-round sessions are never listed; clear the ones older builds saved.
+        if !loadFailed, self.model.purgeEmptySessions() > 0 {
+            try? store.save(self.model.data)
+        }
         refreshRegion()
         if loadFailed {
             self.errorMessage = tr("存檔讀唔到，已經用空白資料重新開始。")
@@ -181,6 +185,22 @@ final class AppViewModel: ObservableObject {
             }
         } catch {
             errorMessage = tr("開唔到呢場。")
+        }
+    }
+
+    /// Swipe-to-delete in 所有紀錄 / long-press on 最近場次, after the confirm alert.
+    func deleteSession(_ id: UUID) {
+        do {
+            try model.deleteSession(id)
+            path.removeAll { route in
+                switch route {
+                case .scoreboard(let routeID), .final(let routeID): return routeID == id
+                case .allSessions: return false
+                }
+            }
+            persist()
+        } catch {
+            errorMessage = tr("刪除失敗，請稍後再試。")
         }
     }
 

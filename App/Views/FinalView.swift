@@ -94,29 +94,39 @@ struct FinalView: View {
         }
     }
 
+    /// v1.1: one big yellow 分享結果圖 plus a small square Aa for the plain-text result.
+    /// While the image is still rendering, the big button shares the text instead.
     @ViewBuilder
     private func shareControls(summary: ShareSummary) -> some View {
-        VStack(spacing: 10) {
-            if let shareImage {
-                ShareLink(
-                    item: shareImage,
-                    preview: SharePreview(summary.title, image: shareImage)
-                ) {
-                    shareLabel(tr("分享結果圖"))
+        HStack(spacing: 10) {
+            Group {
+                if let shareImage {
+                    ShareLink(
+                        item: shareImage,
+                        preview: SharePreview(summary.title, image: shareImage)
+                    ) {
+                        shareLabel(tr("分享結果圖"))
+                    }
+                } else {
+                    ShareLink(item: summary.text) {
+                        shareLabel(tr("分享結果圖"))
+                    }
                 }
-                .padding(.horizontal, 18)
             }
+            .accessibilityIdentifier("final.shareImage")
+
             ShareLink(item: summary.text) {
-                Text(tr("分享文字結果"))
-                    .font(.system(size: 16, weight: .semibold))
+                Text("Aa")
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(Color(theme.text))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .frame(width: 56, height: 56)
                     .background(Color(theme.card))
                     .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
             }
-            .padding(.horizontal, 18)
+            .accessibilityLabel(tr("分享文字結果"))
+            .accessibilityIdentifier("final.shareText")
         }
+        .padding(.horizontal, 18)
         .padding(.vertical, 10)
     }
 

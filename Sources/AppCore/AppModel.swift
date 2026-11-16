@@ -33,20 +33,38 @@ public struct AppModel: Equatable, Sendable {
     /// How many sessions the home screen's 最近場次 list shows.
     public static let homeRecentLimit = 9
 
-    /// 最近場次 on the home screen: newest first, without the session behind 繼續上一場,
-    /// at most `homeRecentLimit` rows. Everything else is under 所有紀錄.
+    /// 最近場次 on the home screen: same order and rules as 所有紀錄 (no 0-round sessions,
+    /// unfinished ones on top with ▶ 繼續), at most `homeRecentLimit` rows.
     public var homeRecentSessions: [StoredSession] {
-        let latestUnfinishedID = latestUnfinished?.id
-        return Array(
-            data.recentSessionsForHome
-                .filter { $0.id != latestUnfinishedID }
-                .prefix(Self.homeRecentLimit)
-        )
+        Array(data.listedSessions.prefix(Self.homeRecentLimit))
     }
 
-    /// 所有紀錄: every stored session, newest first.
+    /// 所有紀錄: every session with at least one round; unfinished first, then newest first.
     public var allSessions: [StoredSession] {
-        data.recentSessionsForHome
+        data.listedSessions
+    }
+
+    /// Removes 0-round sessions left by older builds (run on launch). The latest unfinished
+    /// session is kept even with 0 rounds so 繼續上一場 still opens it. Returns the count removed.
+    @discardableResult
+    public mutating func purgeEmptySessions() -> Int {
+        let keep = data.latestUnfinished.flatMap { $0.isEmpty ? $0.id : nil }
+        let removed = data.removeEmptySessions(keeping: keep)
+        if let currentSessionID, !data.sessions.contains(where: { $0.id == currentSessionID }) {
+            self.currentSessionID = nil
+        }
+        return removed
+    }
+
+    /// Deletes one session (swipe to delete in 所有紀錄).
+    public mutating func deleteSession(_ id: UUID) throws {
+        guard let index = data.sessions.firstIndex(where: { $0.id == id }) else {
+            throw AppModelError.sessionNotFound(id)
+        }
+        data.sessions.remove(at: index)
+        if currentSessionID == id {
+            currentSessionID = nil
+        }
     }
 
     public mutating func startNewSession(
@@ -59,6 +77,8 @@ public struct AppModel: Equatable, Sendable {
         let session = try Session(players: names, rule: chaoTable.rule, scoringMode: scoringMode)
         let now = clock.now
         let stored = StoredSession(session: session, createdAt: now, updatedAt: now)
+        // A session nobody entered a round in is not worth keeping once a new one starts.
+        data.removeEmptySessions()
         data.sessions.append(stored)
         data.lastSettings = LastSettings(playerNames: names, chaoTable: chaoTable)
         data.remember(playerNames: names)

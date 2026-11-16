@@ -7,26 +7,30 @@ import AppCore
 
 /// Google standard anchored adaptive banner (`BannerView`) for the full screen width,
 /// about 50–62 pt tall on iPhone. Loads only after `AdsRuntime` finished UMP consent + ATT.
-/// The slot takes NO height until an ad has actually been received, and collapses again if
-/// a refresh fails, so a not-yet-approved AdMob account never leaves an empty bar. Once an
-/// ad is in, the slot is exactly the ad's height and clips, so the ad can never overflow
-/// upwards onto the screen's bottom buttons.
+/// v1.1: the slot ALWAYS reserves the banner's height while ads are on (from the first
+/// frame, before consent or the first ad), so nothing above it jumps when an ad arrives.
+/// Until an ad is in, the slot shows a subtle placeholder (card colour + tiny 廣告); a received
+/// ad fades in over 0.25 s. A failed refresh fades back to the placeholder, never collapses.
+/// The slot is exactly the ad size and clips, so the ad never overflows onto bottom buttons.
+/// With 移除廣告 bought, `BannerSlot` drops the whole slot.
 struct AdMobBannerSlotView: View {
     @ObservedObject private var runtime = AdsRuntime.shared
-    @State private var loadedHeight: CGFloat = 0
+    @State private var adLoaded = false
 
     var body: some View {
         let adSize = Self.adaptiveSize()
-        ZStack(alignment: .top) {
+        ZStack {
+            BannerSlotBackground()
             if runtime.isReady {
-                AdMobBannerView(adSize: adSize) { height in
-                    loadedHeight = height
+                AdMobBannerView(adSize: adSize) { loaded in
+                    withAnimation(.easeIn(duration: 0.25)) { adLoaded = loaded }
                 }
                 .frame(width: adSize.size.width, height: adSize.size.height)
+                .opacity(adLoaded ? 1 : 0)
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: runtime.isReady ? loadedHeight : 0, alignment: .top)
+        .frame(height: adSize.size.height, alignment: .top)
         .clipped()
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("banner")
@@ -44,10 +48,10 @@ struct AdMobBannerSlotView: View {
 
 private struct AdMobBannerView: UIViewRepresentable {
     let adSize: AdSize
-    /// Height to reserve: the ad's height once one is received, 0 after a failure.
-    let onHeightChange: (CGFloat) -> Void
+    /// `true` once an ad is received, `false` after a failed load / refresh.
+    let onLoadedChange: (Bool) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onHeightChange: onHeightChange) }
+    func makeCoordinator() -> Coordinator { Coordinator(onLoadedChange: onLoadedChange) }
 
     func makeUIView(context: Context) -> BannerView {
         let banner = BannerView(adSize: adSize)
@@ -58,31 +62,48 @@ private struct AdMobBannerView: UIViewRepresentable {
     }
 
     func updateUIView(_ banner: BannerView, context: Context) {
-        context.coordinator.onHeightChange = onHeightChange
-        context.coordinator.maxHeight = adSize.size.height
+        context.coordinator.onLoadedChange = onLoadedChange
         if !isAdSizeEqualToSize(size1: banner.adSize, size2: adSize) {
             banner.adSize = adSize
         }
     }
 
     final class Coordinator: NSObject, BannerViewDelegate {
-        var onHeightChange: (CGFloat) -> Void
-        var maxHeight: CGFloat = 0
+        var onLoadedChange: (Bool) -> Void
 
-        init(onHeightChange: @escaping (CGFloat) -> Void) {
-            self.onHeightChange = onHeightChange
+        init(onLoadedChange: @escaping (Bool) -> Void) {
+            self.onLoadedChange = onLoadedChange
         }
 
         func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            let height = bannerView.adSize.size.height
-            let capped = maxHeight > 0 ? min(height, maxHeight) : height
-            DispatchQueue.main.async { self.onHeightChange(capped) }
+            DispatchQueue.main.async { self.onLoadedChange(true) }
         }
 
         func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
             NSLog("[Ads] Banner failed to load: \(error.localizedDescription)")
-            DispatchQueue.main.async { self.onHeightChange(0) }
+            DispatchQueue.main.async { self.onLoadedChange(false) }
         }
+    }
+}
+
+/// What the reserved banner slot shows before (or between) ads: the card colour with a tiny
+/// grey 廣告, so the bar reads as an ad space rather than a glitch.
+struct BannerSlotBackground: View {
+    @Environment(\.appTheme) private var theme
+
+    var body: some View {
+        ZStack {
+            Color(theme.card)
+            Text(tr("廣告"))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(Color(theme.secondaryText).opacity(0.6))
+        }
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color(theme.secondaryText).opacity(0.15))
+                .frame(height: 0.5)
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -143,7 +164,7 @@ extension View {
     /// applied outside a NavigationStack does not reach pushed screens or the sheet's own
     /// bottom inset, so the banner covered 入今局 / 開波 (seen in UI test screenshots).
     /// The VStack gives the content only the space above the banner, so every bottom
-    /// button sits above it; the banner itself is 0 pt until an ad loads.
+    /// button sits above it; the slot keeps the banner's full height while ads are on.
     func bannerSlot() -> some View {
         modifier(BannerSlotModifier())
     }

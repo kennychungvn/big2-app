@@ -68,7 +68,8 @@ jobs:
     name: Archive & Upload to TestFlight
     needs: build-and-test
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: macos-latest
+    # macos-latest (arm64) jobs sat unacquired for 15+ min on 2026-11-12; Intel picks them up.
+    runs-on: macos-15-intel
     timeout-minutes: 60
     steps:
       - name: Check App Store Connect secrets

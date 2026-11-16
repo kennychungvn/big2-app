@@ -48,7 +48,7 @@ big2-app/
 
 1. 用 `kennychungvn` 開一個 **private** 空 repo（唔好加 README）。
 2. 用 GitHub device code 授權我幫你 push，或者喺電腦網頁自己上傳檔案。
-3. 開好 Apple Developer（個人名義）之後，喺 App Store Connect 開 app 記錄同 API key（角色揀 App Manager），再將 `ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_KEY_P8`、`APPLE_TEAM_ID` 加去 repo 嘅 Actions secrets。
+3. 開好 Apple Developer（個人名義）之後，喺 App Store Connect 開 app 記錄同 API key（角色揀 Admin；TestFlight 雲端簽名需要 Admin），再將 `ASC_KEY_ID`、`ASC_ISSUER_ID`、`ASC_KEY_P8`、`APPLE_TEAM_ID` 加去 repo 嘅 Actions secrets。
 4. 喺 Actions 撳 **Run workflow**。Job A 會喺雲端 Mac compile 同跑測試；Job B 會打包上傳 TestFlight（secrets 未齊會自動跳過，唔會當失敗）。Build number 會用 GitHub `run_number` 自動加。
 5. 用 TestFlight app 裝落 iPhone。你自己做 Internal Tester 唔使過 beta review。
 

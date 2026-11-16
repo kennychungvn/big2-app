@@ -10,7 +10,7 @@
 - [ ] 將 code 放上去（方法 A 或者 B）
 - [ ] 俾 US$99 開 Apple Developer（個人名義），等批准電郵（通常 24–48 小時）
 - [ ] 喺 Apple 登記 Bundle ID，喺 App Store Connect 開 app 記錄
-- [ ] 開 App Store Connect API key（角色揀 **App Manager**）
+- [ ] 開 App Store Connect API key（角色揀 **Admin**；TestFlight 雲端簽名需要 Admin，App Manager 唔夠）
 - [ ] 將 4 個 secrets 加去 GitHub Actions
 - [ ] 喺 Actions 撳 Run workflow，等 TestFlight build
 - [ ] 用 TestFlight app 裝落 iPhone
@@ -98,7 +98,7 @@
 
 之後上架前，要喺 App Store Connect 將商品 id `com.kenny.daidee.removeads` 建成一個**非消耗性**內購（HK$8 永久移除廣告），同埋放私隱政策連結。條款同私隱政策草稿已經喺 `docs/terms.md`、`docs/privacy-policy.md`。
 
-### 3.4 開 App Store Connect API key（角色揀 App Manager）
+### 3.4 開 App Store Connect API key（角色揀 Admin）
 
 呢條 key 係俾 GitHub Actions 用嚟上傳 TestFlight，**唔係**你個 Apple ID 密碼。
 
@@ -106,7 +106,7 @@
 2. 第一次用要先同意條款，啟用 API。
 3. 喺 **Team Keys** 撳 **Generate API Key**（或者 +）。
 4. Name 填 `GitHub Actions TestFlight`。
-5. Access 揀 **App Manager**。
+5. Access 揀 **Admin**。TestFlight 上傳用雲端 Apple Distribution 簽名，只有 Account Holder / Admin key 做得到；App Manager 會喺 export 俾 Cloud signing permission error。
 6. 撳 Generate。
 7. 頁頂有一個 **Issuer ID**（成個 team 共用，格式好似 UUID），抄低。
 8. 抄低呢條 key 嘅 **Key ID**。
@@ -155,7 +155,7 @@
 
 之後出正式版可以開一個 tag，名要係 `v` 開頭，例如 `v0.1.0`。用 GitHub 網頁 **Releases → Create a new release** 開 tag 都會觸發 Job B。
 
-Build number 會自動用 GitHub 嘅 `run_number`，你唔使每次自己改。版本號而家係 `0.1.0`。
+Build number 會自動用 GitHub 嘅 `run_number`，你唔使每次自己改。版本號而家係 `1.0`。
 
 第一次上傳有機會失敗，例如 Bundle ID 未登記、協議未同意、或者 API key 權限唔夠。將紅色 log 畀我睇，我幫你改。
 

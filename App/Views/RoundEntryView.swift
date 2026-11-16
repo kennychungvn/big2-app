@@ -120,22 +120,33 @@ struct RoundEntryView: View {
         .accessibilityIdentifier("entry.row.\(index)")
     }
 
+    /// Same width on every row so the pills line up. Sized for "13" + gap + ×N at full
+    /// font size, plus padding so the 1.6× badge pop (`scaleEffect`, layout-neutral)
+    /// cannot overlap the digits. Comfortable on iPhone SE (375 pt) as well as larger phones.
+    private enum CountPill {
+        static let width: CGFloat = 104
+        static let height: CGFloat = 42
+        static let numberWidth: CGFloat = 36
+        static let spacing: CGFloat = 12
+        static let horizontalPadding: CGFloat = 12
+    }
+
     @ViewBuilder
     private func countView(cards: Int?, isWinner: Bool, isFocused: Bool, badgeMultiplier: Int?, scale: CGFloat) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: CountPill.spacing) {
             if isWinner {
                 Text(tr("出晒 👑"))
                     .font(.system(size: 16, weight: .bold))
                     .foregroundColor(Color(theme.primary))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
             } else if let cards {
                 Text("\(cards)")
                     .font(.system(size: 22, weight: .bold))
                     .monospacedDigit()
                     .foregroundColor(Color(theme.text))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .fixedSize(horizontal: true, vertical: false)
-                    .frame(minWidth: 36, alignment: .trailing)
+                    .frame(width: CountPill.numberWidth, alignment: .trailing)
                 if let badgeMultiplier, badgeMultiplier >= 2 {
                     ChaoBadgeView(multiplier: badgeMultiplier, scale: scale)
                 } else {
@@ -151,8 +162,9 @@ struct RoundEntryView: View {
                     .foregroundColor(Color(theme.tertiaryText))
             }
         }
+        .padding(.horizontal, CountPill.horizontalPadding)
+        .frame(width: CountPill.width, height: CountPill.height)
         .layoutPriority(1)
-        .frame(minWidth: 84, minHeight: 42)
         .background(
             Group {
                 if isWinner {

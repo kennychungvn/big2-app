@@ -31,6 +31,12 @@ final class Big2UITests: XCTestCase {
         add(attachment)
     }
 
+    /// Let the 炒 badge spring (0.35s response, starts at 1.6×) settle so screenshots
+    /// show the number and badge side by side at rest.
+    private func waitForChaoAnimation() {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.7))
+    }
+
     @discardableResult
     private func element(_ id: String, timeout: TimeInterval = 10, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
         let element = app.descendants(matching: .any)[id].firstMatch
@@ -116,7 +122,10 @@ final class Big2UITests: XCTestCase {
     private func enterRound(_ cards: [Int], snapBeforeLast: String? = nil) {
         element("entry.title")
         for (seat, value) in cards.enumerated() {
-            if seat == cards.count - 1, let snapBeforeLast { snap(snapBeforeLast) }
+            if seat == cards.count - 1, let snapBeforeLast {
+                waitForChaoAnimation()
+                snap(snapBeforeLast)
+            }
             tap(value == 0 ? "pad.win" : "pad.\(value)")
         }
         element("result.title")
@@ -223,8 +232,9 @@ final class Big2UITests: XCTestCase {
                 XCTAssertTrue(label("entry.prompt").contains("小肥 剩幾多張？"))
                 assertBanner("entry-start")
                 snap("entry-start")
-                // 13 must stay on one line in the count pill (it used to wrap as "1" over "3").
+                // 13 and the ×4 badge must sit side by side, unclipped, at full size.
                 tap("pad.13")
+                waitForChaoAnimation()
                 snap("entry-13cards")
                 tap("pad.undo")
                 enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
@@ -422,6 +432,7 @@ final class Big2UITests: XCTestCase {
         tap("pad.win")
         XCTAssertFalse(element("pad.win").isEnabled, "only one winner")
         tap("pad.10")
+        waitForChaoAnimation()
         snap("entry-before-last")
         tap("pad.5")
         element("result.title")

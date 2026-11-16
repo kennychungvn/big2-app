@@ -137,6 +137,20 @@ final class Big2UITests: XCTestCase {
         XCTAssertTrue(visible, "banner not visible on \(screen)", file: file, line: line)
     }
 
+    /// A bottom button must sit fully above the banner, never behind it, and stay tappable.
+    private func assertAboveBanner(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+        let target = element(id, file: file, line: line)
+        XCTAssertTrue(target.isHittable, "\(id) is not hittable", file: file, line: line)
+        let banners = app.descendants(matching: .any).matching(identifier: "banner")
+        guard let banner = banners.allElementsBoundByIndex.first(where: { $0.exists && $0.isHittable }) else {
+            XCTFail("no visible banner to compare \(id) with", file: file, line: line)
+            return
+        }
+        XCTAssertLessThanOrEqual(target.frame.maxY, banner.frame.minY + 0.5,
+                                 "\(id) (maxY \(target.frame.maxY)) overlaps the banner (minY \(banner.frame.minY))",
+                                 file: file, line: line)
+    }
+
     private func assertNoBanner(_ screen: String, file: StaticString = #filePath, line: UInt = #line) {
         let banners = app.descendants(matching: .any).matching(identifier: "banner")
         let visible = banners.allElementsBoundByIndex.contains { $0.exists && $0.isHittable }
@@ -185,6 +199,7 @@ final class Big2UITests: XCTestCase {
         XCTAssertEqual(tile8.value as? String, "×2", "tile cycles back to the HK default")
         typeNames(["小肥", "文仔", "呀權", "呀南"])
         snap("setup-filled")
+        assertAboveBanner("setup.start")
         tap("setup.start")
 
         // Scoreboard, 0 rounds

@@ -9,8 +9,9 @@ import AppCore
 /// about 50–62 pt tall on iPhone. Loads only after `AdsRuntime` finished UMP consent + ATT.
 /// v1.1: the slot ALWAYS reserves the banner's height while ads are on (from the first
 /// frame, before consent or the first ad), so nothing above it jumps when an ad arrives.
-/// Until an ad is in, the slot shows a subtle placeholder (card colour + tiny 廣告); a received
-/// ad fades in over 0.25 s. A failed refresh fades back to the placeholder, never collapses.
+/// Until an ad is in, the slot shows a subtle placeholder (card colour + faint app icon
+/// and name); a received ad fades in over 0.25 s. A failed refresh fades back to the
+/// placeholder, never collapses.
 /// The slot is exactly the ad size and clips, so the ad never overflows onto bottom buttons.
 /// With 移除廣告 bought, `BannerSlot` drops the whole slot.
 struct AdMobBannerSlotView: View {
@@ -86,23 +87,33 @@ private struct AdMobBannerView: UIViewRepresentable {
     }
 }
 
-/// What the reserved banner slot shows before (or between) ads: the card colour with a tiny
-/// grey 廣告, so the bar reads as an ad space rather than a glitch.
+/// What the reserved banner slot shows before (or between) ads: the card colour with a
+/// faint app icon and name, so the bar reads as part of the app rather than a glitch
+/// or a tappable ad. Not interactive.
 struct BannerSlotBackground: View {
     @Environment(\.appTheme) private var theme
 
     var body: some View {
         ZStack {
             Color(theme.card)
-            Text(tr("廣告"))
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(Color(theme.secondaryText).opacity(0.6))
+            HStack(spacing: 6) {
+                Image("HomeLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 24, height: 24)
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                Text(tr("鋤大D計分"))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Color(theme.text))
+            }
+            .opacity(0.35)
         }
         .overlay(alignment: .top) {
             Rectangle()
                 .fill(Color(theme.secondaryText).opacity(0.15))
                 .frame(height: 0.5)
         }
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 }

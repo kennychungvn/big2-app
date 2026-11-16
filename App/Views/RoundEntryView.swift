@@ -132,7 +132,10 @@ struct RoundEntryView: View {
                     .font(.system(size: 22, weight: .bold))
                     .monospacedDigit()
                     .foregroundColor(Color(theme.text))
-                    .frame(width: 30, alignment: .trailing)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(minWidth: 36, alignment: .trailing)
                 if let badgeMultiplier, badgeMultiplier >= 2 {
                     ChaoBadgeView(multiplier: badgeMultiplier, scale: scale)
                 } else {
@@ -148,6 +151,7 @@ struct RoundEntryView: View {
                     .foregroundColor(Color(theme.tertiaryText))
             }
         }
+        .layoutPriority(1)
         .frame(minWidth: 84, minHeight: 42)
         .background(
             Group {

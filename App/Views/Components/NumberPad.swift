@@ -79,6 +79,8 @@ struct NumberPad: View {
                 VStack(spacing: 3) {
                     Text("\(value)")
                         .font(.system(size: 24, weight: .bold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     if multiplier >= 2 {
                         Text("×\(multiplier)")
                             .font(.system(size: 11, weight: .semibold))

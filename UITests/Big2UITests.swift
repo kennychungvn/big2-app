@@ -223,6 +223,10 @@ final class Big2UITests: XCTestCase {
                 XCTAssertTrue(label("entry.prompt").contains("小肥 剩幾多張？"))
                 assertBanner("entry-start")
                 snap("entry-start")
+                // 13 must stay on one line in the count pill (it used to wrap as "1" over "3").
+                tap("pad.13")
+                snap("entry-13cards")
+                tap("pad.undo")
                 enterRound(cards, snapBeforeLast: "entry-13cards-before-last")
                 // Pairwise: penalties 0/5/18/52 → +75 / +55 / +3 / −133; a loser can be positive.
                 XCTAssertTrue(label("result.row.2").contains("+3"), label("result.row.2"))

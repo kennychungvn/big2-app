@@ -165,7 +165,7 @@ jobs:
             <key>method</key>
             <string>app-store-connect</string>
             <key>destination</key>
-            <string>upload</string>
+            <string>export</string>
             <key>signingStyle</key>
             <string>automatic</string>
             <key>teamID</key>
@@ -201,7 +201,26 @@ jobs:
             DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
-      - name: Upload archive to TestFlight
+      - name: Re-sign nested frameworks ad hoc
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          # The archive is unsigned, but SPM binary xcframeworks (GoogleMobileAds,
+          # UserMessagingPlatform) arrive carrying Google's signature, which the
+          # thinning copy invalidates. Export then re-signs them while keeping the
+          # stale designated requirement, and App Store validation rejects them
+          # ("not properly signed"). Sign every nested binary ad hoc, inside-out,
+          # so export replaces a clean signature with the Apple Distribution one.
+          APP="${RUNNER_TEMP}/Big2.xcarchive/Products/Applications/Big2.app"
+          if [ -d "${APP}/Frameworks" ]; then
+            find "${APP}/Frameworks" -depth \( -name '*.framework' -o -name '*.dylib' \) -print0 |
+              while IFS= read -r -d '' item; do
+                echo "Ad hoc signing ${item#${APP}/} (was: $(codesign -dvv "${item}" 2>&1 | grep -m1 -E '^Authority=|not signed' || echo 'unknown'))"
+                codesign --force --sign - --timestamp=none "${item}"
+              done
+          fi
+
+      - name: Export signed IPA (cloud-managed signing)
         if: steps.check.outputs.skip != 'true'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -213,45 +232,76 @@ jobs:
             -archivePath "${RUNNER_TEMP}/Big2.xcarchive" \
             -exportPath "${RUNNER_TEMP}/export" \
             -exportOptionsPlist "${RUNNER_TEMP}/ExportOptions.plist" \
-            -destination upload \
             -allowProvisioningUpdates \
             -authenticationKeyPath "${ASC_AUTH_KEY_PATH}" \
             -authenticationKeyID "${ASC_KEY_ID}" \
             -authenticationKeyIssuerID "${ASC_ISSUER_ID}" 2>&1 | tee "${RUNNER_TEMP}/export.log"
           status=${PIPESTATUS[0]}
           set -e
-          if [ "${status}" -eq 0 ]; then
-            echo "Uploaded to App Store Connect with xcodebuild -exportArchive -destination upload."
-            exit 0
-          fi
-
-          if grep -Eiq 'Cloud signing permission|cloud-managed distribution certificates' "${RUNNER_TEMP}/export.log"; then
-            echo "::error::The App Store Connect API key cannot use cloud-managed distribution certificates. Create a new Team Key with Admin access (App Manager is not enough), update ASC_KEY_ID and ASC_KEY_P8, revoke the old key, then re-run this workflow."
+          if [ "${status}" -ne 0 ]; then
+            if grep -Eiq 'Cloud signing permission|cloud-managed distribution certificates' "${RUNNER_TEMP}/export.log"; then
+              echo "::error::The App Store Connect API key cannot use cloud-managed distribution certificates. It needs Admin access."
+            fi
+            echo "::error::xcodebuild -exportArchive failed (exit ${status})."
             exit 1
           fi
 
-          echo "exportArchive destination upload failed; falling back to export + altool."
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          path = Path(os.environ["RUNNER_TEMP"]) / "ExportOptions.plist"
-          text = path.read_text()
-          text = text.replace("<string>upload</string>", "<string>export</string>")
-          path.write_text(text)
-          print("ExportOptions destination set to export.")
-          PY
-          xcodebuild -exportArchive \
-            -archivePath "${RUNNER_TEMP}/Big2.xcarchive" \
-            -exportPath "${RUNNER_TEMP}/export" \
-            -exportOptionsPlist "${RUNNER_TEMP}/ExportOptions.plist" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "${ASC_AUTH_KEY_PATH}" \
-            -authenticationKeyID "${ASC_KEY_ID}" \
-            -authenticationKeyIssuerID "${ASC_ISSUER_ID}"
+      - name: Verify IPA signatures
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
           IPA=$(ls "${RUNNER_TEMP}/export"/*.ipa)
-          echo "Uploading ${IPA} with altool."
+          CHECK_DIR="${RUNNER_TEMP}/ipa-check"
+          rm -rf "${CHECK_DIR}" && mkdir -p "${CHECK_DIR}"
+          unzip -q "${IPA}" -d "${CHECK_DIR}"
+          APP=$(ls -d "${CHECK_DIR}"/Payload/*.app)
+          fail=0
+          check() {
+            local item="$1" info
+            if ! codesign --verify --strict --verbose=2 "${item}"; then
+              echo "::error::Signature does not verify: ${item#${CHECK_DIR}/}"
+              fail=1; return
+            fi
+            info=$(codesign -dvv "${item}" 2>&1 || true)
+            if ! grep -q '^Authority=Apple Distribution' <<<"${info}"; then
+              echo "::error::Not signed with an Apple Distribution certificate: ${item#${CHECK_DIR}/}"
+              grep -E '^(Authority|TeamIdentifier|Signature)=' <<<"${info}" || true
+              fail=1; return
+            fi
+            echo "OK  ${item#${CHECK_DIR}/}"
+          }
+          if [ -d "${APP}/Frameworks" ]; then
+            while IFS= read -r -d '' item; do check "${item}"; done < <(
+              find "${APP}/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) -print0)
+          fi
+          check "${APP}"
+          if [ "${fail}" -ne 0 ]; then
+            echo "::error::IPA is not fully distribution-signed; refusing to upload."
+            exit 1
+          fi
+
+      - name: Upload IPA to TestFlight
+        if: steps.check.outputs.skip != 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          IPA=$(ls "${RUNNER_TEMP}/export"/*.ipa)
+          echo "Uploading ${IPA##*/} (build ${{ github.run_number }})."
+          # altool can exit 0 even when the upload fails, so check its output too.
+          set +e
           xcrun altool --upload-app \
             --type ios \
             --file "${IPA}" \
             --apiKey "${ASC_KEY_ID}" \
-            --apiIssuer "${ASC_ISSUER_ID}"
+            --apiIssuer "${ASC_ISSUER_ID}" 2>&1 | tee "${RUNNER_TEMP}/altool.log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "${status}" -ne 0 ] \
+            || grep -Eq 'UPLOAD FAILED|Failed to upload package|ERROR:' "${RUNNER_TEMP}/altool.log" \
+            || ! grep -Eq 'UPLOAD SUCCEEDED|No errors uploading' "${RUNNER_TEMP}/altool.log"; then
+            echo "::error::TestFlight upload failed (altool exit ${status}). See the log above."
+            exit 1
+          fi
+          echo "Build ${{ github.run_number }} uploaded to App Store Connect."

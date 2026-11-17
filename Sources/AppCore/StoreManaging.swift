@@ -9,10 +9,32 @@ public enum StoreProduct: Sendable {
 }
 
 public enum StoreError: Error, Equatable, Sendable {
+    /// StoreKit returned no product for `StoreProduct.removeAdsProductID`.
     case productNotFound
+    /// Generic failure with no more detail (e.g. an unknown `Product.PurchaseResult`).
     case purchaseFailed
+    /// Ask to Buy / SCA: the purchase finishes later via `Transaction.updates`.
     case purchasePending
+    /// The user dismissed the sign-in or purchase sheet. Never shown as an error.
     case cancelled
+    /// The transaction failed App Store signature verification. Carries the reason.
+    case unverified(String)
+    /// A StoreKit / App Store error. Carries a readable description of the underlying error
+    /// (e.g. "StoreKitError.networkError: …") so it can be shown to the user and logged.
+    case storeKit(String)
+    /// The App Store did not answer within the timeout. The request may still finish later.
+    case timedOut
+    /// Another purchase or restore is already running.
+    case busy
+
+    /// Underlying error text to show under the Cantonese message, if any.
+    public var detail: String? {
+        switch self {
+        case .unverified(let reason): return reason
+        case .storeKit(let description): return description
+        default: return nil
+        }
+    }
 }
 
 /// Main-actor isolated: purchase state is shown in Settings and owned by the view model.
@@ -57,6 +79,8 @@ public final class StubStoreManager: StoreManaging {
     }
 
     public func restorePurchases() async throws -> Bool {
+        isPurchasing = true
+        defer { isPurchasing = false }
         restoreCount += 1
         switch restoreResult {
         case .success(let ok):

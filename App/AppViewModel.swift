@@ -91,7 +91,10 @@ final class AppViewModel: ObservableObject {
     /// Past round opened from the scoreboard history.
     @Published var reviewSheet: ResultSheet?
     @Published var errorMessage: String?
-    @Published var storeMessage: String?
+    /// 「移除廣告」 / 「回復購買」 result shown as an alert in Settings.
+    @Published var storeAlert: StoreAlert?
+    /// True while a purchase or restore is running; disables both buttons.
+    @Published private(set) var isStoreBusy = false
     /// Effective 地區介面 (Hong Kong or Taiwan wording).
     @Published private(set) var region: InterfaceRegion = .hongKong
 
@@ -431,39 +434,40 @@ final class AppViewModel: ObservableObject {
     // MARK: - Settings / IAP
 
     func purchaseRemoveAds() async {
-        storeMessage = nil
+        guard !isStoreBusy else { return }
+        isStoreBusy = true
+        defer { isStoreBusy = false }
+        let result: Result<Bool, Error>
         do {
-            let ok = try await shop.purchaseRemoveAds()
-            if ok {
-                model.setAdsRemoved(true)
-                persist()
-                storeMessage = tr("已經移除廣告，多謝支持！")
-            }
-        } catch StoreError.cancelled {
-            storeMessage = nil
-        } catch StoreError.productNotFound {
-            storeMessage = tr("暫時未設定 App Store 商品（product id：%@），上架前再接。", StoreProduct.removeAdsProductID)
-        } catch StoreError.purchasePending {
-            storeMessage = tr("購買等候批准，稍後會自動生效。")
+            result = .success(try await shop.purchaseRemoveAds())
         } catch {
-            storeMessage = tr("購買失敗，請稍後再試或用「回復購買」。")
+            result = .failure(error)
+        }
+        if case .success(true) = result {
+            model.setAdsRemoved(true)
+            persist()
+        }
+        // Success is shown by the 「已經移除廣告」 label; cancelling stays silent.
+        if let feedback = StoreFeedback.purchase(result), feedback != .purchased {
+            storeAlert = StoreAlert(feedback)
         }
     }
 
     func restorePurchases() async {
-        storeMessage = nil
+        guard !isStoreBusy else { return }
+        isStoreBusy = true
+        defer { isStoreBusy = false }
+        let result: Result<Bool, Error>
         do {
-            let ok = try await shop.restorePurchases()
-            if ok {
-                model.setAdsRemoved(true)
-                persist()
-                storeMessage = tr("已經回復購買，廣告已移除。")
-            } else {
-                storeMessage = tr("搵唔到之前嘅購買記錄。")
-            }
+            result = .success(try await shop.restorePurchases())
         } catch {
-            storeMessage = tr("回復購買失敗，請稍後再試。")
+            result = .failure(error)
         }
+        if case .success(true) = result {
+            model.setAdsRemoved(true)
+            persist()
+        }
+        storeAlert = StoreAlert(StoreFeedback.restore(result))
     }
 
     /// StoreKit reported the 移除廣告 entitlement (launch check, Ask to Buy, another device)

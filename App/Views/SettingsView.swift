@@ -49,8 +49,13 @@ struct SettingsView: View {
                                     Text(tr("移除廣告"))
                                         .font(.system(size: 17, weight: .semibold))
                                     Spacer()
-                                    Text(vm.shop.removeAdsPriceLabel)
-                                        .font(.system(size: 17, weight: .bold))
+                                    if vm.isStoreBusy {
+                                        ProgressView()
+                                            .tint(Color(theme.primaryText))
+                                    } else {
+                                        Text(vm.shop.removeAdsPriceLabel)
+                                            .font(.system(size: 17, weight: .bold))
+                                    }
                                 }
                                 .foregroundColor(Color(theme.primaryText))
                                 .padding(.vertical, 10)
@@ -59,7 +64,7 @@ struct SettingsView: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                             }
                             .buttonStyle(.plain)
-                            .disabled(vm.shop.isPurchasing)
+                            .disabled(vm.isStoreBusy)
                             .accessibilityIdentifier("settings.removeAds")
                         }
                     }
@@ -69,6 +74,7 @@ struct SettingsView: View {
                         Task { await vm.restorePurchases() }
                     }
                     .foregroundColor(Color(theme.accentLink))
+                    .disabled(vm.isStoreBusy)
                     .accessibilityIdentifier("settings.restorePurchases")
 
                     // Required by Google UMP where consent applies (EEA / UK / some US states).
@@ -79,11 +85,6 @@ struct SettingsView: View {
                         .foregroundColor(Color(theme.accentLink))
                     }
 
-                    if let message = vm.storeMessage {
-                        Text(message)
-                            .font(.system(size: 13))
-                            .foregroundColor(Color(theme.secondaryText))
-                    }
                 } header: {
                     Text(tr("購買"))
                 } footer: {
@@ -142,6 +143,13 @@ struct SettingsView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
         .preferredColorScheme(.dark)
+        .alert(item: $vm.storeAlert) { alert in
+            Alert(
+                title: Text(alert.title),
+                message: Text(alert.message),
+                dismissButton: .default(Text(tr("知道")))
+            )
+        }
     }
 
     private var animationBinding: Binding<Bool> {

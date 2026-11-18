@@ -108,6 +108,19 @@ final class Big2UITests: XCTestCase {
         return false
     }
 
+    /// Enter a digit on the software number pad. Avoid `typeText` on a number-pad
+    /// field — it can hang indefinitely if the field is not first responder.
+    private func typeNumberPadDigit(_ digit: String, into field: XCUIElement) {
+        if !hasKeyboardFocus(field, timeout: 5) {
+            field.tap()
+            _ = hasKeyboardFocus(field, timeout: 5)
+        }
+        let key = app.keyboards.keys[digit].firstMatch
+        XCTAssertTrue(key.waitForExistence(timeout: 8), "number pad key \(digit) not found")
+        waitUntil { key.isHittable }
+        key.tap()
+    }
+
     /// The 完場 interstitial shows only if no other ad played in the last 3 minutes.
     private func closeFinishInterstitialIfShown() {
         let close = app.descendants(matching: .any)["interstitial.close"].firstMatch
@@ -350,17 +363,21 @@ final class Big2UITests: XCTestCase {
         // 換算: type 5, scores update live; yellow button collapses the field; another tap turns it off.
         tap("final.conversion")
         let field = element("final.conversion.field")
-        if !hasKeyboardFocus(field, timeout: 5) {
-            field.tap()
-        }
-        field.typeText("5")
+        typeNumberPadDigit("5", into: field)
         XCTAssertTrue(label("final.rank.1").contains("+620"), label("final.rank.1"))
         XCTAssertTrue(label("final.rank.1").contains("+124"), label("final.rank.1"))
         XCTAssertTrue(label("final.rank.4").contains("−980"), label("final.rank.4"))
         XCTAssertTrue(label("final.rank.4").contains("−196"), label("final.rank.4"))
         XCTAssertTrue(label("final.conversion").contains("換算 ×5"), label("final.conversion"))
         snap("final-huansuan")
-        tap("final.conversion")
+        // The pad may sit over the bottom of the screen; the 換算 button is at the top.
+        // If it still isn't hittable, resign focus so the field collapses and stays on.
+        let conversion = element("final.conversion")
+        if conversion.isHittable {
+            conversion.tap()
+        } else {
+            app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
         waitGone("final.conversion.field")
         XCTAssertTrue(label("final.rank.1").contains("+620"), label("final.rank.1"))
         snap("final-huansuan-on")

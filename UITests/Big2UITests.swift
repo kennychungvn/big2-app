@@ -347,6 +347,27 @@ final class Big2UITests: XCTestCase {
         assertBanner("final")
         snap("final")
 
+        // 換算: type 5, scores update live; yellow button collapses the field; another tap turns it off.
+        tap("final.conversion")
+        let field = element("final.conversion.field")
+        if !hasKeyboardFocus(field, timeout: 5) {
+            field.tap()
+        }
+        field.typeText("5")
+        XCTAssertTrue(label("final.rank.1").contains("+620"), label("final.rank.1"))
+        XCTAssertTrue(label("final.rank.1").contains("+124"), label("final.rank.1"))
+        XCTAssertTrue(label("final.rank.4").contains("−980"), label("final.rank.4"))
+        XCTAssertTrue(label("final.rank.4").contains("−196"), label("final.rank.4"))
+        XCTAssertTrue(label("final.conversion").contains("換算 ×5"), label("final.conversion"))
+        snap("final-huansuan")
+        tap("final.conversion")
+        waitGone("final.conversion.field")
+        XCTAssertTrue(label("final.rank.1").contains("+620"), label("final.rank.1"))
+        snap("final-huansuan-on")
+        tap("final.conversion")
+        XCTAssertTrue(label("final.rank.1").contains("+124"), label("final.rank.1"))
+        XCTAssertFalse(label("final.rank.1").contains("+620"), label("final.rank.1"))
+
         // Back home: session in the recent list, 所有紀錄 available
         tap("nav.home")
         element("home.recent.0")

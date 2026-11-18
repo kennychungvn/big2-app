@@ -51,6 +51,8 @@ struct Big2App: App {
             : AdMobAdManager() as AdManaging
         if UITestSupport.isActive {
             try? FileManager.default.removeItem(at: fileURL)
+            UserDefaults.standard.removeObject(forKey: ScoreConversion.enabledDefaultsKey)
+            UserDefaults.standard.removeObject(forKey: ScoreConversion.multiplierDefaultsKey)
             return AppViewModel(
                 store: JSONFileStore(fileURL: fileURL),
                 ads: ads,

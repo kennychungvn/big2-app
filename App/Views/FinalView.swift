@@ -9,6 +9,13 @@ struct FinalView: View {
     let sessionID: UUID
 
     @State private var shareImage: Image?
+    @State private var isEditing = false
+    @State private var input = ""
+    @State private var fieldWasFocused = false
+    @FocusState private var isFieldFocused: Bool
+
+    @AppStorage(ScoreConversion.enabledDefaultsKey) private var isEnabled = false
+    @AppStorage(ScoreConversion.multiplierDefaultsKey) private var savedMultiplier = 0
 
     var body: some View {
         Group {
@@ -37,31 +44,55 @@ struct FinalView: View {
         .toolbarBackground(Color(theme.background), for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { renderShareImage() }
+        .onAppear {
+            restoreInput()
+            renderShareImage()
+        }
+        .onChange(of: appliedMultiplier) { _ in
+            renderShareImage()
+        }
     }
 
     private var stored: StoredSession? {
         vm.model.data.sessions.first(where: { $0.id == sessionID })
     }
 
+    /// Live multiplier while editing; otherwise the persisted one.
+    private var appliedMultiplier: Int? {
+        if isEditing {
+            return ScoreConversion.appliedMultiplier(enabled: true, input: input)
+        }
+        return ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: savedMultiplier)
+    }
+
     @ViewBuilder
     private func content(_ stored: StoredSession) -> some View {
-        let summary = ShareSummary(stored: stored, format: vm.format)
+        let summary = ShareSummary(stored: stored, format: vm.format, conversionMultiplier: appliedMultiplier)
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(tr("最終排名"))
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(theme.secondaryText))
-                        .padding(.horizontal, 18)
-                        .padding(.top, 8)
-                        .padding(.bottom, 6)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(tr("最終排名"))
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(theme.secondaryText))
+                        Spacer()
+                        Text("\(summary.dateLine) · \(summary.roundsLine)")
+                            .font(.system(size: 15))
+                            .foregroundColor(Color(theme.secondaryText))
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 8)
+                    .padding(.bottom, 10)
 
-                    Text("\(summary.dateLine) · \(summary.roundsLine)")
-                        .font(.system(size: 15))
-                        .foregroundColor(Color(theme.secondaryText))
-                        .padding(.horizontal, 18)
+                    conversionButton
+                        .padding(.horizontal, 14)
                         .padding(.bottom, 8)
+
+                    if isEditing {
+                        conversionField
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 8)
+                    }
 
                     ForEach(Array(stored.session.ranking.enumerated()), id: \.element.index) { _, player in
                         HStack(spacing: 10) {
@@ -74,7 +105,7 @@ struct FinalView: View {
                                 .font(.system(size: 19, weight: .semibold))
                                 .foregroundColor(Color(theme.text))
                             Spacer()
-                            ScoreText(value: player.total, size: 28, format: vm.format)
+                            rankScore(player.total)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
@@ -88,9 +119,112 @@ struct FinalView: View {
                 }
                 .padding(.bottom, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
 
             shareControls(summary: summary)
             AdSafeGap()
+        }
+    }
+
+    @ViewBuilder
+    private func rankScore(_ total: Int) -> some View {
+        if let multiplier = appliedMultiplier {
+            let converted = ScoreConversion.multiply(total, by: multiplier)
+            VStack(alignment: .trailing, spacing: 2) {
+                ScoreText(value: converted, size: 28, format: vm.format)
+                Text(vm.format.points(total))
+                    .font(ThemeFont.numeric(size: 12, weight: .semibold))
+                    .foregroundColor(Color(theme.secondaryText))
+            }
+        } else {
+            ScoreText(value: total, size: 28, format: vm.format)
+        }
+    }
+
+    private var conversionButtonTitle: String {
+        if let multiplier = appliedMultiplier {
+            return tr("換算 ×%@", "\(multiplier)")
+        }
+        return tr("換算")
+    }
+
+    private var isConversionOn: Bool {
+        appliedMultiplier != nil
+    }
+
+    private var conversionButton: some View {
+        Button(action: toggleConversion) {
+            HStack(spacing: 8) {
+                ConversionGlyph()
+                    .frame(width: 20, height: 20)
+                Text(conversionButtonTitle)
+                    .font(.system(size: 17, weight: isConversionOn ? .heavy : .bold))
+            }
+            .foregroundColor(isConversionOn ? Color(theme.primaryText) : Color(theme.text))
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(isConversionOn ? Color(theme.primary) : Color(RGBColor(hex: 0x4A5162)))
+            .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous)
+                    .stroke(Color(theme.primary).opacity(isConversionOn ? 0 : 0.4), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("final.conversion")
+        .accessibilityLabel(conversionButtonTitle)
+    }
+
+    private var conversionField: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(tr("倍數"))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color(theme.secondaryText))
+                .padding(.horizontal, 4)
+            TextField("", text: $input)
+                .keyboardType(.numberPad)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .font(ThemeFont.numeric(size: 26, weight: .bold))
+                .foregroundColor(Color(theme.text))
+                .padding(.horizontal, 16)
+                .frame(height: 46)
+                .background(Color(RGBColor(hex: 0x1A1D24)))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color(theme.primary), lineWidth: 1.5)
+                )
+                .shadow(color: Color(theme.primary).opacity(0.18), radius: 3)
+                .focused($isFieldFocused)
+                .onChange(of: input) { newValue in
+                    inputDidChange(newValue)
+                }
+                .accessibilityIdentifier("final.conversion.field")
+                .accessibilityLabel(tr("倍數"))
+            Text(tr("下次會記住呢個倍數"))
+                .font(.system(size: 12))
+                .foregroundColor(Color(theme.secondaryText))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(Color(theme.card))
+        .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
+        .onAppear {
+            fieldWasFocused = false
+            DispatchQueue.main.async {
+                isFieldFocused = true
+            }
+        }
+        .onChange(of: isFieldFocused) { focused in
+            if focused {
+                fieldWasFocused = true
+            } else if fieldWasFocused && isEditing {
+                collapseField()
+            }
         }
     }
 
@@ -140,13 +274,87 @@ struct FinalView: View {
             .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
     }
 
+    private func restoreInput() {
+        if savedMultiplier >= 1 && input.isEmpty {
+            input = String(savedMultiplier)
+        }
+        if ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: savedMultiplier) == nil {
+            isEnabled = false
+        }
+        isEditing = false
+    }
+
+    private func inputDidChange(_ newValue: String) {
+        let sanitized = ScoreConversion.sanitize(newValue)
+        if sanitized != newValue {
+            input = sanitized
+        }
+        if let value = ScoreConversion.parse(sanitized), value >= 1 {
+            savedMultiplier = value
+            isEnabled = value >= 2
+        } else {
+            isEnabled = false
+        }
+    }
+
+    private func toggleConversion() {
+        if isEditing {
+            isFieldFocused = false
+            collapseField()
+            return
+        }
+        if ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: savedMultiplier) != nil {
+            isEnabled = false
+            return
+        }
+        if savedMultiplier >= 1 {
+            input = String(savedMultiplier)
+        } else {
+            input = ""
+        }
+        isEditing = true
+        isEnabled = savedMultiplier >= 2
+    }
+
+    private func collapseField() {
+        isEditing = false
+        if ScoreConversion.appliedMultiplier(enabled: true, input: input) != nil {
+            isEnabled = true
+        } else {
+            isEnabled = false
+        }
+    }
+
     private func renderShareImage() {
         guard let stored else { return }
-        let summary = ShareSummary(stored: stored, format: vm.format)
+        let summary = ShareSummary(stored: stored, format: vm.format, conversionMultiplier: appliedMultiplier)
         let renderer = ImageRenderer(content: ShareCardView(summary: summary, theme: theme))
         renderer.scale = UIScreen.main.scale
         if let uiImage = renderer.uiImage {
             shareImage = Image(uiImage: uiImage)
         }
+    }
+}
+
+/// Rounded square with an X, matching the approved 換算 mockup glyph.
+private struct ConversionGlyph: View {
+    var body: some View {
+        ConversionGlyphShape()
+            .stroke(style: StrokeStyle(lineWidth: 1.7, lineCap: .round, lineJoin: .round))
+    }
+}
+
+private struct ConversionGlyphShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let box = rect.insetBy(dx: 1.05, dy: 1.05)
+        path.addRoundedRect(in: box, cornerSize: CGSize(width: rect.width * 0.22, height: rect.height * 0.22))
+        let scaleX = rect.width / 20
+        let scaleY = rect.height / 20
+        path.move(to: CGPoint(x: 7 * scaleX, y: 7 * scaleY))
+        path.addLine(to: CGPoint(x: 13 * scaleX, y: 13 * scaleY))
+        path.move(to: CGPoint(x: 13 * scaleX, y: 7 * scaleY))
+        path.addLine(to: CGPoint(x: 7 * scaleX, y: 13 * scaleY))
+        return path
     }
 }

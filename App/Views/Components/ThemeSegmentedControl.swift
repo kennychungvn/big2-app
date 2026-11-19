@@ -37,6 +37,7 @@ struct ThemeSegmentedControl<Item: Hashable>: View {
 struct NameChipRow: View {
     let names: [String]
     let onTap: (String) -> Void
+    var onDelete: ((String) -> Void)? = nil
 
     @Environment(\.appTheme) private var theme
 
@@ -57,6 +58,16 @@ struct NameChipRow: View {
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("setup.chip.\(name)")
+                        .contextMenu {
+                            if let onDelete {
+                                Button(role: .destructive) {
+                                    onDelete(name)
+                                } label: {
+                                    Label(tr("刪除"), systemImage: "trash")
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 14)

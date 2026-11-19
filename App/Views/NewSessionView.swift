@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import AppCore
 import ScoringEngine
 
@@ -18,36 +19,20 @@ struct NewSessionView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    sectionTitle(tr("玩家"))
+                    nameSectionHeader
 
                     ForEach(0..<ScoringEngine.playerCount, id: \.self) { index in
-                        HStack(spacing: 10) {
-                            PlayerColorDot(index: index, height: 30)
-                            TextField(vm.format.placeholderName(at: index), text: $draft.names[index])
-                                .accessibilityIdentifier("setup.name.\(index)")
-                                .focused($focusedField, equals: index)
-                                .submitLabel(index < ScoringEngine.playerCount - 1 ? .next : .done)
-                                .onSubmit {
-                                    focusedField = index < ScoringEngine.playerCount - 1 ? index + 1 : nil
-                                }
-                                .font(.system(size: 18))
-                                .foregroundColor(Color(theme.text))
-                                .tint(Color(theme.primary))
-                        }
-                        .padding(.horizontal, 12)
-                        .frame(height: 54)
-                        .background(Color(theme.card))
-                        .clipShape(RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 5)
+                        nameField(index: index)
                     }
 
                     let chips = vm.model.availableNameChips(for: draft.names)
                     if !chips.isEmpty {
                         sectionTitle(tr("㩒名快速填入"))
-                        NameChipRow(names: chips) { name in
+                        NameChipRow(names: chips, onTap: { name in
                             _ = draft.applyChip(name)
-                        }
+                        }, onDelete: { name in
+                            vm.removeKnownPlayerName(name)
+                        })
                     }
 
                     sectionTitle(tr("炒法"))
@@ -104,6 +89,9 @@ struct NewSessionView: View {
             }
             .toolbarBackground(Color(theme.background), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { notification in
+                selectAll(in: notification.object as? UITextField)
+            }
         }
     }
 
@@ -136,6 +124,82 @@ struct NewSessionView: View {
         .accessibilityValue("×\(multiplier)")
         .accessibilityLabel(tr("%@ 張，炒 %@ 倍", "\(cards)", "\(multiplier)"))
         .accessibilityHint(tr("㩒格轉倍數"))
+    }
+
+    private var nameSectionHeader: some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(tr("玩家"))
+                .font(.system(size: 13))
+                .foregroundColor(Color(theme.secondaryText))
+            Spacer()
+            Button(tr("清除全部")) {
+                draft.clearAllNames()
+                focusedField = nil
+            }
+            .font(.system(size: 13))
+            .foregroundColor(Color(theme.accentLink))
+            .disabled(!draft.hasAnyName)
+            .opacity(draft.hasAnyName ? 1 : 0.4)
+            .accessibilityIdentifier("setup.clearAll")
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 6)
+    }
+
+    private func nameField(index: Int) -> some View {
+        HStack(spacing: 10) {
+            PlayerColorDot(index: index, height: 30)
+            TextField(
+                vm.format.placeholderName(at: index),
+                text: $draft.names[index],
+                onEditingChanged: { isEditing in
+                    if isEditing { selectAllInFocusedField() }
+                }
+            )
+            .accessibilityIdentifier("setup.name.\(index)")
+            .focused($focusedField, equals: index)
+            .submitLabel(index < ScoringEngine.playerCount - 1 ? .next : .done)
+            .onSubmit {
+                focusedField = index < ScoringEngine.playerCount - 1 ? index + 1 : nil
+            }
+            .font(.system(size: 18))
+            .foregroundColor(Color(theme.text))
+            .tint(Color(theme.primary))
+            if !draft.names[index].isEmpty {
+                Button {
+                    draft.names[index] = ""
+                } label: {
+                    Text("✕")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color(theme.secondaryText))
+                        .frame(width: 28, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tr("清除"))
+                .accessibilityIdentifier("setup.name.clear.\(index)")
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 54)
+        .background(Color(theme.card))
+        .clipShape(RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
+    }
+
+    private func selectAllInFocusedField() {
+        DispatchQueue.main.async {
+            UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
+        }
+    }
+
+    private func selectAll(in field: UITextField?) {
+        guard let field else { return }
+        DispatchQueue.main.async {
+            field.selectedTextRange = field.textRange(from: field.beginningOfDocument, to: field.endOfDocument)
+        }
     }
 
     private func sectionTitle(_ text: String) -> some View {

@@ -187,7 +187,7 @@ public struct AppModel: Equatable, Sendable {
             // Files from older builds always carried a preset, even before the first session.
             settings.chaoTable = nil
         }
-        return NewSessionDraft(from: settings, region: region)
+        return NewSessionDraft(from: settings, region: region, sessions: data.sessions)
     }
 
     /// Saves the 地區介面 setting. When the effective region changes and the remembered 炒法 is
@@ -251,6 +251,36 @@ public struct AppModel: Equatable, Sendable {
                 .map { $0.lowercased() }
         )
         return data.knownPlayerNames.filter { !filled.contains($0.lowercased()) }
+    }
+
+    /// Removes a quick-fill name. Session records and last-used seat names are left unchanged.
+    public mutating func removeKnownPlayerName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        data.knownPlayerNames.removeAll { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
+    }
+
+    public mutating func removeKnownPlayerNames(at offsets: IndexSet) {
+        for index in offsets.sorted(by: >) {
+            guard data.knownPlayerNames.indices.contains(index) else { continue }
+            data.knownPlayerNames.remove(at: index)
+        }
+    }
+
+    public mutating func moveKnownPlayerNames(from source: IndexSet, to destination: Int) {
+        let moving = source.sorted().compactMap { index -> String? in
+            guard data.knownPlayerNames.indices.contains(index) else { return nil }
+            return data.knownPlayerNames[index]
+        }
+        for index in source.sorted(by: >) {
+            guard data.knownPlayerNames.indices.contains(index) else { continue }
+            data.knownPlayerNames.remove(at: index)
+        }
+        let adjusted = max(0, min(
+            destination - source.filter { $0 < destination }.count,
+            data.knownPlayerNames.count
+        ))
+        data.knownPlayerNames.insert(contentsOf: moving, at: adjusted)
     }
 
     @discardableResult

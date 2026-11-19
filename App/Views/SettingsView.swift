@@ -99,6 +99,12 @@ struct SettingsView: View {
                     Toggle(isOn: hapticsBinding) {
                         Text(tr("震機提示"))
                     }
+                    NavigationLink {
+                        KnownNamesSettingsView()
+                    } label: {
+                        Text(tr("管理快速填入名稱"))
+                    }
+                    .accessibilityIdentifier("settings.knownNames")
                 }
 
                 Section(tr("關於")) {

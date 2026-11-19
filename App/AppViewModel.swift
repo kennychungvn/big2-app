@@ -554,4 +554,19 @@ final class AppViewModel: ObservableObject {
         model.setHapticsEnabled(enabled)
         persist()
     }
+
+    func removeKnownPlayerName(_ name: String) {
+        model.removeKnownPlayerName(name)
+        persist()
+    }
+
+    func removeKnownPlayerNames(at offsets: IndexSet) {
+        model.removeKnownPlayerNames(at: offsets)
+        persist()
+    }
+
+    func moveKnownPlayerNames(from source: IndexSet, to destination: Int) {
+        model.moveKnownPlayerNames(from: source, to: destination)
+        persist()
+    }
 }

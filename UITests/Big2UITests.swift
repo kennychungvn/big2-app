@@ -86,6 +86,12 @@ final class Big2UITests: XCTestCase {
         for (index, name) in names.enumerated() {
             let field = element("setup.name.\(index)")
             focusNameField(field)
+            // Prefill / select-all: clear first so typeText replaces rather than appends.
+            let clear = app.descendants(matching: .any)["setup.name.clear.\(index)"].firstMatch
+            if clear.exists, clear.isHittable {
+                clear.tap()
+                focusNameField(field)
+            }
             field.typeText(name + "\n")
         }
     }

@@ -112,6 +112,32 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(chips.contains("阿May"))
     }
 
+    func testNewSessionDraftPrefillsRememberedNames() throws {
+        let (model, _) = try model()
+        XCTAssertEqual(model.newSessionDraft(region: .hongKong).names, names)
+    }
+
+    func testRemovingKnownNameDoesNotChangeSessionRecords() throws {
+        var (model, _) = try model()
+        let playersBefore = model.data.sessions.map(\.session.players)
+        let lastBefore = model.data.lastSettings.playerNames
+        model.removeKnownPlayerName("kenny")
+        XCTAssertFalse(model.data.knownPlayerNames.contains("Kenny"))
+        XCTAssertEqual(model.data.knownPlayerNames, ["阿明", "阿強", "阿May"])
+        XCTAssertEqual(model.data.sessions.map(\.session.players), playersBefore)
+        XCTAssertEqual(model.data.lastSettings.playerNames, lastBefore)
+        XCTAssertTrue(model.data.lastSettings.playerNames.contains("Kenny"))
+    }
+
+    func testMoveAndDeleteKnownPlayerNamesByIndex() throws {
+        var (model, _) = try model()
+        model.moveKnownPlayerNames(from: IndexSet(integer: 0), to: 4)
+        XCTAssertEqual(model.data.knownPlayerNames, ["Kenny", "阿強", "阿May", "阿明"])
+        model.removeKnownPlayerNames(at: IndexSet(integer: 1))
+        XCTAssertEqual(model.data.knownPlayerNames, ["Kenny", "阿May", "阿明"])
+        XCTAssertEqual(model.data.sessions.first?.session.players, names)
+    }
+
     func testInterstitialAfterEveryFiveRoundsRespectsAdsRemoved() throws {
         var (model, clock) = try model()
         XCTAssertFalse(model.shouldShowInterstitial(clock: clock))

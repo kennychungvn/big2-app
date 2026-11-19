@@ -76,3 +76,46 @@ final class StoreFeedbackTests: XCTestCase {
         XCTAssertFalse(store.adsRemoved)
     }
 }
+
+final class StoreEventLogTests: XCTestCase {
+    private func makeLog(limit: Int = 30) -> (StoreEventLog, UserDefaults) {
+        let suite = "StoreEventLogTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        return (StoreEventLog(defaults: defaults, key: "log", limit: limit), defaults)
+    }
+
+    func testKeepsOnlyTheLastEvents() {
+        let (log, _) = makeLog(limit: 3)
+        for i in 1...5 { log.append("e\(i)") }
+        XCTAssertEqual(log.events.map(\.message), ["e3", "e4", "e5"])
+    }
+
+    func testPersistsAcrossInstances() {
+        let (log, defaults) = makeLog()
+        log.append("purchase start")
+        let again = StoreEventLog(defaults: defaults, key: "log")
+        XCTAssertEqual(again.events.map(\.message), ["purchase start"])
+        again.clear()
+        XCTAssertTrue(log.events.isEmpty)
+    }
+
+    func testDefaultLimitIsThirty() {
+        let (log, _) = makeLog()
+        for i in 1...45 { log.append("e\(i)") }
+        XCTAssertEqual(log.events.count, 30)
+        XCTAssertEqual(log.events.first?.message, "e16")
+    }
+
+    func testLongMessagesAreTrimmedAndExportHasOneLinePerEvent() {
+        let (log, _) = makeLog()
+        log.append(String(repeating: "x", count: 2000))
+        log.append("restore result: cancelled")
+        XCTAssertLessThanOrEqual(log.events[0].message.count, StoreEventLog.maxMessageLength + 1)
+        let text = log.exportText(header: "header")
+        let lines = text.split(separator: "\n")
+        XCTAssertEqual(lines.count, 3)
+        XCTAssertEqual(lines.first, "header")
+        XCTAssertTrue(lines.last!.hasSuffix("restore result: cancelled"))
+    }
+}

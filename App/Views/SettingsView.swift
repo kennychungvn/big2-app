@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Environment(\.appTheme) private var theme
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var adsRuntime = AdsRuntime.shared
+    @State private var showingStoreLog = false
 
     var body: some View {
         NavigationStack {
@@ -107,6 +108,12 @@ struct SettingsView: View {
                         Text(versionString)
                             .foregroundColor(Color(theme.secondaryText))
                     }
+                    .contentShape(Rectangle())
+                    // Hidden 購買紀錄 (debug): StoreKit events for troubleshooting 移除廣告.
+                    .onLongPressGesture(minimumDuration: 0.8) {
+                        showingStoreLog = true
+                    }
+                    .accessibilityIdentifier("settings.version")
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text(tr("免責聲明"))
@@ -130,6 +137,9 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Color(theme.background).ignoresSafeArea())
+            .navigationDestination(isPresented: $showingStoreLog) {
+                StoreDebugLogView()
+            }
             .navigationTitle(tr("設定"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

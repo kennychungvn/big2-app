@@ -1,10 +1,12 @@
 import SwiftUI
+import StoreKit
 import UIKit
 import AppCore
 import ScoringEngine
 
 struct FinalView: View {
     @EnvironmentObject private var vm: AppViewModel
+    @Environment(\.requestReview) private var requestReview
     @Environment(\.appTheme) private var theme
     let sessionID: UUID
 
@@ -50,6 +52,9 @@ struct FinalView: View {
         }
         .onChange(of: appliedMultiplier) { _ in
             renderShareImage()
+        }
+        .task(id: sessionID) {
+            await offerReviewIfNeeded()
         }
     }
 
@@ -333,6 +338,17 @@ struct FinalView: View {
         if let uiImage = renderer.uiImage {
             shareImage = Image(uiImage: uiImage)
         }
+    }
+
+    /// Native App Store review prompt after the 3rd 完場, once the settlement screen is up.
+    /// Skipped when opening a past game from history, during UI tests, or if an interstitial is still up.
+    private func offerReviewIfNeeded() async {
+        guard vm.consumePendingReviewPrompt(for: sessionID) else { return }
+        try? await Task.sleep(nanoseconds: ReviewPromptPolicy.settlementDelayNanoseconds)
+        guard !Task.isCancelled else { return }
+        guard vm.isReviewPromptEligible() else { return }
+        requestReview()
+        vm.markReviewPromptShown()
     }
 }
 

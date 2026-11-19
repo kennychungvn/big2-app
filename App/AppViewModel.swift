@@ -101,8 +101,13 @@ final class AppViewModel: ObservableObject {
     let store: AppStoring
     let ads: AdManaging
     let shop: StoreManaging
+    let reviewPrompt = ReviewPromptStore()
     var format: ScoreFormatting { ScoreFormatting(region: region) }
     let theme: Theme = .neighbourhood
+
+    /// Set when a session has just been finished, so FinalView can offer a review prompt
+    /// on that appearance only (not when opening a past 完場 from history).
+    private var pendingReviewPromptSessionID: UUID?
 
     private var undoTask: Task<Void, Never>?
     private var resultTask: Task<Void, Never>?
@@ -131,6 +136,7 @@ final class AppViewModel: ObservableObject {
         if loadFailed {
             self.errorMessage = tr("存檔讀唔到，已經用空白資料重新開始。")
         }
+        self.reviewPrompt.seedIfNeeded(existingFinishedSessionCount: Self.finishedPlayableCount(in: self.model))
         self.ads.adsRemoved = self.model.data.adsRemoved
         if !self.model.data.adsRemoved {
             self.ads.preloadInterstitial()
@@ -146,6 +152,31 @@ final class AppViewModel: ObservableObject {
             errorMessage = tr("儲存失敗，請稍後再試。")
         }
         ads.adsRemoved = model.data.adsRemoved
+    }
+
+    /// Consumes the one-shot flag for this settlement appearance. Returns false for history visits and UI tests.
+    func consumePendingReviewPrompt(for sessionID: UUID) -> Bool {
+        guard pendingReviewPromptSessionID == sessionID else { return false }
+        pendingReviewPromptSessionID = nil
+        if UITestSupport.isActive { return false }
+        return true
+    }
+
+    func isReviewPromptEligible() -> Bool {
+        !isShowingInterstitial && reviewPrompt.shouldRequestReview(currentVersion: Self.marketingVersion)
+    }
+
+    func markReviewPromptShown() {
+        reviewPrompt.recordPromptShown(for: Self.marketingVersion)
+    }
+
+    static var marketingVersion: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func finishedPlayableCount(in model: AppModel) -> Int {
+        model.data.sessions.filter { $0.isFinished && $0.session.roundsCompleted >= 1 }.count
     }
 
     // MARK: - Sessions
@@ -208,6 +239,7 @@ final class AppViewModel: ObservableObject {
     }
 
     func goHome() {
+        pendingReviewPromptSessionID = nil
         roundEntry = nil
         resultSheet = nil
         model.closeCurrentSession()
@@ -226,6 +258,10 @@ final class AppViewModel: ObservableObject {
         }
         do {
             try model.finishCurrentSession()
+            if let session = model.currentSession, session.session.roundsCompleted >= 1 {
+                reviewPrompt.recordFinishedGame()
+                pendingReviewPromptSessionID = session.id
+            }
             persist()
             if let id = model.currentSessionID {
                 path = [.final(id)]

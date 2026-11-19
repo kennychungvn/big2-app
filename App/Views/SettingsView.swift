@@ -115,6 +115,12 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("settings.version")
 
+                    Link(destination: ReviewPromptPolicy.writeReviewURL) {
+                        Text(tr("為 App 評分"))
+                    }
+                    .foregroundColor(Color(theme.accentLink))
+                    .accessibilityIdentifier("settings.writeReview")
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text(tr("免責聲明"))
                             .font(.system(size: 14, weight: .semibold))

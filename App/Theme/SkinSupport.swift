@@ -41,11 +41,19 @@ enum SkinPreferences {
 /// share sheet), independent of the system light/dark setting.
 @MainActor
 enum SkinWindowStyle {
+    private static func isAppWindow(_ window: UIWindow) -> Bool {
+        let name = NSStringFromClass(type(of: window))
+        return !name.contains("Keyboard") && !name.contains("TextEffects")
+    }
+
     static func apply(_ skin: SkinID) {
         let style: UIUserInterfaceStyle = skin.isDark ? .dark : .light
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
-            for window in windowScene.windows where window.overrideUserInterfaceStyle != style {
+            // Only the app's own windows. Never touch the system keyboard / text-effects
+            // windows (UIRemoteKeyboardWindow, UITextEffectsWindow): they take their
+            // appearance from the focused field's traits.
+            for window in windowScene.windows where isAppWindow(window) && window.overrideUserInterfaceStyle != style {
                 window.overrideUserInterfaceStyle = style
             }
         }

@@ -50,8 +50,7 @@ struct AdMobBannerSlotView: View {
     /// width. Not the "large" anchored variant: that one is far taller (a quarter of the
     /// screen on build 41) and hid the sheets' bottom buttons.
     private static func adaptiveSize() -> AdSize {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        let width = scenes.first?.screen.bounds.width ?? 375
+        let width = UIScreen.main.bounds.width
         return currentOrientationAnchoredAdaptiveBanner(width: width)
     }
 }
@@ -114,14 +113,23 @@ struct BannerSlotBackground: View {
 }
 
 /// ♠♥♣♦ repeating from the left: 15pt glyphs on a 25pt pitch, whole suits only, centred with
-/// ≥ 12pt margins. Loading: fade in left to right (200 ms each, 40 ms stagger), then a
-/// 120pt shimmer sweep (rest 50 % → 100 %) every 1.2 s, at most 3 loops. Static at 100 %
-/// once the request finished, or with Reduce Motion / 動畫效果 off.
+/// ≥ 12pt margins. Loading: fade in left to right (200 ms each, 40 ms stagger, to 50 %), then a
+/// 120pt shimmer sweep (50 % → 100 %) every 1.2 s, at most 3 loops. Static at 100 % once the
+/// request finished, or with Reduce Motion / 動畫效果 off.
+///
+/// Build 77 fix: this used to be a `TimelineView(.animation)` re-evaluating the row every
+/// display frame while loading. In every sheet that has a real banner (新開一場 …) that ran
+/// at the same time as the keyboard's first presentation and starved the main thread
+/// (freeze ~4–5 s, then a crash, 「入名有閃退」). Now both effects are plain SwiftUI
+/// animations started once (render-server driven, no per-frame body updates), and the
+/// row never animates while a text field is being edited.
 struct SuitPatternRow: View {
     var loading: Bool
     @Environment(\.appTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var start = Date()
+    @State private var faded = false
+    @State private var sweep = false
+    @State private var keyboardUp = false
 
     private static let pitch: CGFloat = 25
     private static let glyph: CGFloat = 15
@@ -129,28 +137,71 @@ struct SuitPatternRow: View {
     private static let fadeStagger = 0.04
     private static let fadeDuration = 0.2
     private static let loop = 1.2
-    private static let maxLoops = 3.0
+    private static let maxLoops = 3
     private static let sweepWidth: CGFloat = 120
 
     var body: some View {
         GeometryReader { proxy in
             let count = max(0, Int((proxy.size.width - 24) / Self.pitch))
-            let animate = loading && MotionSettings.enabled && !reduceMotion
-            let fadeEnd = Double(max(count - 1, 0)) * Self.fadeStagger + Self.fadeDuration
-            TimelineView(.animation(minimumInterval: nil, paused: !animate)) { context in
-                let t = context.date.timeIntervalSince(start)
-                let running = animate && t < fadeEnd + Self.loop * Self.maxLoops
-                HStack(spacing: 0) {
-                    ForEach(0..<count, id: \.self) { index in
-                        suit(index)
-                            .frame(width: Self.pitch, height: Self.glyph)
-                            .opacity(running ? opacity(index: index, count: count, t: t, fadeEnd: fadeEnd) : 1)
-                    }
+            let animate = loading && !keyboardUp && MotionSettings.enabled && !reduceMotion
+            let rowWidth = CGFloat(count) * Self.pitch
+            ZStack {
+                row(count: count, animate: animate, base: animate ? 0.5 : 1)
+                if animate {
+                    // Shimmer: the same row at 100 %, revealed through a moving soft band.
+                    row(count: count, animate: false, base: 1)
+                        .mask(
+                            LinearGradient(
+                                colors: [.clear, .white, .clear],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                            .frame(width: Self.sweepWidth)
+                            .offset(x: sweep ? rowWidth / 2 + Self.sweepWidth / 2 : -rowWidth / 2 - Self.sweepWidth / 2)
+                        )
+                        .opacity(faded ? 1 : 0)
                 }
-                .frame(width: proxy.size.width, height: proxy.size.height)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .onAppear { start(animate: animate, count: count) }
+            .onChange(of: animate) { start(animate: $0, count: count) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            keyboardUp = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidHideNotification)) { _ in
+            keyboardUp = false
+        }
+    }
+
+    private func row(count: Int, animate: Bool, base: Double) -> some View {
+        HStack(spacing: 0) {
+            ForEach(0..<count, id: \.self) { index in
+                suit(index)
+                    .frame(width: Self.pitch, height: Self.glyph)
+                    .opacity(animate ? (faded ? base : 0) : base)
+                    .animation(
+                        animate ? .easeOut(duration: Self.fadeDuration).delay(Double(index) * Self.fadeStagger) : nil,
+                        value: faded
+                    )
             }
         }
-        .onChange(of: loading) { _ in start = Date() }
+    }
+
+    private func start(animate: Bool, count: Int) {
+        guard animate else {
+            faded = true
+            sweep = false
+            return
+        }
+        faded = false
+        sweep = false
+        DispatchQueue.main.async {
+            faded = true
+            let fadeEnd = Double(max(count - 1, 0)) * Self.fadeStagger + Self.fadeDuration
+            withAnimation(.linear(duration: Self.loop).repeatCount(Self.maxLoops, autoreverses: false).delay(fadeEnd)) {
+                sweep = true
+            }
+        }
     }
 
     @ViewBuilder
@@ -160,19 +211,6 @@ struct SuitPatternRow: View {
         Image(systemName: theme.suitOutline ? name : name + ".fill")
             .font(.system(size: Self.glyph, weight: theme.suitOutline ? .light : .regular))
             .foregroundColor(Color(isRed ? theme.suitRed : theme.suitBlack))
-    }
-
-    private func opacity(index: Int, count: Int, t: Double, fadeEnd: Double) -> Double {
-        if t < fadeEnd {
-            let local = (t - Double(index) * Self.fadeStagger) / Self.fadeDuration
-            return 0.5 * min(max(local, 0), 1)
-        }
-        let phase = ((t - fadeEnd).truncatingRemainder(dividingBy: Self.loop)) / Self.loop
-        let rowWidth = CGFloat(count) * Self.pitch
-        let sweepX = -Self.sweepWidth / 2 + CGFloat(phase) * (rowWidth + Self.sweepWidth)
-        let x = (CGFloat(index) + 0.5) * Self.pitch
-        let lift = max(0, 1 - abs(x - sweepX) / (Self.sweepWidth / 2))
-        return 0.5 + 0.5 * Double(lift)
     }
 }
 

@@ -158,13 +158,7 @@ struct NewSessionView: View {
     private func nameField(index: Int) -> some View {
         HStack(spacing: 10) {
             PlayerColorDot(index: index)
-            TextField(
-                vm.format.placeholderName(at: index),
-                text: $draft.names[index],
-                onEditingChanged: { isEditing in
-                    if isEditing { selectAllInFocusedField() }
-                }
-            )
+            TextField(vm.format.placeholderName(at: index), text: $draft.names[index])
             .accessibilityIdentifier("setup.name.\(index)")
             .focused($focusedField, equals: index)
             .submitLabel(index < ScoringEngine.playerCount - 1 ? .next : .done)
@@ -196,16 +190,19 @@ struct NewSessionView: View {
         .padding(.vertical, 4)
     }
 
-    private func selectAllInFocusedField() {
-        DispatchQueue.main.async {
-            UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
-        }
-    }
-
+    /// Select-all on focus so typing replaces a prefilled name. Only the field that began
+    /// editing, only when it has text, and never while the IME has marked text. (Build 77:
+    /// a second, broadcast `selectAll:` via `sendAction(to: nil)` on every focus change was
+    /// removed — it raced the keyboard's first presentation on device.)
     private func selectAll(in field: UITextField?) {
         guard let field else { return }
         DispatchQueue.main.async {
-            field.selectedTextRange = field.textRange(from: field.beginningOfDocument, to: field.endOfDocument)
+            guard field.isFirstResponder, field.markedTextRange == nil,
+                  let text = field.text, !text.isEmpty,
+                  let range = field.textRange(from: field.beginningOfDocument, to: field.endOfDocument),
+                  field.selectedTextRange != range
+            else { return }
+            field.selectedTextRange = range
         }
     }
 

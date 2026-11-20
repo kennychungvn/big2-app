@@ -1,0 +1,78 @@
+# Temporary (branch v2.0-namecrash only): reproduce build 77 「入名有閃退」 in Release config.
+name: Name entry crash repro
+"on":
+  push:
+    branches: [v2.0-namecrash]
+permissions:
+  contents: read
+jobs:
+  repro:
+    name: ${{ matrix.scheme }} ${{ matrix.config }} ads=${{ matrix.ads }}
+    strategy:
+      fail-fast: false
+      matrix:
+        scheme: [Big2, DaLaoEr]
+        config: [Release]
+        ads: [real, stub]
+    runs-on: macos-15-intel
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: brew install xcodegen && xcodegen generate
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys, re
+          data = json.load(sys.stdin)["devices"]
+          best = None
+          for runtime, devices in data.items():
+              if "iOS" not in runtime: continue
+              m = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              ver = (int(m.group(1)), int(m.group(2))) if m else (0, 0)
+              for d in devices:
+                  name = d["name"]
+                  if not name.startswith("iPhone") or "SE" in name or "Plus" in name or "Max" in name: continue
+                  score = (ver, "Pro" not in name, name)
+                  if best is None or score > best[0]: best = (score, d["udid"], name, runtime)
+          print(best[1]); print(f"Using {best[2]} on {best[3]}", file=sys.stderr)
+          ')
+          echo "udid=${UDID}" >> "${GITHUB_OUTPUT}"
+          xcrun simctl boot "${UDID}" || true
+          xcrun simctl bootstatus "${UDID}" -b
+      - name: Run name-entry UI tests (${{ matrix.config }})
+        env:
+          TEST_RUNNER_NAME_TEST_REAL_ADS: ${{ matrix.ads == 'real' && '1' || '0' }}
+        run: |
+          set +e
+          if [ "${{ matrix.scheme }}" = "Big2" ]; then T=Big2UITests; else T=DaLaoErUITests; fi
+          xcodebuild test \
+            -project Big2.xcodeproj -scheme ${{ matrix.scheme }} -configuration ${{ matrix.config }} \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath DerivedData -resultBundlePath NameEntry.xcresult \
+            -only-testing:${T}/NameEntryUITests \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO > test.log 2>&1
+          status=$?
+          grep -E "Test Case|error:|failed|crash|Crash|\*\* TEST" test.log | tail -120
+          exit $status
+      - name: Collect crash reports
+        if: always()
+        run: |
+          mkdir -p crashes
+          find ~/Library/Logs/DiagnosticReports -newer test.log -o -name '*Big2*' -o -name '*DaLaoEr*' 2>/dev/null | grep -E 'Big2|DaLaoEr' | while read f; do cp "$f" crashes/; done
+          ls -la crashes
+          for f in crashes/*; do echo "=== $f"; head -c 20000 "$f"; done
+          xcrun xcresulttool export attachments --path NameEntry.xcresult --output-path attachments || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: namecrash-${{ matrix.scheme }}-${{ matrix.config }}-${{ matrix.ads }}
+          path: |
+            test.log
+            crashes
+            attachments
+          if-no-files-found: ignore

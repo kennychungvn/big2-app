@@ -36,6 +36,8 @@
 	<!-- IAP product id. TODO: create this non-consumable in App Store Connect. -->
 	<key>RemoveAdsProductID</key>
 	<string>com.kenny.dalaoer.removeads</string>
+	<key>AppFlavor</key>
+	<string>taiwan</string>
 	<!-- TODO: fill in after Kenny creates the App Store Connect app record. -->
 	<key>AppStoreID</key>
 	<string>TODO</string>

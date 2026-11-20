@@ -167,4 +167,15 @@ final class TaiwanAppCoreTests: XCTestCase {
         let hk = ScoreFormatting().pairwiseBreakdown(items[0], names: ["A", "B", "C", "D"])
         XCTAssertTrue(hk.contains("張"))
     }
+
+    func testAppFlavorResolvePrefersPlistAndBundleId() {
+        XCTAssertEqual(AppFlavor.resolve(compilationFlagTaiwan: true, plistFlavor: nil, bundleIdentifier: "com.kenny.daidee"), .taiwan)
+        XCTAssertEqual(AppFlavor.resolve(compilationFlagTaiwan: false, plistFlavor: "taiwan", bundleIdentifier: "com.kenny.daidee"), .taiwan)
+        XCTAssertEqual(AppFlavor.resolve(compilationFlagTaiwan: false, plistFlavor: nil, bundleIdentifier: "com.kenny.dalaoer"), .taiwan)
+        XCTAssertEqual(AppFlavor.resolve(compilationFlagTaiwan: false, plistFlavor: "hongkong", bundleIdentifier: "com.kenny.dalaoer"), .hongKong)
+        XCTAssertEqual(AppFlavor.resolve(compilationFlagTaiwan: false, plistFlavor: nil, bundleIdentifier: "com.kenny.daidee"), .hongKong)
+        XCTAssertEqual(AppFlavor.resolve(compilationFlagTaiwan: false, plistFlavor: "TODO", bundleIdentifier: "com.kenny.daidee"), .hongKong)
+        // Package tests (no plist, not the Taiwan bundle) stay on the Hong Kong flavor.
+        XCTAssertEqual(AppFlavor.current, .hongKong)
+    }
 }

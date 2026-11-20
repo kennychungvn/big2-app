@@ -1,20 +1,56 @@
 import Foundation
 import ScoringEngine
 
-/// Compile-time product flavor. The Hong Kong target (`Big2`, 鋤大D計分) and the
-/// Taiwan-only target (`DaLaoEr`, 大老二計分) share AppCore and the views; this
-/// switch (or `SWIFT_ACTIVE_COMPILATION_CONDITIONS = TAIWAN`) is what diverges
-/// rules, copy, ads and IAP. The Hong Kong target never defines `TAIWAN`.
+/// Product flavor for the shared AppCore + views.
+///
+/// The `TAIWAN` compile flag is set on the `DaLaoEr` app target, but AppCore is
+/// a Swift package and does not inherit that flag. Detection therefore also
+/// reads the target's Info.plist (`AppFlavor`) and bundle id so the Taiwan app
+/// actually gets Taiwan rules and copy. The Hong Kong target never defines
+/// `TAIWAN` and keeps bundle id `com.kenny.daidee`.
 public enum AppFlavor: String, Equatable, Sendable {
     case hongKong
     case taiwan
 
     public static var current: AppFlavor {
         #if TAIWAN
-        return .taiwan
+        let flag = true
         #else
-        return .hongKong
+        let flag = false
         #endif
+        return resolve(
+            compilationFlagTaiwan: flag,
+            plistFlavor: Bundle.main.object(forInfoDictionaryKey: "AppFlavor") as? String,
+            bundleIdentifier: Bundle.main.bundleIdentifier
+        )
+    }
+
+    /// True when running inside the 大老二計分 target (`com.kenny.dalaoer`).
+    public static var runtimeIsTaiwanApp: Bool {
+        resolve(
+            compilationFlagTaiwan: false,
+            plistFlavor: Bundle.main.object(forInfoDictionaryKey: "AppFlavor") as? String,
+            bundleIdentifier: Bundle.main.bundleIdentifier
+        ) == .taiwan
+    }
+
+    /// Shared by `current` and tests. `compilationFlagTaiwan` mirrors `#if TAIWAN`.
+    public static func resolve(
+        compilationFlagTaiwan: Bool,
+        plistFlavor: String?,
+        bundleIdentifier: String?
+    ) -> AppFlavor {
+        if compilationFlagTaiwan { return .taiwan }
+        if let raw = plistFlavor?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased(),
+           !raw.isEmpty,
+           raw != "todo" {
+            if raw == "taiwan" || raw == "dalaoer" { return .taiwan }
+            if raw == "hongkong" || raw == "daidee" { return .hongKong }
+        }
+        if bundleIdentifier == "com.kenny.dalaoer" { return .taiwan }
+        return .hongKong
     }
 
     public var isTaiwanApp: Bool { self == .taiwan }

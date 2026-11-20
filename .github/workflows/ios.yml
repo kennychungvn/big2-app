@@ -1,5 +1,6 @@
 # iOS CI: simulator build + tests on every push/PR.
-# TestFlight archive + upload on workflow_dispatch or tags matching v*.
+# TestFlight archive + upload on workflow_dispatch or tags matching v*, for both apps:
+# Big2 (鋤大D計分, com.kenny.daidee) and DaLaoEr (大老二計分, com.kenny.dalaoer).
 # Job B skips cleanly (does not fail) when App Store Connect secrets are missing.
 
 name: iOS
@@ -17,6 +18,12 @@ name: iOS
       - "docs/**"
       - "LICENSE"
   workflow_dispatch:
+    inputs:
+      apps:
+        description: "Which app(s) to archive and upload to TestFlight"
+        type: choice
+        options: [both, hk, tw]
+        default: both
 
 permissions:
   contents: read
@@ -120,12 +127,24 @@ jobs:
           python3 scripts/check_privacy_manifests.py "${APP}"
 
   testflight:
-    name: Archive & Upload to TestFlight
+    name: Archive & Upload to TestFlight (${{ matrix.scheme }})
     needs: build-and-test
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     # macos-latest (arm64) jobs sat unacquired for 15+ min on 2026-11-12; Intel picks them up.
     runs-on: macos-15-intel
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each scheme is its own App Store Connect app record; automatic (cloud-managed)
+        # signing with the same API key covers both bundle ids.
+        include:
+          - scheme: Big2
+            app: hk
+            bundle_id: com.kenny.daidee
+          - scheme: DaLaoEr
+            app: tw
+            bundle_id: com.kenny.dalaoer
     steps:
       - name: Check App Store Connect secrets
         id: check
@@ -141,6 +160,12 @@ jobs:
           if [ -z "${ASC_ISSUER_ID}" ]; then missing+=("ASC_ISSUER_ID"); fi
           if [ -z "${ASC_KEY_P8}" ]; then missing+=("ASC_KEY_P8"); fi
           if [ -z "${APPLE_TEAM_ID}" ]; then missing+=("APPLE_TEAM_ID"); fi
+          SELECTED="${{ github.event.inputs.apps || 'both' }}"
+          if [ "${SELECTED}" != "both" ] && [ "${SELECTED}" != "${{ matrix.app }}" ]; then
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            echo "Skipping ${{ matrix.scheme }}: this run uploads only '${SELECTED}'."
+            exit 0
+          fi
           if [ ${#missing[@]} -ne 0 ]; then
             echo "skip=true" >> "${GITHUB_OUTPUT}"
             echo "Skipping TestFlight upload. Missing secrets: ${missing[*]}"
@@ -247,10 +272,10 @@ jobs:
           # an Admin App Store Connect API key; App Manager is not enough.
           xcodebuild archive \
             -project Big2.xcodeproj \
-            -scheme Big2 \
+            -scheme ${{ matrix.scheme }} \
             -configuration Release \
             -destination "generic/platform=iOS" \
-            -archivePath "${RUNNER_TEMP}/Big2.xcarchive" \
+            -archivePath "${RUNNER_TEMP}/${{ matrix.scheme }}.xcarchive" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
@@ -266,7 +291,7 @@ jobs:
           # stale designated requirement, and App Store validation rejects them
           # ("not properly signed"). Sign every nested binary ad hoc, inside-out,
           # so export replaces a clean signature with the Apple Distribution one.
-          APP="${RUNNER_TEMP}/Big2.xcarchive/Products/Applications/Big2.app"
+          APP="${RUNNER_TEMP}/${{ matrix.scheme }}.xcarchive/Products/Applications/${{ matrix.scheme }}.app"
           if [ -d "${APP}/Frameworks" ]; then
             find "${APP}/Frameworks" -depth \( -name '*.framework' -o -name '*.dylib' \) -print0 |
               while IFS= read -r -d '' item; do
@@ -284,7 +309,7 @@ jobs:
           set -euo pipefail
           set +e
           xcodebuild -exportArchive \
-            -archivePath "${RUNNER_TEMP}/Big2.xcarchive" \
+            -archivePath "${RUNNER_TEMP}/${{ matrix.scheme }}.xcarchive" \
             -exportPath "${RUNNER_TEMP}/export" \
             -exportOptionsPlist "${RUNNER_TEMP}/ExportOptions.plist" \
             -allowProvisioningUpdates \
@@ -298,6 +323,18 @@ jobs:
               echo "::error::The App Store Connect API key cannot use cloud-managed distribution certificates. It needs Admin access."
             fi
             echo "::error::xcodebuild -exportArchive failed (exit ${status})."
+            exit 1
+          fi
+
+      - name: Check IPA bundle id
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          IPA=$(ls "${RUNNER_TEMP}/export"/*.ipa)
+          ID=$(unzip -p "${IPA}" 'Payload/*.app/Info.plist' | plutil -extract CFBundleIdentifier raw -o - -)
+          echo "IPA bundle id: ${ID}"
+          if [ "${ID}" != "${{ matrix.bundle_id }}" ]; then
+            echo "::error::Expected ${{ matrix.bundle_id }}, got ${ID}."
             exit 1
           fi
 
@@ -368,7 +405,7 @@ jobs:
         run: |
           set -euo pipefail
           IPA=$(ls "${RUNNER_TEMP}/export"/*.ipa)
-          echo "Uploading ${IPA##*/} (build ${{ github.run_number }})."
+          echo "Uploading ${IPA##*/} (${{ matrix.bundle_id }}, build ${{ github.run_number }})."
           # altool can exit 0 even when the upload fails, so check its output too.
           set +e
           xcrun altool --upload-app \
@@ -384,4 +421,4 @@ jobs:
             echo "::error::TestFlight upload failed (altool exit ${status}). See the log above."
             exit 1
           fi
-          echo "Build ${{ github.run_number }} uploaded to App Store Connect."
+          echo "${{ matrix.scheme }} build ${{ github.run_number }} uploaded to App Store Connect."

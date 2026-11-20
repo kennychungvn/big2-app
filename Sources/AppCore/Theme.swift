@@ -310,7 +310,7 @@ struct Palette {
         case .ledger:
             return Palette(bg: c(0xFFFFFF), surface: c(0xF4F5F7), surface2: c(0xE9EBEF), line: c(0xE4E6EB),
                            text: c(0x0A0A0A), text2: c(0x5C6270), text3: c(0x9CA1AB), accent: c(0x2F5BFF),
-                           onAccent: c(0xFFFFFF), hi: c(0x2F5BFF), hiSoft: c(0xEEF2FF), link: c(0x2F5BFF),
+                           onAccent: c(0xFFFFFF), hi: c(0x2F5BFF), hiSoft: c(0xE6ECFF), link: c(0x2F5BFF),
                            sel: c(0x0A0A0A), key: c(0xF4F5F7), keyText: c(0x0A0A0A), pos: c(0x007A4D),
                            neg: c(0xC9363B), toggle: c(0x2F5BFF), adband: c(0xF4F5F7),
                            p1: c(0x2F5BFF), p2: c(0xE5484D), p3: c(0x00A86B), p4: c(0xF5A524))

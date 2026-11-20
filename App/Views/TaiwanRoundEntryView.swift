@@ -7,6 +7,7 @@ import ScoringEngine
 struct TaiwanRoundEntryView: View {
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var sheet: RoundEntrySheet
 
     var body: some View {
@@ -229,13 +230,17 @@ struct TaiwanRoundEntryView: View {
                             .strokeBorder(Color(theme.hi), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
-                    .transition(.scale(scale: 1.25).combined(with: .opacity))
+                    .transition(
+                        (reduceMotion || !MotionSettings.enabled)
+                            ? .opacity
+                            : .scale(scale: 1.25).combined(with: .opacity)
+                    )
                     .accessibilityHidden(true)
                     .id("dbl-\(index)-\(chip)")
             }
 
             Button {
-                withAnimation(MotionSettings.animation(.spring(response: 0.25, dampingFraction: 0.8), reduceMotion: false)) {
+                withAnimation(MotionSettings.animation(.spring(response: 0.25, dampingFraction: 0.8), reduceMotion: reduceMotion)) {
                     sheet.state.incrementDoubles(at: index)
                 }
                 if vm.model.data.hapticsEnabled {

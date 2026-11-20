@@ -141,17 +141,17 @@ final class FormattingAndDraftTests: XCTestCase {
 
     /// WCAG AA (4.5:1) for text on every button / key fill in both looks.
     func testButtonTextContrastMeetsWCAGAA() {
-        func luminance(_ c: RGBColor) -> Double {
+        func luminance(_ c: AppCore.RGBColor) -> Double {
             func lin(_ v: Double) -> Double { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
             return 0.2126 * lin(c.red) + 0.7152 * lin(c.green) + 0.0722 * lin(c.blue)
         }
-        func ratio(_ a: RGBColor, _ b: RGBColor) -> Double {
+        func ratio(_ a: AppCore.RGBColor, _ b: AppCore.RGBColor) -> Double {
             let la = luminance(a), lb = luminance(b)
             return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
         }
         for skin in SkinID.allCases {
             let t = Theme.make(skin: skin)
-            let pairs: [(String, RGBColor, RGBColor)] = [
+            let pairs: [(String, AppCore.RGBColor, AppCore.RGBColor)] = [
                 ("primary", t.primaryText, t.primary),
                 ("disabled", t.secondaryText, t.surface2),
                 ("secondary", t.text, t.surface2),
@@ -159,10 +159,10 @@ final class FormattingAndDraftTests: XCTestCase {
                 ("key ×2", t.keyTextColor(forMultiplier: 2), t.keyColor(forMultiplier: 2)),
                 ("key ×3", t.keyTextColor(forMultiplier: 3), t.keyColor(forMultiplier: 3)),
                 ("key ×4", t.keyTextColor(forMultiplier: 4), t.keyColor(forMultiplier: 4)),
-                ("badge ×2", RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 2)),
-                ("badge ×3", RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 3)),
-                ("badge ×4", RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 4)),
-                ("destructive fill", RGBColor(hex: 0xFFFFFF), t.destructiveFill),
+                ("badge ×2", AppCore.RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 2)),
+                ("badge ×3", AppCore.RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 3)),
+                ("badge ×4", AppCore.RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 4)),
+                ("destructive fill", AppCore.RGBColor(hex: 0xFFFFFF), t.destructiveFill),
                 ("destructive text", t.negative, t.card),
                 ("link", t.accentLink, t.background),
                 ("hi chip", t.hi, t.hiSoft),

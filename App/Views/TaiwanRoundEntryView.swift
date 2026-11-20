@@ -242,12 +242,13 @@ struct TaiwanRoundEntryView: View {
                     ChaoHaptics.play(multiplier: 2)
                 }
             } label: {
+                let canAdd = doubles < ScoringEngine.maxManualDoubles
                 Text(tr("+ ×2"))
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(Color(theme.primaryText))
+                    .foregroundColor(Color(canAdd ? theme.primaryText : theme.secondaryText))
                     .padding(.horizontal, 10)
                     .frame(height: 32)
-                    .background(Color(theme.primary))
+                    .background(Color(canAdd ? theme.primary : theme.surface2))
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
             }
             .buttonStyle(.plain)

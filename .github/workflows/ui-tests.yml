@@ -211,6 +211,8 @@ jobs:
       - name: App Store style status bar
         run: |
           xcrun simctl status_bar booted override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          # System dark mode on: the skins must ignore it (經典 dark, Ledger stays light).
+          xcrun simctl ui booted appearance dark || true
 
       - name: Run DaLaoEr UI tests
         run: |

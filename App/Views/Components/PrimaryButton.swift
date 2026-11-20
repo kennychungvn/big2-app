@@ -14,10 +14,12 @@ struct PrimaryButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: fontSize, weight: theme.monoNumbers ? .semibold : .bold))
-                .foregroundColor(Color(theme.primaryText))
+                // Disabled: the shared disabled look (surface2 fill, secondary text) in both
+                // skins, instead of a faded accent (Ledger white-on-pale-blue was 2:1).
+                .foregroundColor(Color(enabled ? theme.primaryText : theme.secondaryText))
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(Color(theme.primary).opacity(enabled ? 1 : 0.45))
+                .background(Color(enabled ? theme.primary : theme.surface2))
                 .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
         }
         .buttonStyle(PressStyle(amount: 0.97))

@@ -97,9 +97,8 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var isStoreBusy = false
     /// Effective 地區介面 (Hong Kong or Taiwan wording).
     @Published private(set) var region: InterfaceRegion = .hongKong
-    /// 2.0 skin (`skin` key, default 經典) and 外觀 (`appearance`, default 跟系統).
+    /// 2.0 skin (`skin` key, default 經典). The skin fixes the look: 經典 dark, Ledger light.
     @Published private(set) var skin: SkinID = SkinPreferences.loadSkin()
-    @Published private(set) var appearance: AppearancePreference = SkinPreferences.loadAppearance()
     /// 「App 圖示 · 跟隨主題」 (`iconFollowsSkin`, default on).
     @Published private(set) var iconFollowsSkin: Bool = SkinPreferences.loadIconFollowsSkin()
 
@@ -544,6 +543,7 @@ final class AppViewModel: ObservableObject {
         guard newSkin != skin else { return }
         SkinTransition.crossfade(animated: model.data.chaoAnimationEnabled, haptics: model.data.hapticsEnabled) {
             self.skin = newSkin
+            SkinWindowStyle.apply(newSkin)
         }
         SkinPreferences.save(skin: newSkin)
         if iconFollowsSkin {
@@ -553,14 +553,6 @@ final class AppViewModel: ObservableObject {
                 AppIconSwitcher.apply(newSkin)
             }
         }
-    }
-
-    func setAppearance(_ newValue: AppearancePreference) {
-        guard newValue != appearance else { return }
-        SkinTransition.crossfade(animated: model.data.chaoAnimationEnabled, haptics: model.data.hapticsEnabled) {
-            self.appearance = newValue
-        }
-        SkinPreferences.save(appearance: newValue)
     }
 
     func setIconFollowsSkin(_ follows: Bool) {

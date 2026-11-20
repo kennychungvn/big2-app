@@ -101,40 +101,76 @@ final class FormattingAndDraftTests: XCTestCase {
     }
 
     func testDualSkinTokensMatchHandoff() {
-        let classicDark = Theme.make(skin: .classic, dark: true)
-        XCTAssertEqual(classicDark.background.hexString, "#1E2128")
-        XCTAssertEqual(classicDark.card.hexString, "#2A2E37")
-        XCTAssertEqual(classicDark.primary.hexString, "#F5C542")
-        XCTAssertEqual(classicDark.cardCornerRadius, 16)
-        XCTAssertEqual(classicDark.buttonCornerRadius, 18)
-        XCTAssertEqual(classicDark.keyCornerRadius, 12)
-        XCTAssertEqual(classicDark.cardBorderWidth, 0)
-        XCTAssertFalse(classicDark.monoNumbers)
+        // Two fixed looks (Kenny, 2026-11-20): 經典 always dark, Ledger always light.
+        let classic = Theme.make(skin: .classic)
+        XCTAssertTrue(classic.isDark)
+        XCTAssertEqual(classic.background.hexString, "#1E2128")
+        XCTAssertEqual(classic.card.hexString, "#2A2E37")
+        XCTAssertEqual(classic.primary.hexString, "#F5C542")
+        XCTAssertEqual(classic.primaryText.hexString, "#1E2128")
+        XCTAssertEqual(classic.keyColor(forMultiplier: 2).hexString, "#F5C542")
+        XCTAssertEqual(classic.keyColor(forMultiplier: 3).hexString, "#E38B2C")
+        XCTAssertEqual(classic.keyColor(forMultiplier: 4).hexString, "#C8372D")
+        XCTAssertEqual(classic.cardCornerRadius, 16)
+        XCTAssertEqual(classic.buttonCornerRadius, 18)
+        XCTAssertEqual(classic.keyCornerRadius, 12)
+        XCTAssertEqual(classic.cardBorderWidth, 0)
+        XCTAssertFalse(classic.monoNumbers)
+        XCTAssertFalse(classic.suitOutline)
+        XCTAssertEqual(classic.suitBlack.hexString, "#3A3F4B")
 
-        let classicLight = Theme.make(skin: .classic, dark: false)
-        XCTAssertEqual(classicLight.background.hexString, "#F2F3F6")
-        XCTAssertEqual(classicLight.positive.hexString, "#0B7A43")
+        let ledger = Theme.make(skin: .ledger)
+        XCTAssertFalse(ledger.isDark)
+        XCTAssertEqual(ledger.background.hexString, "#FFFFFF")
+        XCTAssertEqual(ledger.primary.hexString, "#2F5BFF")
+        XCTAssertEqual(ledger.primaryText.hexString, "#FFFFFF")
+        XCTAssertEqual(ledger.keyColor(forMultiplier: 2).hexString, "#2F5BFF")
+        XCTAssertEqual(ledger.keyColor(forMultiplier: 4).hexString, "#C9363B")
+        XCTAssertEqual(ledger.cardCornerRadius, 10)
+        XCTAssertEqual(ledger.keyCornerRadius, 8)
+        XCTAssertEqual(ledger.cardBorderWidth, 1)
+        XCTAssertTrue(ledger.monoNumbers)
+        XCTAssertTrue(ledger.squareMarker)
+        XCTAssertTrue(ledger.suitOutline)
+        XCTAssertEqual(ledger.suitRed.hexString, "#AFC0F7")
 
-        let ledgerLight = Theme.make(skin: .ledger, dark: false)
-        XCTAssertEqual(ledgerLight.background.hexString, "#FFFFFF")
-        XCTAssertEqual(ledgerLight.primary.hexString, "#2F5BFF")
-        XCTAssertEqual(ledgerLight.primaryText.hexString, "#FFFFFF")
-        XCTAssertEqual(ledgerLight.cardCornerRadius, 10)
-        XCTAssertEqual(ledgerLight.keyCornerRadius, 8)
-        XCTAssertEqual(ledgerLight.cardBorderWidth, 1)
-        XCTAssertTrue(ledgerLight.monoNumbers)
-        XCTAssertTrue(ledgerLight.squareMarker)
-
-        let ledgerDark = Theme.make(skin: .ledger, dark: true)
-        XCTAssertEqual(ledgerDark.background.hexString, "#000000")
-        XCTAssertEqual(ledgerDark.primary.hexString, "#5B7CFF")
         XCTAssertEqual(SkinID.ledger.alternateIconName, "AppIcon-Ledger")
         XCTAssertNil(SkinID.classic.alternateIconName)
         XCTAssertEqual(SkinID.ledger.displayName, "Ledger")
-        XCTAssertEqual(classicDark.suitBlack.hexString, "#3A3F4B")
-        XCTAssertEqual(ledgerLight.suitRed.hexString, "#AFC0F7")
-        XCTAssertTrue(ledgerLight.suitOutline)
-        XCTAssertFalse(classicLight.suitOutline)
+    }
+
+    /// WCAG AA (4.5:1) for text on every button / key fill in both looks.
+    func testButtonTextContrastMeetsWCAGAA() {
+        func luminance(_ c: RGBColor) -> Double {
+            func lin(_ v: Double) -> Double { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+            return 0.2126 * lin(c.red) + 0.7152 * lin(c.green) + 0.0722 * lin(c.blue)
+        }
+        func ratio(_ a: RGBColor, _ b: RGBColor) -> Double {
+            let la = luminance(a), lb = luminance(b)
+            return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+        }
+        for skin in SkinID.allCases {
+            let t = Theme.make(skin: skin)
+            let pairs: [(String, RGBColor, RGBColor)] = [
+                ("primary", t.primaryText, t.primary),
+                ("disabled", t.secondaryText, t.surface2),
+                ("secondary", t.text, t.surface2),
+                ("key ×1", t.keyTextColor(forMultiplier: 1), t.keyColor(forMultiplier: 1)),
+                ("key ×2", t.keyTextColor(forMultiplier: 2), t.keyColor(forMultiplier: 2)),
+                ("key ×3", t.keyTextColor(forMultiplier: 3), t.keyColor(forMultiplier: 3)),
+                ("key ×4", t.keyTextColor(forMultiplier: 4), t.keyColor(forMultiplier: 4)),
+                ("badge ×2", RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 2)),
+                ("badge ×3", RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 3)),
+                ("badge ×4", RGBColor(hex: 0xFFFFFF), t.badgeColor(forMultiplier: 4)),
+                ("destructive fill", RGBColor(hex: 0xFFFFFF), t.destructiveFill),
+                ("destructive text", t.negative, t.card),
+                ("link", t.accentLink, t.background),
+                ("hi chip", t.hi, t.hiSoft),
+            ]
+            for (name, fg, bg) in pairs {
+                XCTAssertGreaterThanOrEqual(ratio(fg, bg), 4.5, "\(skin) \(name)")
+            }
+        }
     }
 
     @MainActor

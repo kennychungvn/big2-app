@@ -25,7 +25,7 @@ struct RootView: View {
                 .bannerSlot()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
-                .preferredColorScheme(vm.appearance.colorScheme)
+                .preferredColorScheme(theme.colorScheme)
                 .environment(\.locale, vm.region.locale)
         }
         .sheet(isPresented: $vm.isPresentingSettings) {
@@ -33,7 +33,7 @@ struct RootView: View {
                 .bannerSlot()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
-                .preferredColorScheme(vm.appearance.colorScheme)
+                .preferredColorScheme(theme.colorScheme)
                 .environment(\.locale, vm.region.locale)
         }
         .sheet(item: $vm.reviewSheet) { sheet in
@@ -41,7 +41,7 @@ struct RootView: View {
                 .bannerSlot()
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
-                .preferredColorScheme(vm.appearance.colorScheme)
+                .preferredColorScheme(theme.colorScheme)
                 .environment(\.locale, vm.region.locale)
         }
         .fullScreenCover(item: $vm.roundEntry) { entry in
@@ -56,7 +56,7 @@ struct RootView: View {
             ))
             .environmentObject(vm)
             .environment(\.appTheme, theme)
-            .preferredColorScheme(vm.appearance.colorScheme)
+            .preferredColorScheme(theme.colorScheme)
             .environment(\.locale, vm.region.locale)
         }
         // Home, Scoreboard, Final and 所有紀錄 (navigation pushes) share the root banner.

@@ -67,6 +67,7 @@ struct Big2App: App {
                 shop: StubStoreManager()
             )
         }
+        SkinPreferences.clearLegacyAppearance()
         let shop = StoreKitStoreManager()
         let viewModel = AppViewModel(
             store: JSONFileStore(fileURL: fileURL),
@@ -80,22 +81,19 @@ struct Big2App: App {
     }
 }
 
-/// Resolves the active skin × light/dark into the `Theme` every view reads, and applies the
-/// 外觀 preference (跟系統 / 淺色 / 深色) to the window.
+/// Resolves the active skin into the `Theme` every view reads. Each skin has one fixed
+/// look (經典 dark, Ledger light); system dark mode is ignored. The scheme is forced on
+/// the SwiftUI tree and on every UIWindow, so the status bar, sheets, keyboards and
+/// system alerts match the skin too.
 struct SkinnedRoot: View {
     @EnvironmentObject private var vm: AppViewModel
-    @Environment(\.colorScheme) private var systemScheme
 
     var body: some View {
-        let dark: Bool = {
-            switch vm.appearance {
-            case .dark: return true
-            case .light: return false
-            case .system: return systemScheme == .dark
-            }
-        }()
+        let theme = Theme.make(skin: vm.skin)
         RootView()
-            .environment(\.appTheme, Theme.make(skin: vm.skin, dark: dark))
-            .preferredColorScheme(vm.appearance.colorScheme)
+            .environment(\.appTheme, theme)
+            .preferredColorScheme(theme.colorScheme)
+            .onAppear { SkinWindowStyle.apply(vm.skin) }
+            .onChange(of: vm.skin) { SkinWindowStyle.apply($0) }
     }
 }

@@ -55,7 +55,8 @@ public struct Theme: Equatable, Sendable {
 
     // MARK: 2.0 dual-skin tokens (design2/dual-skin/tokens.md)
     public var skin: SkinID = .classic
-    public var isDark: Bool = true
+    /// Fixed per skin (Kenny, 2026-11-20): 經典 is always dark, Ledger is always light.
+    public var isDark: Bool { skin.isDark }
     /// Secondary fill: count box, segmented track, secondary button.
     public var surface2: RGBColor = RGBColor(hex: 0x363B48)
     /// Divider / card border (only drawn when `cardBorderWidth > 0`).
@@ -82,6 +83,9 @@ public struct Theme: Equatable, Sendable {
     public var suitBlack: RGBColor = RGBColor(hex: 0x3A3F4B)
     public var suitRed: RGBColor = RGBColor(hex: 0x4A4231)
     public var suitOutline: Bool = false
+    /// Fill behind white destructive labels (swipe 刪除). Classic's `negative` text red
+    /// (FF6363) is too light under white text, so the fill is a slightly deeper red (AA 4.6:1).
+    public var destructiveFill: RGBColor = RGBColor(hex: 0xD63A3A)
 
     /// The default 街坊 skin: dark grey, yellow primary, rounded 14–16 pt.
     public static let neighbourhood = Theme(
@@ -133,15 +137,15 @@ public struct Theme: Equatable, Sendable {
 
     public static let current = Theme.neighbourhood
 
-    /// 2.0 skins. One layout; views read tokens only.
-    public static func make(skin: SkinID, dark: Bool) -> Theme {
+    /// 2.0 skins. One layout; views read tokens only. Each skin has exactly one look
+    /// (經典 = dark, Ledger = light); the system appearance is ignored.
+    public static func make(skin: SkinID) -> Theme {
         var t = Theme.neighbourhood
         t.skin = skin
-        t.isDark = dark
         t.id = skin.rawValue
         t.chineseName = skin.displayName
         t.englishName = skin.displayName
-        let p = Palette.of(skin: skin, dark: dark)
+        let p = Palette.of(skin: skin)
         t.background = p.bg
         t.elevatedBackground = p.adband
         t.card = p.surface
@@ -173,11 +177,9 @@ public struct Theme: Equatable, Sendable {
         t.keyText = p.keyText
         t.toggle = p.toggle
         t.adband = p.adband
-        switch (skin, dark) {
-        case (.classic, false): t.suitBlack = RGBColor(hex: 0xCDD0D7); t.suitRed = RGBColor(hex: 0xE3D3A2)
-        case (.classic, true): t.suitBlack = RGBColor(hex: 0x3A3F4B); t.suitRed = RGBColor(hex: 0x4A4231)
-        case (.ledger, false): t.suitBlack = RGBColor(hex: 0xBFC4CE); t.suitRed = RGBColor(hex: 0xAFC0F7)
-        case (.ledger, true): t.suitBlack = RGBColor(hex: 0x2E3138); t.suitRed = RGBColor(hex: 0x2A3666)
+        switch skin {
+        case .classic: t.suitBlack = RGBColor(hex: 0x3A3F4B); t.suitRed = RGBColor(hex: 0x4A4231)
+        case .ledger: t.suitBlack = RGBColor(hex: 0xBFC4CE); t.suitRed = RGBColor(hex: 0xAFC0F7)
         }
         t.suitOutline = skin == .ledger
         switch skin {
@@ -185,10 +187,11 @@ public struct Theme: Equatable, Sendable {
             t.keyTier2 = RGBColor(hex: 0xF5C542)
             t.keyTier3 = RGBColor(hex: 0xE38B2C)
             t.keyTier4 = RGBColor(hex: 0xC8372D)
-            t.badgeTier2 = dark ? RGBColor(hex: 0x2F6D4A) : RGBColor(hex: 0x0B7A43)
-            t.badgeTier3 = dark ? RGBColor(hex: 0x8A5A1A) : RGBColor(hex: 0xB86E12)
-            t.badgeTier4 = dark ? RGBColor(hex: 0x9B2C2C) : RGBColor(hex: 0xD13438)
+            t.badgeTier2 = RGBColor(hex: 0x2F6D4A)
+            t.badgeTier3 = RGBColor(hex: 0x8A5A1A)
+            t.badgeTier4 = RGBColor(hex: 0x9B2C2C)
             t.tierText = RGBColor(hex: 0x1E2128)
+            t.destructiveFill = RGBColor(hex: 0xD63A3A)
             t.cardCornerRadius = 16
             t.buttonCornerRadius = 18
             t.keyCornerRadius = 12
@@ -198,12 +201,13 @@ public struct Theme: Equatable, Sendable {
             t.squareMarker = false
         case .ledger:
             t.keyTier2 = p.accent
-            t.keyTier3 = dark ? RGBColor(hex: 0xE08A2E) : RGBColor(hex: 0xC56A12)
+            t.keyTier3 = RGBColor(hex: 0xB4600F) // was C56A12; white text now AA 4.5:1
             t.keyTier4 = p.neg
             t.badgeTier2 = p.accent
-            t.badgeTier3 = dark ? RGBColor(hex: 0xA8641C) : RGBColor(hex: 0xC56A12)
-            t.badgeTier4 = dark ? RGBColor(hex: 0xC9363B) : RGBColor(hex: 0xC9363B)
+            t.badgeTier3 = RGBColor(hex: 0xB4600F)
+            t.badgeTier4 = RGBColor(hex: 0xC9363B)
             t.tierText = RGBColor(hex: 0xFFFFFF)
+            t.destructiveFill = p.neg
             t.cardCornerRadius = 10
             t.buttonCornerRadius = 10
             t.keyCornerRadius = 8
@@ -274,6 +278,9 @@ public enum SkinID: String, CaseIterable, Sendable, Identifiable {
         }
     }
 
+    /// The skin's only colour scheme: 經典 dark, Ledger light.
+    public var isDark: Bool { self == .classic }
+
     public var iconPreviewName: String {
         switch self {
         case .classic: return "IconPreview-Classic"
@@ -286,50 +293,27 @@ public enum SkinID: String, CaseIterable, Sendable, Identifiable {
     }
 }
 
-/// 外觀: 跟系統 / 淺色 / 深色, persisted under `appearance`.
-public enum AppearancePreference: String, CaseIterable, Sendable, Identifiable {
-    case system
-    case light
-    case dark
-
-    public var id: String { rawValue }
-}
-
-/// Raw colour table from tokens.md (four palettes).
+/// Raw colour table from tokens.md: 經典 dark and Ledger light (the two shipped looks).
 struct Palette {
     var bg, surface, surface2, line, text, text2, text3, accent, onAccent, hi, hiSoft, link, sel, key, keyText, pos, neg, toggle, adband, p1, p2, p3, p4: RGBColor
 
-    static func of(skin: SkinID, dark: Bool) -> Palette {
+    static func of(skin: SkinID) -> Palette {
         func c(_ hex: UInt32) -> RGBColor { RGBColor(hex: hex) }
-        switch (skin, dark) {
-        case (.classic, false):
-            return Palette(bg: c(0xF2F3F6), surface: c(0xFFFFFF), surface2: c(0xE7E9EE), line: c(0xE1E3E8),
-                           text: c(0x1E2128), text2: c(0x5F6573), text3: c(0x9AA0AC), accent: c(0xF5C542),
-                           onAccent: c(0x1E2128), hi: c(0xD9A520), hiSoft: c(0xFBEFC8), link: c(0x1F5FCC),
-                           sel: c(0x1E2128), key: c(0xFFFFFF), keyText: c(0x1E2128), pos: c(0x0B7A43),
-                           neg: c(0xD13438), toggle: c(0x30D158), adband: c(0xE7E9EE),
-                           p1: c(0x3B78E7), p2: c(0xE5484D), p3: c(0x22A447), p4: c(0xF08C1A))
-        case (.classic, true):
+        switch skin {
+        case .classic:
             return Palette(bg: c(0x1E2128), surface: c(0x2A2E37), surface2: c(0x363B48), line: c(0x343844),
                            text: c(0xFFFFFF), text2: c(0xA3A9B6), text3: c(0x6B7180), accent: c(0xF5C542),
                            onAccent: c(0x1E2128), hi: c(0xF5C542), hiSoft: c(0x4A3F1E), link: c(0x8AB4FF),
                            sel: c(0xF5C542), key: c(0x363B48), keyText: c(0xFFFFFF), pos: c(0x3DD68C),
                            neg: c(0xFF6363), toggle: c(0x30D158), adband: c(0x16181D),
                            p1: c(0x4F8CF7), p2: c(0xFF5A5F), p3: c(0x34C759), p4: c(0xFFA53B))
-        case (.ledger, false):
+        case .ledger:
             return Palette(bg: c(0xFFFFFF), surface: c(0xF4F5F7), surface2: c(0xE9EBEF), line: c(0xE4E6EB),
                            text: c(0x0A0A0A), text2: c(0x5C6270), text3: c(0x9CA1AB), accent: c(0x2F5BFF),
-                           onAccent: c(0xFFFFFF), hi: c(0x2F5BFF), hiSoft: c(0xE6ECFF), link: c(0x2F5BFF),
+                           onAccent: c(0xFFFFFF), hi: c(0x2F5BFF), hiSoft: c(0xEEF2FF), link: c(0x2F5BFF),
                            sel: c(0x0A0A0A), key: c(0xF4F5F7), keyText: c(0x0A0A0A), pos: c(0x007A4D),
                            neg: c(0xC9363B), toggle: c(0x2F5BFF), adband: c(0xF4F5F7),
                            p1: c(0x2F5BFF), p2: c(0xE5484D), p3: c(0x00A86B), p4: c(0xF5A524))
-        case (.ledger, true):
-            return Palette(bg: c(0x000000), surface: c(0x111214), surface2: c(0x1C1D21), line: c(0x24262B),
-                           text: c(0xF5F6F7), text2: c(0x9CA1AB), text3: c(0x5C6270), accent: c(0x5B7CFF),
-                           onAccent: c(0xFFFFFF), hi: c(0x5B7CFF), hiSoft: c(0x141C3A), link: c(0x5B7CFF),
-                           sel: c(0xF5F6F7), key: c(0x1C1D21), keyText: c(0xF5F6F7), pos: c(0x2BD48F),
-                           neg: c(0xFF5C61), toggle: c(0x5B7CFF), adband: c(0x0B0C0E),
-                           p1: c(0x5B7CFF), p2: c(0xFF5C61), p3: c(0x2BD48F), p4: c(0xFFB547))
         }
     }
 }

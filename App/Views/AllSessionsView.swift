@@ -43,7 +43,7 @@ struct AllSessionsView: View {
                         } label: {
                             Label(tr("刪除"), systemImage: "trash")
                         }
-                        .tint(Color(theme.negative))
+                        .tint(Color(theme.destructiveFill))
                     }
                 }
             }

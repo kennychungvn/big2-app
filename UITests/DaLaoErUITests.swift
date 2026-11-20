@@ -63,7 +63,7 @@ final class DaLaoErUITests: XCTestCase {
     /// 2.0 Ledger skin (light) on the Taiwan app: entry with ×2 chips, round result, 完場.
     func testTaiwanLedgerSkinScreens() {
         app.terminate()
-        app.launchArguments += ["-skin", "ledger", "-appearance", "light"]
+        app.launchArguments += ["-skin", "ledger"]
         app.launch()
         element("home.title")
         snap("DLE-L-01-home")
@@ -89,6 +89,8 @@ final class DaLaoErUITests: XCTestCase {
         element("result.title")
         snap("DLE-L-04-result")
         tap("result.next")
+        element("scoreboard.player.0")
+        snap("DLE-L-04b-scoreboard")
         tap("scoreboard.finish")
         let alert = app.alerts.firstMatch
         XCTAssertTrue(alert.waitForExistence(timeout: 5))
@@ -108,10 +110,9 @@ final class DaLaoErUITests: XCTestCase {
         snap("DLE-L-06-settings")
     }
 
-    /// Classic (default) skin, dark: entry and 完場.
+    /// Classic (default) skin, always dark: entry and 完場.
     func testTaiwanClassicDarkScreens() {
         app.terminate()
-        app.launchArguments += ["-appearance", "dark"]
         app.launch()
         element("home.title")
         snap("DLE-C-01-home")
@@ -135,6 +136,8 @@ final class DaLaoErUITests: XCTestCase {
         element("result.title")
         snap("DLE-C-04-result")
         tap("result.next")
+        element("scoreboard.player.0")
+        snap("DLE-C-04b-scoreboard")
         tap("scoreboard.finish")
         let alert = app.alerts.firstMatch
         XCTAssertTrue(alert.waitForExistence(timeout: 5))

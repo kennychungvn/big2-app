@@ -6,15 +6,12 @@ import AppCore
 /// keeps using AppData.chaoAnimationEnabled (the old 炒倍動畫 value), so it carries over.
 enum SkinPreferences {
     static let skinKey = "skin"
-    static let appearanceKey = "appearance"
+    /// 2.0 betas had a 外觀 picker; the key is no longer read and is cleared on launch.
+    static let legacyAppearanceKey = "appearance"
     static let iconFollowsSkinKey = "iconFollowsSkin"
 
     static func loadSkin(_ defaults: UserDefaults = .standard) -> SkinID {
         defaults.string(forKey: skinKey).flatMap(SkinID.init(rawValue:)) ?? .classic
-    }
-
-    static func loadAppearance(_ defaults: UserDefaults = .standard) -> AppearancePreference {
-        defaults.string(forKey: appearanceKey).flatMap(AppearancePreference.init(rawValue:)) ?? .system
     }
 
     static func loadIconFollowsSkin(_ defaults: UserDefaults = .standard) -> Bool {
@@ -25,8 +22,8 @@ enum SkinPreferences {
         defaults.set(skin.rawValue, forKey: skinKey)
     }
 
-    static func save(appearance: AppearancePreference, _ defaults: UserDefaults = .standard) {
-        defaults.set(appearance.rawValue, forKey: appearanceKey)
+    static func clearLegacyAppearance(_ defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: legacyAppearanceKey)
     }
 
     static func save(iconFollowsSkin: Bool, _ defaults: UserDefaults = .standard) {
@@ -35,8 +32,23 @@ enum SkinPreferences {
 
     static func resetForUITests(_ defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: skinKey)
-        defaults.removeObject(forKey: appearanceKey)
+        defaults.removeObject(forKey: legacyAppearanceKey)
         defaults.removeObject(forKey: iconFollowsSkinKey)
+    }
+}
+
+/// Forces the skin's fixed colour scheme on every window (status bar, keyboards, alerts,
+/// share sheet), independent of the system light/dark setting.
+@MainActor
+enum SkinWindowStyle {
+    static func apply(_ skin: SkinID) {
+        let style: UIUserInterfaceStyle = skin.isDark ? .dark : .light
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows where window.overrideUserInterfaceStyle != style {
+                window.overrideUserInterfaceStyle = style
+            }
+        }
     }
 }
 
@@ -58,7 +70,7 @@ enum AppIconSwitcher {
     }
 }
 
-/// Skin / appearance switch: snapshot crossfade of the whole window (motion spec §9), so
+/// Skin switch: snapshot crossfade of the whole window (motion spec §9), so
 /// colours, fonts, radii and markers swap under the snapshot instead of morphing.
 @MainActor
 enum SkinTransition {

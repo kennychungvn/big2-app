@@ -53,19 +53,19 @@ struct NumberPad: View {
             } label: {
                 Text(tr("贏"))
                     .font(.system(size: 22, weight: .heavy))
-                    // Disabled (winner already picked): keep 贏 readable — yellow text on a
-                    // faint yellow key instead of dark text on a 30 % key (looked blank).
-                    .foregroundColor(enabled ? Color(theme.primaryText) : Color(theme.primary).opacity(0.55))
+                    // Disabled (winner already picked): same disabled look as PrimaryButton
+                    // (surface2 fill, secondary text), readable in both skins.
+                    .foregroundColor(Color(enabled ? theme.primaryText : theme.secondaryText))
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.keyHeight)
-                    .background(Color(theme.primary).opacity(enabled ? 1 : 0.14))
+                    .background(Color(enabled ? theme.primary : theme.surface2))
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
                             .strokeBorder(Color(theme.sel), lineWidth: isSelected ? 2 : 0)
                     )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle(amount: 0.92))
             .disabled(!enabled)
             .accessibilityIdentifier("pad.win")
             .accessibilityLabel(tr("贏"))
@@ -84,7 +84,6 @@ struct NumberPad: View {
                     if multiplier >= 2 {
                         Text("×\(multiplier)")
                             .font(ThemeFont.numeric(theme, size: 11, weight: .semibold))
-                            .opacity(0.85)
                     }
                 }
                 .foregroundColor(Color(theme.keyTextColor(forMultiplier: multiplier)))
@@ -111,12 +110,13 @@ struct NumberPad: View {
                 Text("↶")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(Color(theme.secondaryText))
+                    .opacity(state.canUndo ? 1 : 0.4)
                     .frame(maxWidth: .infinity)
                     .frame(height: Self.keyHeight)
                     .background(Color(theme.keyUtilityBackground))
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle(amount: 0.92))
             .disabled(!state.canUndo)
             .accessibilityIdentifier("pad.undo")
             .accessibilityLabel(tr("撤回"))

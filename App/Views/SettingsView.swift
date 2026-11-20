@@ -131,7 +131,7 @@ struct SettingsView: View {
                 }
                 .listRowBackground(Color(theme.card))
 
-                appearanceSection
+                skinSection
 
                 Section {
                     Toggle(isOn: animationBinding) {
@@ -215,7 +215,7 @@ struct SettingsView: View {
             .toolbarBackground(Color(theme.background), for: .navigationBar)
             .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
         }
-        .preferredColorScheme(vm.appearance.colorScheme)
+        .preferredColorScheme(theme.colorScheme)
         .alert(item: $vm.storeAlert) { alert in
             Alert(
                 title: Text(alert.title),
@@ -233,7 +233,8 @@ struct SettingsView: View {
 
     // MARK: 主題及外觀 (2.0)
 
-    private var appearanceSection: some View {
+    /// Two fixed looks: 經典 (dark) and Ledger (light). No separate 外觀 picker.
+    private var skinSection: some View {
         Section {
             HStack(spacing: 10) {
                 ForEach(SkinID.allCases) { skin in
@@ -241,14 +242,6 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 4)
-
-            Picker(tr("外觀"), selection: appearanceBinding) {
-                Text(tr("跟系統")).tag(AppearancePreference.system)
-                Text(tr("淺色")).tag(AppearancePreference.light)
-                Text(tr("深色")).tag(AppearancePreference.dark)
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("settings.appearance")
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 12) {
@@ -272,7 +265,7 @@ struct SettingsView: View {
 
     private func skinTile(_ skin: SkinID) -> some View {
         let selected = vm.skin == skin
-        let preview = Theme.make(skin: skin, dark: theme.isDark)
+        let preview = Theme.make(skin: skin)
         return Button {
             vm.setSkin(skin)
         } label: {
@@ -329,13 +322,6 @@ struct SettingsView: View {
         .accessibilityIdentifier("settings.icon.\(icon.rawValue)")
         .accessibilityLabel(tr("App 圖示") + " " + icon.displayName)
         .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-
-    private var appearanceBinding: Binding<AppearancePreference> {
-        Binding(
-            get: { vm.appearance },
-            set: { vm.setAppearance($0) }
-        )
     }
 
     private var iconFollowsBinding: Binding<Bool> {

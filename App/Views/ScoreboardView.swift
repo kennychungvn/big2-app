@@ -124,7 +124,12 @@ struct ScoreboardView: View {
 
     private func playerCard(_ player: RankedPlayer) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
+            HStack(alignment: .center, spacing: 4) {
+                // Ledger: square inline before the name, centred on it (as on the entry rows).
+                if theme.squareMarker {
+                    PlayerColorDot(index: player.index)
+                        .padding(.trailing, 4)
+                }
                 if player.rank == 1 && (stored?.session.roundsCompleted ?? 0) > 0 {
                     Text("👑")
                 }
@@ -137,13 +142,16 @@ struct ScoreboardView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.leading, 6)
+        .padding(.leading, theme.squareMarker ? 0 : 6)
         .frame(height: 100)
         .themedCard(theme)
         .overlay(alignment: .topLeading) {
-            PlayerColorDot(index: player.index)
-                .padding(.leading, theme.squareMarker ? 9 : 7)
-                .padding(.top, theme.squareMarker ? 18 : 12)
+            // 經典: vertical colour bar in the card's top-left corner (unchanged).
+            if !theme.squareMarker {
+                PlayerColorDot(index: player.index)
+                    .padding(.leading, 7)
+                    .padding(.top, 12)
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(player.name) \(vm.format.points(player.total))")

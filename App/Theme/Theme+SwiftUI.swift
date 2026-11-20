@@ -2,7 +2,7 @@ import SwiftUI
 import AppCore
 
 private struct AppThemeKey: EnvironmentKey {
-    static let defaultValue: Theme = .make(skin: .classic, dark: true)
+    static let defaultValue: Theme = .make(skin: .classic)
 }
 
 extension EnvironmentValues {
@@ -20,17 +20,6 @@ extension Color {
 
 extension ShapeStyle where Self == Color {
     static func app(_ rgb: RGBColor) -> Color { Color(rgb) }
-}
-
-extension AppearancePreference {
-    /// nil = 跟系統.
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
 }
 
 extension Theme {

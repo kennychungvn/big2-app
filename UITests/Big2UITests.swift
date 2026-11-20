@@ -421,23 +421,21 @@ final class Big2UITests: XCTestCase {
         snap("home-ads-removed")
     }
 
-    // MARK: - 2.0 skins (screenshots of both skins × light/dark)
+    // MARK: - 2.0 skins (two fixed looks: 經典 dark, Ledger light)
 
-    /// Short flow per skin/appearance: home, 新開一場, entry, result, home with 進行中,
-    /// 完場 + 換算, 設定 (主題及外觀). Scoring values are asserted by the full flow above.
+    /// Short flow per skin: home, 新開一場, entry, result, scoreboard, home with 進行中,
+    /// 完場 + 換算, 設定 (主題). Scoring values are asserted by the full flow above.
     func testSkinShowcase() {
-        let configs: [(skin: String, appearance: String)] = [
+        let configs: [(skin: String, look: String)] = [
             ("classic", "dark"),
-            ("classic", "light"),
             ("ledger", "light"),
-            ("ledger", "dark"),
         ]
         for config in configs {
             launch(
                 languages: "zh-Hant-HK",
                 locale: "zh_HK",
-                prefix: "HK-SKIN-\(config.skin)-\(config.appearance)",
-                extra: ["-skin", config.skin, "-appearance", config.appearance]
+                prefix: "HK-SKIN-\(config.skin)-\(config.look)",
+                extra: ["-skin", config.skin]
             )
             XCTAssertEqual(label("home.title"), "鋤大D計分")
             snap("home-empty")
@@ -488,6 +486,8 @@ final class Big2UITests: XCTestCase {
             element("settings.done")
             element("settings.skin.\(config.skin)")
             XCTAssertTrue(element("settings.skin.\(config.skin)").isSelected)
+            // 外觀 picker removed: each skin has one fixed look.
+            XCTAssertFalse(app.descendants(matching: .any)["settings.appearance"].exists)
             snap("settings")
             tap("settings.done")
             app.terminate()

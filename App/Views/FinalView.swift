@@ -12,6 +12,8 @@ struct FinalView: View {
 
     @State private var shareImage: Image?
     @State private var revealed = false
+    @State private var crownVisible = false
+    @State private var didStartReveal = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isEditing = false
     @State private var input = ""
@@ -51,7 +53,7 @@ struct FinalView: View {
         .onAppear {
             restoreInput()
             renderShareImage()
-            revealed = true
+            startRevealIfNeeded()
         }
         .onChange(of: appliedMultiplier) { _ in
             renderShareImage()
@@ -113,9 +115,15 @@ struct FinalView: View {
                                 .foregroundColor(Color(theme.tertiaryText))
                                 .frame(width: 20)
                             PlayerColorDot(index: player.index)
-                            Text(player.rank == 1 ? "👑 \(player.name)" : player.name)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(Color(theme.text))
+                            HStack(spacing: 4) {
+                                if player.rank == 1 {
+                                    Text("👑")
+                                        .opacity(crownVisible ? 1 : 0)
+                                }
+                                Text(player.name)
+                            }
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(Color(theme.text))
                             Spacer()
                             rankScore(player.total)
                         }
@@ -150,8 +158,17 @@ struct FinalView: View {
         // One stable RollingScoreText so 換算 (and turning it off) rolls in place
         // instead of swapping views. Display-only: the raw total is unchanged.
         let displayed = appliedMultiplier.map { ScoreConversion.multiply(total, by: $0) } ?? total
+        // Count up from 0 on first appear only when 動畫效果 is on and Reduce Motion is off.
+        let countFromZero = MotionSettings.enabled && !reduceMotion
         VStack(alignment: .trailing, spacing: 2) {
-            RollingScoreText(value: displayed, size: 26, format: vm.format, motion: .conversion)
+            RollingScoreText(
+                value: displayed,
+                size: 26,
+                format: vm.format,
+                appearFrom: countFromZero ? 0 : nil,
+                motion: .conversion,
+                appearMotion: .settlement
+            )
             if let multiplier = appliedMultiplier {
                 Text("\(vm.format.points(total)) ×\(multiplier)")
                     .font(ThemeFont.numeric(theme, size: 12, weight: .semibold))
@@ -290,6 +307,41 @@ struct FinalView: View {
             .frame(height: 56)
             .background(Color(theme.primary))
             .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
+    }
+
+    /// Rows, score count-up and 👑 are display-only. 換算 and share stay tappable from frame 0.
+    private func startRevealIfNeeded() {
+        guard !didStartReveal else {
+            revealed = true
+            crownVisible = true
+            return
+        }
+        didStartReveal = true
+        revealed = true
+        guard MotionSettings.enabled else {
+            crownVisible = true
+            return
+        }
+        if reduceMotion {
+            // 150 ms list fade (already on the rows); final numbers, no slide, crown with the fade.
+            withAnimation(.easeInOut(duration: 0.15)) {
+                crownVisible = true
+            }
+            if vm.model.data.hapticsEnabled {
+                ChaoHaptics.light()
+            }
+            return
+        }
+        // 👑 fades in last (150 ms) after the row reveal (~440 ms).
+        withAnimation(.easeOut(duration: 0.15).delay(0.44)) {
+            crownVisible = true
+        }
+        if vm.model.data.hapticsEnabled {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 260_000_000)
+                ChaoHaptics.light()
+            }
+        }
     }
 
     private func restoreInput() {

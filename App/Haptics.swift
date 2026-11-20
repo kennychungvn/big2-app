@@ -20,4 +20,11 @@ enum ChaoHaptics {
         generator.prepare()
         generator.impactOccurred(intensity: intensity)
     }
+
+    /// One-shot light impact (完場 rank 1 landing). Caller gates on 震機提示.
+    static func light() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        generator.impactOccurred()
+    }
 }

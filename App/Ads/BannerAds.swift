@@ -13,7 +13,7 @@ import AppCore
 /// and name); a received ad fades in over 0.25 s. A failed refresh fades back to the
 /// placeholder, never collapses.
 /// The slot is exactly the ad size and clips, so the ad never overflows onto bottom buttons.
-/// With 移除廣告 bought, `BannerSlot` drops the whole slot.
+/// With 移除廣告 bought, `BannerSlot` collapses the 60pt band (220 ms when motion is on).
 struct AdMobBannerSlotView: View {
     @ObservedObject private var runtime = AdsRuntime.shared
     @State private var adLoaded = false
@@ -176,22 +176,61 @@ struct BannerAdContainer: View {
 }
 
 /// The bottom banner every screen shows, including sheets and full-screen covers (they
-/// cover the root's banner, so each hosts its own). Hidden only when ads are removed or
-/// while an interstitial is showing. Accessibility id `banner`.
+/// cover the root's banner, so each hosts its own). Hidden while an interstitial is
+/// showing (instant). After 移除廣告, the 60pt band collapses to 0 over 220 ms when
+/// 動畫效果 is on and Reduce Motion is off; otherwise it collapses instantly.
+/// SuitPatternRow stays static — only the slot height animates, once.
 struct BannerSlot: View {
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// 50pt ad + 5pt padding on each side.
+    private static let expandedHeight: CGFloat = 60
+
+    @State private var height: CGFloat = BannerSlot.expandedHeight
+    @State private var holdsContent = true
 
     var body: some View {
-        if !vm.model.data.adsRemoved && !vm.isShowingInterstitial {
-            // 2.0 ad band: `adband` fill + 1pt `line` hairline. No transition/animation.
-            BannerAdContainer(adsRemoved: false)
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity)
-                .background(Color(theme.adband).ignoresSafeArea(edges: .bottom))
-                .overlay(alignment: .top) {
-                    Rectangle().fill(Color(theme.line)).frame(height: 1)
-                }
+        let hideForInterstitial = vm.isShowingInterstitial
+        ZStack(alignment: .top) {
+            if holdsContent && !hideForInterstitial {
+                // 2.0 ad band: `adband` fill + 1pt `line` hairline. No content animation.
+                BannerAdContainer(adsRemoved: false)
+                    .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(theme.adband).ignoresSafeArea(edges: .bottom))
+                    .overlay(alignment: .top) {
+                        Rectangle().fill(Color(theme.line)).frame(height: 1)
+                    }
+            }
+        }
+        .frame(height: hideForInterstitial ? 0 : height)
+        .frame(maxWidth: .infinity)
+        .clipped()
+        .onAppear { applyAdsRemoved(vm.model.data.adsRemoved, animated: false) }
+        .onChange(of: vm.model.data.adsRemoved) { removed in
+            applyAdsRemoved(removed, animated: true)
+        }
+        .onChange(of: height) { newHeight in
+            if newHeight < 0.5 { holdsContent = false }
+        }
+    }
+
+    private func applyAdsRemoved(_ removed: Bool, animated: Bool) {
+        if !removed {
+            holdsContent = true
+            height = Self.expandedHeight
+            return
+        }
+        let shouldAnimate = animated && MotionSettings.enabled && !reduceMotion
+        if shouldAnimate {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                height = 0
+            }
+        } else {
+            height = 0
+            holdsContent = false
         }
     }
 }

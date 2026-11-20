@@ -41,18 +41,21 @@ enum RollingScoreMotion {
     case totals
     /// 換算 (spec §7): 350 ms crisp curve, every row at once.
     case conversion
+    /// 完場 reveal (spec §6): count up from 0 over 500 ms, no stagger.
+    case settlement
 
     var duration: Double {
         switch self {
         case .totals: return 0.45
         case .conversion: return 0.35
+        case .settlement: return 0.50
         }
     }
 
     var stagger: Double {
         switch self {
         case .totals: return 0.04
-        case .conversion: return 0
+        case .conversion, .settlement: return 0
         }
     }
 
@@ -79,6 +82,8 @@ struct RollingScoreText: View {
     /// this number. Otherwise the first frame snaps to `value` (no roll-from-0).
     var appearFrom: Int? = nil
     var motion: RollingScoreMotion = .totals
+    /// Timing for the first appearance when `appearFrom` is set; later changes use `motion`.
+    var appearMotion: RollingScoreMotion? = nil
 
     @Environment(\.appTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -93,7 +98,8 @@ struct RollingScoreText: View {
         weight: Font.Weight = .heavy,
         column: Int = 0,
         appearFrom: Int? = nil,
-        motion: RollingScoreMotion = .totals
+        motion: RollingScoreMotion = .totals,
+        appearMotion: RollingScoreMotion? = nil
     ) {
         self.value = value
         self.size = size
@@ -102,6 +108,7 @@ struct RollingScoreText: View {
         self.column = column
         self.appearFrom = appearFrom
         self.motion = motion
+        self.appearMotion = appearMotion
         let start = appearFrom ?? value
         _displayed = State(initialValue: Double(start))
         _shownValue = State(initialValue: start)
@@ -126,7 +133,7 @@ struct RollingScoreText: View {
             didAppear = true
             if let appearFrom, appearFrom != value, shouldInterpolate {
                 displayed = Double(appearFrom)
-                animateInterpolation(to: value)
+                animateInterpolation(to: value, using: appearMotion ?? motion)
             } else {
                 snap(to: value, fade: shouldCrossfade && appearFrom != nil && appearFrom != value)
             }
@@ -155,12 +162,13 @@ struct RollingScoreText: View {
         return Color(theme.text)
     }
 
-    private func animateInterpolation(to target: Int) {
-        let crisp = motion.alwaysCrisp || theme.monoNumbers
+    private func animateInterpolation(to target: Int, using motion: RollingScoreMotion? = nil) {
+        let used = motion ?? self.motion
+        let crisp = used.alwaysCrisp || theme.monoNumbers
         let curve: Animation = crisp
-            ? .timingCurve(0.2, 0, 0, 1, duration: motion.duration)
-            : .easeOut(duration: motion.duration)
-        withAnimation(curve.delay(Double(column) * motion.stagger)) {
+            ? .timingCurve(0.2, 0, 0, 1, duration: used.duration)
+            : .easeOut(duration: used.duration)
+        withAnimation(curve.delay(Double(column) * used.stagger)) {
             displayed = Double(target)
         }
     }

@@ -81,7 +81,7 @@ struct TaiwanRoundEntryView: View {
                 Spacer()
                 Text(vm.format.roundTitle(roundNumber))
                     .accessibilityIdentifier("entry.title")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundColor(Color(theme.text))
                 Spacer()
                 Text("　　")
@@ -92,10 +92,10 @@ struct TaiwanRoundEntryView: View {
 
             Text(mode == .winnerTakesAll ? tr("台灣玩法 • 贏家通吃") : tr("台灣玩法 • 互對"))
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(theme.hi))
+                .foregroundColor(Color(theme.primaryText))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(Color(theme.hiSoft))
+                .background(Color(theme.primary))
                 .clipShape(Capsule())
                 .accessibilityIdentifier("entry.modeBadge")
         }
@@ -115,7 +115,7 @@ struct TaiwanRoundEntryView: View {
             HStack(spacing: 10) {
                 PlayerColorDot(index: index)
                 Text(name)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(Color(theme.text))
                     .lineLimit(1)
                 Spacer(minLength: 4)
@@ -125,26 +125,24 @@ struct TaiwanRoundEntryView: View {
                         Text(tr("贏家"))
                             .font(.system(size: 15, weight: .bold))
                     }
-                    .foregroundColor(Color(theme.hi))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(theme.hiSoft))
-                    .clipShape(Capsule())
+                    .foregroundColor(Color(theme.primary))
                     .accessibilityIdentifier("entry.winner.\(index)")
                 } else if let cards {
                     Text("\(cards)")
-                        .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
+                        .monospacedDigit()
                         .foregroundColor(Color(theme.text))
-                        .frame(minWidth: 52, minHeight: 38)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
                         .background(Color(theme.countSetBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else if isFocused {
                     Text("?")
-                        .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(Color(theme.tertiaryText))
                 } else {
                     Text("–")
-                        .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(Color(theme.tertiaryText))
                 }
             }
@@ -157,8 +155,8 @@ struct TaiwanRoundEntryView: View {
                     .foregroundColor(Color(theme.secondaryText))
             } else if let cards, let penalty {
                 Text(formula(cards: cards, base: base, doubles: doubles, value: penalty))
-                    .font(ThemeFont.numeric(theme, size: 13, weight: .medium))
-                    .foregroundColor(Color(theme.secondaryText))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color(theme.text))
                     .accessibilityIdentifier("entry.formula.\(index)")
 
                 HStack(alignment: .center, spacing: 8) {
@@ -171,13 +169,17 @@ struct TaiwanRoundEntryView: View {
             }
         }
         .padding(14)
-        .themedCard(
-            theme,
-            selected: isWinner || isFocused,
-            selectedColor: isFocused ? theme.sel : theme.hi
+        .background(Color(isFocused ? theme.cardElevated : theme.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous)
+                .stroke(
+                    isWinner ? Color(theme.primary).opacity(0.85) : (isFocused ? Color.white : Color.clear),
+                    lineWidth: isWinner || isFocused ? 1.5 : 0
+                )
         )
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 5)
         .contentShape(Rectangle())
         .onTapGesture { sheet.state.selectPlayer(index) }
         .accessibilityElement(children: .contain)
@@ -188,8 +190,8 @@ struct TaiwanRoundEntryView: View {
         var text = AttributedString(vm.format.penaltyFormula(cardsLeft: cards, baseMultiplier: base, manualDoubles: doubles))
         // Color the equals value: the last token after " = ".
         if let range = text.range(of: "= \(value)") {
-            text[range].foregroundColor = Color(theme.hi)
-            text[range].font = ThemeFont.numeric(theme, size: 13, weight: .bold)
+            text[range].foregroundColor = Color(theme.primary)
+            text[range].font = .system(size: 14, weight: .bold)
         }
         return text
     }
@@ -209,8 +211,8 @@ struct TaiwanRoundEntryView: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(Color(theme.secondaryText))
                     .frame(width: 36, height: 32)
-                    .background(Color(theme.surface2))
-                    .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
+                    .background(Color(theme.countUnsetBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(doubles == 0)
@@ -219,25 +221,18 @@ struct TaiwanRoundEntryView: View {
 
             ForEach(0..<doubles, id: \.self) { chip in
                 Text("×2")
-                    .font(ThemeFont.numeric(theme, size: 13, weight: .bold))
-                    .foregroundColor(Color(theme.hi))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(Color(theme.primaryText))
                     .padding(.horizontal, 8)
                     .frame(height: 28)
-                    .background(Color(theme.hiSoft))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
-                            .strokeBorder(Color(theme.hi), lineWidth: 1)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
-                    .transition(.scale(scale: 1.25).combined(with: .opacity))
+                    .background(Color(theme.keyColor(forMultiplier: 2)))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .accessibilityHidden(true)
                     .id("dbl-\(index)-\(chip)")
             }
 
             Button {
-                withAnimation(MotionSettings.animation(.spring(response: 0.25, dampingFraction: 0.8), reduceMotion: false)) {
-                    sheet.state.incrementDoubles(at: index)
-                }
+                sheet.state.incrementDoubles(at: index)
                 if vm.model.data.hapticsEnabled {
                     ChaoHaptics.play(multiplier: 2)
                 }
@@ -248,7 +243,7 @@ struct TaiwanRoundEntryView: View {
                     .padding(.horizontal, 10)
                     .frame(height: 32)
                     .background(Color(theme.primary))
-                    .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(doubles >= ScoringEngine.maxManualDoubles)
@@ -265,7 +260,7 @@ struct TaiwanRoundEntryView: View {
                         .foregroundColor(Color(theme.secondaryText))
                     Spacer()
                     Text("\(total)")
-                        .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundColor(Color(theme.text))
                         .accessibilityIdentifier("entry.total")
                 }
@@ -276,7 +271,7 @@ struct TaiwanRoundEntryView: View {
                             .foregroundColor(Color(theme.secondaryText))
                         Spacer()
                         Text(vm.format.points(total))
-                            .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundColor(Color(theme.positive))
                     }
                 }
@@ -315,12 +310,12 @@ struct TaiwanRoundEntryView: View {
 
             AdSafeGap()
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .padding(.top, 10)
         .background(Color(theme.padBackground))
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(theme.line))
+                .fill(Color.white.opacity(0.08))
                 .frame(height: 1)
         }
     }

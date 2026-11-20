@@ -11,13 +11,14 @@ struct RoundEntryView: View {
     @State private var lingeringBadge: [Int: Int] = [:]
 
     var body: some View {
-        if AppFlavor.current.isTaiwanApp {
-            TaiwanRoundEntryView(sheet: $sheet)
-        } else {
-            hongKongBody
-        }
+        #if TAIWAN
+        TaiwanRoundEntryView(sheet: $sheet)
+        #else
+        hongKongBody
+        #endif
     }
 
+    @ViewBuilder
     private var hongKongBody: some View {
         let session = vm.model.currentSession?.session
         let names = session?.players ?? []

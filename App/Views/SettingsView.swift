@@ -200,7 +200,6 @@ struct SettingsView: View {
             .scrollContentBackground(.hidden)
             .background(Color(theme.background).ignoresSafeArea())
             .tint(Color(theme.toggle))
-            .foregroundColor(Color(theme.text))
             .navigationDestination(isPresented: $showingStoreLog) {
                 StoreDebugLogView()
             }

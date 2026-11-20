@@ -78,9 +78,9 @@ final class DaLaoErUITests: XCTestCase {
         tap("pad.10")
         tap("pad.13")
         tap("pad.5")
-        tap("entry.double.inc.1")
-        tap("entry.double.inc.2")
-        tap("entry.double.inc.2")
+        tapVisible("entry.double.inc.1")
+        tapVisible("entry.double.inc.2")
+        tapVisible("entry.double.inc.2")
         element("entry.total")
         assertNoHongKongWording(on: "entry-ledger")
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
@@ -103,6 +103,8 @@ final class DaLaoErUITests: XCTestCase {
         tap("home.settings")
         element("settings.done")
         assertNoHongKongWording(on: "settings-ledger")
+        app.swipeUp()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
         snap("DLE-L-06-settings")
     }
 
@@ -112,9 +114,11 @@ final class DaLaoErUITests: XCTestCase {
         app.launchArguments += ["-appearance", "dark"]
         app.launch()
         element("home.title")
+        snap("DLE-C-01-home")
         tap("home.newSession")
         element("setup.name.0")
         typeNames(["小明", "阿強", "小美", "志明"])
+        snap("DLE-C-02-setup")
         tap("setup.start")
         tap("scoreboard.addRound")
         element("entry.title")
@@ -122,13 +126,14 @@ final class DaLaoErUITests: XCTestCase {
         tap("pad.10")
         tap("pad.13")
         tap("pad.5")
-        tap("entry.double.inc.1")
-        tap("entry.double.inc.2")
+        tapVisible("entry.double.inc.1")
+        tapVisible("entry.double.inc.2")
         element("entry.total")
         RunLoop.current.run(until: Date().addingTimeInterval(0.6))
         snap("DLE-C-03-entry")
         tap("entry.confirm")
         element("result.title")
+        snap("DLE-C-04-result")
         tap("result.next")
         tap("scoreboard.finish")
         let alert = app.alerts.firstMatch
@@ -140,6 +145,12 @@ final class DaLaoErUITests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(1.0))
         assertNoHongKongWording(on: "final-classic")
         snap("DLE-C-05-final")
+        tap("nav.home")
+        tap("home.settings")
+        element("settings.done")
+        app.swipeUp()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.5))
+        snap("DLE-C-06-settings")
     }
 
     // MARK: - Helpers

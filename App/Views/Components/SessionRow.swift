@@ -9,6 +9,8 @@ struct SessionRow: View {
     let stored: StoredSession
     /// Home has no date headers, so its rows start with `今日` / `昨日` / `11/14`.
     var showsDay: Bool = false
+    /// Inside a grouped card (home 最近場次): no own card / outer padding.
+    var grouped: Bool = false
     let action: () -> Void
 
     @EnvironmentObject private var vm: AppViewModel
@@ -34,15 +36,14 @@ struct SessionRow: View {
                 }
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(theme.card))
-            .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            .modifier(SessionRowCard(theme: theme, grouped: grouped))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 5)
+        .padding(.horizontal, grouped ? 0 : 16)
+        .padding(.vertical, grouped ? 0 : 4)
     }
 
     private func title(_ summary: SessionListSummary) -> String {
@@ -65,7 +66,7 @@ struct SessionRow: View {
                 .accessibilityIdentifier("session.continueBadge")
         } else if let line = summary.winnerLine(format: vm.format), let total = summary.winningTotal {
             Text(line)
-                .font(.system(size: 17, weight: .bold))
+                .font(ThemeFont.numeric(theme, size: 17, weight: .bold))
                 .foregroundColor(color(for: total))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -90,6 +91,19 @@ struct SessionRow: View {
         if total > 0 { return Color(theme.positive) }
         if total < 0 { return Color(theme.negative) }
         return Color(theme.secondaryText)
+    }
+}
+
+private struct SessionRowCard: ViewModifier {
+    let theme: Theme
+    let grouped: Bool
+
+    func body(content: Content) -> some View {
+        if grouped {
+            content
+        } else {
+            content.themedCard(theme)
+        }
     }
 }
 

@@ -97,13 +97,17 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var isStoreBusy = false
     /// Effective 地區介面 (Hong Kong or Taiwan wording).
     @Published private(set) var region: InterfaceRegion = .hongKong
+    /// 2.0 skin (`skin` key, default 經典) and 外觀 (`appearance`, default 跟系統).
+    @Published private(set) var skin: SkinID = SkinPreferences.loadSkin()
+    @Published private(set) var appearance: AppearancePreference = SkinPreferences.loadAppearance()
+    /// 「App 圖示 · 跟隨主題」 (`iconFollowsSkin`, default on).
+    @Published private(set) var iconFollowsSkin: Bool = SkinPreferences.loadIconFollowsSkin()
 
     let store: AppStoring
     let ads: AdManaging
     let shop: StoreManaging
     let reviewPrompt = ReviewPromptStore()
     var format: ScoreFormatting { ScoreFormatting(region: region) }
-    let theme: Theme = .neighbourhood
 
     /// Set when a session has just been finished, so FinalView can offer a review prompt
     /// on that appearance only (not when opening a past 完場 from history).
@@ -138,6 +142,7 @@ final class AppViewModel: ObservableObject {
         }
         self.reviewPrompt.seedIfNeeded(existingFinishedSessionCount: Self.finishedPlayableCount(in: self.model))
         self.ads.adsRemoved = self.model.data.adsRemoved
+        MotionSettings.enabled = self.model.data.chaoAnimationEnabled
         if !self.model.data.adsRemoved {
             self.ads.preloadInterstitial()
         }
@@ -152,6 +157,7 @@ final class AppViewModel: ObservableObject {
             errorMessage = tr("儲存失敗，請稍後再試。")
         }
         ads.adsRemoved = model.data.adsRemoved
+        MotionSettings.enabled = model.data.chaoAnimationEnabled
     }
 
     /// Consumes the one-shot flag for this settlement appearance. Returns false for history visits and UI tests.
@@ -532,6 +538,41 @@ final class AppViewModel: ObservableObject {
             model.setAdsRemoved(true)
             persist()
         }
+    }
+
+    func setSkin(_ newSkin: SkinID) {
+        guard newSkin != skin else { return }
+        SkinTransition.crossfade(animated: model.data.chaoAnimationEnabled, haptics: model.data.hapticsEnabled) {
+            self.skin = newSkin
+        }
+        SkinPreferences.save(skin: newSkin)
+        if iconFollowsSkin {
+            // After the 250 ms crossfade; iOS shows its own "icon changed" alert.
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                AppIconSwitcher.apply(newSkin)
+            }
+        }
+    }
+
+    func setAppearance(_ newValue: AppearancePreference) {
+        guard newValue != appearance else { return }
+        SkinTransition.crossfade(animated: model.data.chaoAnimationEnabled, haptics: model.data.hapticsEnabled) {
+            self.appearance = newValue
+        }
+        SkinPreferences.save(appearance: newValue)
+    }
+
+    func setIconFollowsSkin(_ follows: Bool) {
+        iconFollowsSkin = follows
+        SkinPreferences.save(iconFollowsSkin: follows)
+        if follows { AppIconSwitcher.apply(skin) }
+    }
+
+    /// Manual icon choice (跟隨主題 off).
+    func chooseIcon(_ icon: SkinID) {
+        AppIconSwitcher.apply(icon)
+        objectWillChange.send()
     }
 
     func setChaoAnimationEnabled(_ enabled: Bool) {

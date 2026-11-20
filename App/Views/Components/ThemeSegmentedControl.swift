@@ -21,16 +21,15 @@ struct ThemeSegmentedControl<Item: Hashable>: View {
                         .padding(.vertical, 10)
                         .background(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(item == selection ? Color(theme.countSetBackground) : Color.clear)
+                                .fill(item == selection ? Color(theme.card) : Color.clear)
                         )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(4)
-        .background(Color(theme.card))
-        .clipShape(RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous))
-        .padding(.horizontal, 14)
+        .themedCard(theme, radius: theme.textFieldCornerRadius, fill: theme.surface2)
+        .padding(.horizontal, 16)
     }
 }
 
@@ -51,10 +50,10 @@ struct NameChipRow: View {
                         } label: {
                             Text("+ \(name)")
                                 .font(.system(size: 14))
-                                .foregroundColor(Color(theme.secondaryText))
-                                .padding(.vertical, 8)
+                                .foregroundColor(Color(theme.text))
                                 .padding(.horizontal, 12)
-                                .background(Color(theme.card))
+                                .frame(height: 32)
+                                .background(Color(theme.surface2))
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
@@ -70,7 +69,7 @@ struct NameChipRow: View {
                         }
                     }
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
             }
         }
     }

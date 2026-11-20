@@ -18,7 +18,7 @@ struct KnownNamesSettingsView: View {
                 ForEach(vm.model.data.knownPlayerNames, id: \.self) { name in
                     Text(name)
                         .foregroundColor(Color(theme.text))
-                        .listRowBackground(Color(theme.card))
+                        .themedListRow(theme)
                         .accessibilityIdentifier(identifier(for: name))
                 }
                 .onDelete { vm.removeKnownPlayerNames(at: $0) }
@@ -37,7 +37,7 @@ struct KnownNamesSettingsView: View {
             }
         }
         .toolbarBackground(Color(theme.background), for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
     }
 
     private func identifier(for name: String) -> String {

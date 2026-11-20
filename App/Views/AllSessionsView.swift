@@ -17,7 +17,7 @@ struct AllSessionsView: View {
         List {
             ForEach(sections) { section in
                 Text(section.title)
-                    .font(.system(size: 13))
+                    .font(ThemeFont.sectionLabel(theme))
                     .foregroundColor(Color(theme.secondaryText))
                     .padding(.horizontal, 18)
                     .padding(.top, 12)
@@ -57,6 +57,6 @@ struct AllSessionsView: View {
         .navigationTitle(tr("所有紀錄"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color(theme.background), for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
     }
 }

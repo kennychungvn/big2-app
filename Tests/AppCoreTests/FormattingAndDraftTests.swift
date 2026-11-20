@@ -93,16 +93,44 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(theme.background.hexString, "#1E2128")
         XCTAssertEqual(theme.card.hexString, "#2A2E37")
         XCTAssertEqual(theme.primary.hexString, "#F5C542")
-        XCTAssertEqual(theme.playerColors.map(\.hexString), ["#4A8CFF", "#FF5A5A", "#3CCF7A", "#FFA53C"])
-        XCTAssertEqual(theme.cardCornerRadius, 16)
-        XCTAssertEqual(theme.keyCornerRadius, 14)
-        XCTAssertEqual(theme.chineseName, "街坊")
         XCTAssertEqual(theme.keyColor(forMultiplier: 1), theme.keyBackground)
         XCTAssertEqual(theme.keyColor(forMultiplier: 2).hexString, "#F5C542")
         XCTAssertEqual(theme.keyColor(forMultiplier: 3).hexString, "#E38B2C")
         XCTAssertEqual(theme.keyColor(forMultiplier: 4).hexString, "#C8372D")
-        XCTAssertEqual(theme.keyTextColor(forMultiplier: 2), theme.primaryText)
-        XCTAssertEqual(theme.keyTextColor(forMultiplier: 4), theme.text)
+        XCTAssertEqual(theme.keyTextColor(forMultiplier: 4).hexString, "#FFFFFF")
+    }
+
+    func testDualSkinTokensMatchHandoff() {
+        let classicDark = Theme.make(skin: .classic, dark: true)
+        XCTAssertEqual(classicDark.background.hexString, "#1E2128")
+        XCTAssertEqual(classicDark.card.hexString, "#2A2E37")
+        XCTAssertEqual(classicDark.primary.hexString, "#F5C542")
+        XCTAssertEqual(classicDark.cardCornerRadius, 16)
+        XCTAssertEqual(classicDark.buttonCornerRadius, 18)
+        XCTAssertEqual(classicDark.keyCornerRadius, 12)
+        XCTAssertEqual(classicDark.cardBorderWidth, 0)
+        XCTAssertFalse(classicDark.monoNumbers)
+
+        let classicLight = Theme.make(skin: .classic, dark: false)
+        XCTAssertEqual(classicLight.background.hexString, "#F2F3F6")
+        XCTAssertEqual(classicLight.positive.hexString, "#0B7A43")
+
+        let ledgerLight = Theme.make(skin: .ledger, dark: false)
+        XCTAssertEqual(ledgerLight.background.hexString, "#FFFFFF")
+        XCTAssertEqual(ledgerLight.primary.hexString, "#2F5BFF")
+        XCTAssertEqual(ledgerLight.primaryText.hexString, "#FFFFFF")
+        XCTAssertEqual(ledgerLight.cardCornerRadius, 10)
+        XCTAssertEqual(ledgerLight.keyCornerRadius, 8)
+        XCTAssertEqual(ledgerLight.cardBorderWidth, 1)
+        XCTAssertTrue(ledgerLight.monoNumbers)
+        XCTAssertTrue(ledgerLight.squareMarker)
+
+        let ledgerDark = Theme.make(skin: .ledger, dark: true)
+        XCTAssertEqual(ledgerDark.background.hexString, "#000000")
+        XCTAssertEqual(ledgerDark.primary.hexString, "#5B7CFF")
+        XCTAssertEqual(SkinID.ledger.alternateIconName, "AppIcon-Ledger")
+        XCTAssertNil(SkinID.classic.alternateIconName)
+        XCTAssertEqual(SkinID.ledger.displayName, "Ledger")
     }
 
     @MainActor

@@ -11,6 +11,8 @@ struct FinalView: View {
     let sessionID: UUID
 
     @State private var shareImage: Image?
+    @State private var revealed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isEditing = false
     @State private var input = ""
     @State private var fieldWasFocused = false
@@ -39,18 +41,23 @@ struct FinalView: View {
             ToolbarItem(placement: .principal) {
                 Text(tr("完場"))
                     .accessibilityIdentifier("final.title")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(Color(theme.text))
             }
         }
         .toolbarBackground(Color(theme.background), for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             restoreInput()
             renderShareImage()
+            revealed = true
         }
         .onChange(of: appliedMultiplier) { _ in
+            renderShareImage()
+        }
+        // The share image follows the active skin and light/dark palette.
+        .onChange(of: theme) { _ in
             renderShareImage()
         }
         .task(id: sessionID) {
@@ -78,46 +85,53 @@ struct FinalView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .firstTextBaseline) {
                         Text(tr("最終排名"))
-                            .font(.system(size: 13))
+                            .font(ThemeFont.sectionLabel(theme))
                             .foregroundColor(Color(theme.secondaryText))
                         Spacer()
                         Text("\(summary.dateLine) · \(summary.roundsLine)")
-                            .font(.system(size: 15))
+                            .font(.system(size: 13))
                             .foregroundColor(Color(theme.secondaryText))
                     }
-                    .padding(.horizontal, 18)
+                    .padding(.horizontal, 20)
                     .padding(.top, 8)
                     .padding(.bottom, 10)
 
                     conversionButton
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 16)
                         .padding(.bottom, 8)
 
                     if isEditing {
                         conversionField
-                            .padding(.horizontal, 14)
+                            .padding(.horizontal, 16)
                             .padding(.bottom, 8)
                     }
 
-                    ForEach(Array(stored.session.ranking.enumerated()), id: \.element.index) { _, player in
+                    ForEach(Array(stored.session.ranking.enumerated()), id: \.element.index) { position, player in
                         HStack(spacing: 10) {
                             Text("\(player.rank)")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(Color(theme.secondaryText))
-                                .frame(width: 24)
-                            PlayerColorDot(index: player.index, height: 32)
+                                .font(ThemeFont.numeric(theme, size: 15, weight: .semibold))
+                                .foregroundColor(Color(theme.tertiaryText))
+                                .frame(width: 20)
+                            PlayerColorDot(index: player.index)
                             Text(player.rank == 1 ? "👑 \(player.name)" : player.name)
-                                .font(.system(size: 19, weight: .semibold))
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(Color(theme.text))
                             Spacer()
                             rankScore(player.total)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Color(theme.card))
-                        .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 5)
+                        .frame(minHeight: 62)
+                        .themedCard(theme)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                        // 完場 reveal (motion §6): rank order, 60 ms stagger; input never waits.
+                        .opacity(revealed ? 1 : 0)
+                        .offset(y: revealed || reduceMotion ? 0 : 12)
+                        .animation(
+                            MotionSettings.animation(.timingCurve(0.2, 0, 0, 1, duration: 0.26), reduceMotion: reduceMotion)?
+                                .delay(reduceMotion ? 0 : Double(position) * 0.06),
+                            value: revealed
+                        )
                         .accessibilityElement(children: .combine)
                         .accessibilityIdentifier("final.rank.\(player.rank)")
                     }
@@ -136,13 +150,13 @@ struct FinalView: View {
         if let multiplier = appliedMultiplier {
             let converted = ScoreConversion.multiply(total, by: multiplier)
             VStack(alignment: .trailing, spacing: 2) {
-                ScoreText(value: converted, size: 28, format: vm.format)
-                Text(vm.format.points(total))
-                    .font(ThemeFont.numeric(size: 12, weight: .semibold))
-                    .foregroundColor(Color(theme.secondaryText))
+                ScoreText(value: converted, size: 26, format: vm.format)
+                Text("\(vm.format.points(total)) ×\(multiplier)")
+                    .font(ThemeFont.numeric(theme, size: 12, weight: .semibold))
+                    .foregroundColor(Color(theme.tertiaryText))
             }
         } else {
-            ScoreText(value: total, size: 28, format: vm.format)
+            ScoreText(value: total, size: 26, format: vm.format)
         }
     }
 
@@ -167,15 +181,16 @@ struct FinalView: View {
             }
             .foregroundColor(isConversionOn ? Color(theme.primaryText) : Color(theme.text))
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
-            .background(isConversionOn ? Color(theme.primary) : Color(RGBColor(hex: 0x4A5162)))
-            .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
+            .frame(height: 54)
+            .background(isConversionOn ? Color(theme.primary) : Color(theme.surface2))
+            .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous)
-                    .stroke(Color(theme.primary).opacity(isConversionOn ? 0 : 0.4), lineWidth: 1)
+                RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous)
+                    .strokeBorder(Color(theme.line), lineWidth: isConversionOn ? 0 : CGFloat(theme.cardBorderWidth))
             )
+            .animation(MotionSettings.animation(.easeOut(duration: 0.15), reduceMotion: reduceMotion), value: isConversionOn)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle(amount: 0.97))
         .accessibilityIdentifier("final.conversion")
         .accessibilityLabel(conversionButtonTitle)
     }
@@ -183,24 +198,24 @@ struct FinalView: View {
     private var conversionField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(tr("倍數"))
-                .font(.system(size: 13, weight: .semibold))
+                .font(ThemeFont.sectionLabel(theme))
                 .foregroundColor(Color(theme.secondaryText))
                 .padding(.horizontal, 4)
             TextField("", text: $input)
                 .keyboardType(.numberPad)
                 .textInputAutocapitalization(.never)
                 .disableAutocorrection(true)
-                .font(ThemeFont.numeric(size: 26, weight: .bold))
+                .font(ThemeFont.numeric(theme, size: 26, weight: .bold))
                 .foregroundColor(Color(theme.text))
                 .padding(.horizontal, 16)
                 .frame(height: 46)
-                .background(Color(RGBColor(hex: 0x1A1D24)))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color(theme.background))
+                .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color(theme.primary), lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
+                        .strokeBorder(Color(theme.hi), lineWidth: 1.5)
                 )
-                .shadow(color: Color(theme.primary).opacity(0.18), radius: 3)
+                .tint(Color(theme.hi))
                 .focused($isFieldFocused)
                 .onChange(of: input) { newValue in
                     inputDidChange(newValue)
@@ -216,8 +231,7 @@ struct FinalView: View {
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
-        .background(Color(theme.card))
-        .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
+        .themedCard(theme)
         .onAppear {
             fieldWasFocused = false
             DispatchQueue.main.async {
@@ -259,19 +273,18 @@ struct FinalView: View {
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(Color(theme.text))
                     .frame(width: 56, height: 56)
-                    .background(Color(theme.card))
-                    .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
+                    .themedCard(theme, radius: theme.buttonCornerRadius, fill: theme.surface2)
             }
             .accessibilityLabel(tr("分享文字結果"))
             .accessibilityIdentifier("final.shareText")
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
         .padding(.vertical, 10)
     }
 
     private func shareLabel(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 20, weight: .heavy))
+            .font(.system(size: 18, weight: theme.monoNumbers ? .semibold : .bold))
             .foregroundColor(Color(theme.primaryText))
             .frame(maxWidth: .infinity)
             .frame(height: 56)

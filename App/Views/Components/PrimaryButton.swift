@@ -3,8 +3,8 @@ import AppCore
 
 struct PrimaryButton: View {
     let title: String
-    var height: CGFloat = 64
-    var fontSize: CGFloat = 22
+    var height: CGFloat = 56
+    var fontSize: CGFloat = 18
     var enabled: Bool = true
     let action: () -> Void
 
@@ -13,16 +13,16 @@ struct PrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: fontSize, weight: .heavy))
+                .font(.system(size: fontSize, weight: theme.monoNumbers ? .semibold : .bold))
                 .foregroundColor(Color(theme.primaryText))
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(Color(theme.primary).opacity(enabled ? 1 : 0.4))
+                .background(Color(theme.primary).opacity(enabled ? 1 : 0.45))
                 .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle(amount: 0.97))
         .disabled(!enabled)
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -38,7 +38,7 @@ struct SecondaryButton: View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Text(title)
-                    .font(.system(size: 19, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(Color(theme.text))
                 if let subtitle {
                     Text(subtitle)
@@ -47,11 +47,10 @@ struct SecondaryButton: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 76)
-            .background(Color(theme.card))
-            .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
+            .frame(minHeight: subtitle == nil ? 48 : 64)
+            .themedCard(theme, radius: theme.buttonCornerRadius, fill: theme.surface2)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 18)
+        .buttonStyle(PressStyle(amount: 0.97))
+        .padding(.horizontal, 16)
     }
 }

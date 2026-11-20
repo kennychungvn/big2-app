@@ -9,7 +9,7 @@ struct ShareCardView: View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: 10) {
                 Text(summary.title)
-                    .font(.system(size: 26, weight: .heavy))
+                    .font(.system(size: 24, weight: .bold))
                     .foregroundColor(Color(theme.text))
                     .padding(.trailing, summary.conversionLine == nil ? 0 : 88)
                 Text("\(summary.dateLine) · \(summary.roundsLine)")
@@ -29,8 +29,7 @@ struct ShareCardView: View {
                         }
                         .padding(.vertical, row.originalPoints == nil ? 8 : 10)
                         .padding(.horizontal, 12)
-                        .background(Color(theme.historyRow))
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .themedCard(theme, radius: theme.keyCornerRadius)
                     }
                 }
                 .padding(.top, 8)
@@ -52,6 +51,7 @@ struct ShareCardView: View {
         }
         .frame(width: 390, alignment: .leading)
         .background(Color(theme.background))
+        .environment(\.colorScheme, theme.colorScheme)
     }
 
     @ViewBuilder
@@ -59,15 +59,15 @@ struct ShareCardView: View {
         if let original = row.originalPoints {
             VStack(alignment: .trailing, spacing: 3) {
                 Text(row.points)
-                    .font(ThemeFont.numeric(size: 24, weight: .heavy))
+                    .font(ThemeFont.numeric(theme, size: 24, weight: .heavy))
                     .foregroundColor(pointsColor(row.points))
                 Text(original)
-                    .font(ThemeFont.numeric(size: 12, weight: .semibold))
+                    .font(ThemeFont.numeric(theme, size: 12, weight: .semibold))
                     .foregroundColor(Color(theme.secondaryText))
             }
         } else {
             Text(row.points)
-                .font(ThemeFont.numeric(size: 17, weight: .bold))
+                .font(ThemeFont.numeric(theme, size: 17, weight: .bold))
                 .foregroundColor(pointsColor(row.points))
         }
     }

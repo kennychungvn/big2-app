@@ -28,6 +28,7 @@ struct SettingsView: View {
                 } footer: {
                     Text(tr("揀「台灣」會用大老二用語，第一次開場預設台灣常見炒法（10-12張 ×2 · 13張 ×3）。"))
                 }
+                .listRowBackground(Color(theme.card))
                 }
 
                 if AppFlavor.current.isTaiwanApp {
@@ -44,10 +45,11 @@ struct SettingsView: View {
                             .font(.system(size: 13))
                             .foregroundColor(Color(theme.secondaryText))
                     } header: {
-                        Text(tr("計分方式"))
+                        sectionHeader(tr("計分方式"))
                     } footer: {
                         Text(tr("下次開新牌局時套用，不會改到進行中的牌局。"))
                     }
+                    .listRowBackground(Color(theme.card))
 
                     Section {
                         Text(tr("1–7 張固定 ×1。預設 8 張起 ×2、10 張起 ×3、13 張 ×4，點格可調整。"))
@@ -60,8 +62,9 @@ struct SettingsView: View {
                         }
                         .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
                     } header: {
-                        Text(tr("加倍門檻"))
+                        sectionHeader(tr("加倍門檻"))
                     }
+                    .listRowBackground(Color(theme.card))
                 }
 
                 Section {
@@ -97,7 +100,7 @@ struct SettingsView: View {
                                 .padding(.vertical, 10)
                                 .padding(.horizontal, 14)
                                 .background(Color(theme.primary))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius - 4, style: .continuous))
                             }
                             .buttonStyle(.plain)
                             .disabled(vm.isStoreBusy)
@@ -122,15 +125,19 @@ struct SettingsView: View {
                     }
 
                 } header: {
-                    Text(tr("購買"))
+                    sectionHeader(tr("購買"))
                 } footer: {
                     Text(tr("%@ 係一次性購買（非訂閱），買咗之後所有廣告永久移除；換機或重裝可用「回復購買」。", tr(StoreProduct.removeAdsDisplayName)))
                 }
+                .listRowBackground(Color(theme.card))
 
-                Section(tr("體驗")) {
+                appearanceSection
+
+                Section {
                     Toggle(isOn: animationBinding) {
-                        Text(tr("炒倍動畫"))
+                        Text(tr("動畫效果"))
                     }
+                    .accessibilityIdentifier("settings.motion")
                     Toggle(isOn: hapticsBinding) {
                         Text(tr("震機提示"))
                     }
@@ -140,9 +147,12 @@ struct SettingsView: View {
                         Text(tr("管理快速填入名稱"))
                     }
                     .accessibilityIdentifier("settings.knownNames")
+                } header: {
+                    sectionHeader(tr("體驗"))
                 }
+                .listRowBackground(Color(theme.card))
 
-                Section(tr("關於")) {
+                Section {
                     HStack {
                         Text(tr("版本"))
                         Spacer()
@@ -182,10 +192,15 @@ struct SettingsView: View {
                     }
                     .foregroundColor(Color(theme.accentLink))
                     .accessibilityIdentifier("settings.privacyPolicy")
+                } header: {
+                    sectionHeader(tr("關於"))
                 }
+                .listRowBackground(Color(theme.card))
             }
             .scrollContentBackground(.hidden)
             .background(Color(theme.background).ignoresSafeArea())
+            .tint(Color(theme.toggle))
+            .foregroundColor(Color(theme.text))
             .navigationDestination(isPresented: $showingStoreLog) {
                 StoreDebugLogView()
             }
@@ -199,9 +214,9 @@ struct SettingsView: View {
                 }
             }
             .toolbarBackground(Color(theme.background), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(vm.appearance.colorScheme)
         .alert(item: $vm.storeAlert) { alert in
             Alert(
                 title: Text(alert.title),
@@ -209,6 +224,126 @@ struct SettingsView: View {
                 dismissButton: .default(Text(tr("知道")))
             )
         }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(ThemeFont.sectionLabel(theme))
+            .foregroundColor(Color(theme.secondaryText))
+    }
+
+    // MARK: 主題及外觀 (2.0)
+
+    private var appearanceSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                ForEach(SkinID.allCases) { skin in
+                    skinTile(skin)
+                }
+            }
+            .padding(.vertical, 4)
+
+            Picker(tr("外觀"), selection: appearanceBinding) {
+                Text(tr("跟系統")).tag(AppearancePreference.system)
+                Text(tr("淺色")).tag(AppearancePreference.light)
+                Text(tr("深色")).tag(AppearancePreference.dark)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("settings.appearance")
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    Text(tr("App 圖示"))
+                    Spacer()
+                    ForEach(SkinID.allCases) { icon in
+                        iconPreview(icon)
+                    }
+                }
+                Toggle(isOn: iconFollowsBinding) {
+                    Text(tr("跟隨主題"))
+                }
+                .accessibilityIdentifier("settings.iconFollowsSkin")
+            }
+            .padding(.vertical, 2)
+        } header: {
+            sectionHeader(tr("主題及外觀"))
+        }
+        .listRowBackground(Color(theme.card))
+    }
+
+    private func skinTile(_ skin: SkinID) -> some View {
+        let selected = vm.skin == skin
+        let preview = Theme.make(skin: skin, dark: theme.isDark)
+        return Button {
+            vm.setSkin(skin)
+        } label: {
+            HStack(spacing: 8) {
+                SkinMiniPreview(theme: preview)
+                    .frame(width: 30, height: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(skin.displayName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color(theme.text))
+                    Text(selected ? tr("使用中") : tr("撳一下切換"))
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(theme.secondaryText))
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity)
+            .themedCard(theme, radius: theme.keyCornerRadius, fill: theme.surface2, selected: selected)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.skin.\(skin.rawValue)")
+        .accessibilityLabel(skin.displayName)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func iconPreview(_ icon: SkinID) -> some View {
+        let active = vm.iconFollowsSkin ? vm.skin : AppIconSwitcher.current
+        let isActive = active == icon
+        return Button {
+            guard !vm.iconFollowsSkin else { return }
+            vm.chooseIcon(icon)
+        } label: {
+            VStack(spacing: 3) {
+                Image(icon.iconPreviewName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 46, height: 46)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(Color(theme.sel), lineWidth: isActive ? 2 : 0)
+                            .padding(-3)
+                    )
+                    .opacity(isActive || !vm.iconFollowsSkin ? 1 : 0.4)
+                Text(vm.iconFollowsSkin && isActive ? "\(icon.displayName) · \(tr("自動"))" : icon.displayName)
+                    .font(.system(size: 10))
+                    .foregroundColor(Color(theme.secondaryText))
+                    .lineLimit(1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.icon.\(icon.rawValue)")
+        .accessibilityLabel(tr("App 圖示") + " " + icon.displayName)
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+
+    private var appearanceBinding: Binding<AppearancePreference> {
+        Binding(
+            get: { vm.appearance },
+            set: { vm.setAppearance($0) }
+        )
+    }
+
+    private var iconFollowsBinding: Binding<Bool> {
+        Binding(
+            get: { vm.iconFollowsSkin },
+            set: { vm.setIconFollowsSkin($0) }
+        )
     }
 
     private var animationBinding: Binding<Bool> {
@@ -274,10 +409,37 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity)
             .frame(height: 52)
             .background(Color(theme.keyColor(forMultiplier: multiplier)))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("settings.tile.\(cards)")
         .accessibilityValue("×\(multiplier)")
+    }
+}
+
+/// Tiny phone-ish preview of a skin for the 主題 picker: bg, two cards, accent bar.
+private struct SkinMiniPreview: View {
+    let theme: Theme
+
+    var body: some View {
+        let r = CGFloat(max(3, theme.cardCornerRadius / 4))
+        VStack(spacing: 3) {
+            RoundedRectangle(cornerRadius: r, style: .continuous)
+                .fill(Color(theme.card))
+                .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).strokeBorder(Color(theme.line), lineWidth: CGFloat(theme.cardBorderWidth) * 0.5))
+                .frame(height: 9)
+            RoundedRectangle(cornerRadius: r, style: .continuous)
+                .fill(Color(theme.card))
+                .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).strokeBorder(Color(theme.line), lineWidth: CGFloat(theme.cardBorderWidth) * 0.5))
+                .frame(height: 9)
+            Spacer(minLength: 0)
+            RoundedRectangle(cornerRadius: r, style: .continuous)
+                .fill(Color(theme.primary))
+                .frame(height: 7)
+        }
+        .padding(4)
+        .background(Color(theme.background))
+        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Color(theme.line), lineWidth: 1))
     }
 }

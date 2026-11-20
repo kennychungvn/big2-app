@@ -421,6 +421,79 @@ final class Big2UITests: XCTestCase {
         snap("home-ads-removed")
     }
 
+    // MARK: - 2.0 skins (screenshots of both skins × light/dark)
+
+    /// Short flow per skin/appearance: home, 新開一場, entry, result, home with 進行中,
+    /// 完場 + 換算, 設定 (主題及外觀). Scoring values are asserted by the full flow above.
+    func testSkinShowcase() {
+        let configs: [(skin: String, appearance: String)] = [
+            ("classic", "dark"),
+            ("classic", "light"),
+            ("ledger", "light"),
+            ("ledger", "dark"),
+        ]
+        for config in configs {
+            launch(
+                languages: "zh-Hant-HK",
+                locale: "zh_HK",
+                prefix: "HK-SKIN-\(config.skin)-\(config.appearance)",
+                extra: ["-skin", config.skin, "-appearance", config.appearance]
+            )
+            XCTAssertEqual(label("home.title"), "鋤大D計分")
+            snap("home-empty")
+
+            tap("home.newSession")
+            element("setup.name.0")
+            typeNames(["小肥", "文仔", "呀權", "Ken"])
+            snap("setup")
+            tap("setup.start")
+
+            tap("scoreboard.addRound")
+            enterRound([0, 5, 9, 13], snapBeforeLast: "entry")
+            snap("result")
+            tapNextRound()
+            tap("scoreboard.addRound")
+            enterRound([2, 0, 11, 4])
+            tapNextRound()
+            snap("scoreboard")
+
+            tap("nav.home")
+            element("home.continue")
+            snap("home-in-progress")
+            tap("home.continue")
+            waitForScoreboard()
+
+            tap("scoreboard.finish")
+            let alert = app.alerts.firstMatch
+            XCTAssertTrue(alert.waitForExistence(timeout: 5))
+            alert.buttons["完場"].tap()
+            closeFinishInterstitialIfShown()
+            element("final.title")
+            RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+            snap("final")
+            tap("final.conversion")
+            let field = element("final.conversion.field")
+            typeNumberPadDigit("5", into: field)
+            snap("final-huansuan")
+            let conversion = element("final.conversion")
+            if conversion.isHittable {
+                conversion.tap()
+            } else {
+                app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            }
+            waitGone("final.conversion.field")
+
+            tap("nav.home")
+            tap("home.settings")
+            element("settings.done")
+            element("settings.skin.\(config.skin)")
+            XCTAssertTrue(element("settings.skin.\(config.skin)").isSelected)
+            snap("settings")
+            tap("settings.done")
+            app.terminate()
+        }
+    }
+
     // MARK: - zh-TW device while Taiwan is on hold
 
     func testTaiwanDeviceFallsBackToHongKong() {

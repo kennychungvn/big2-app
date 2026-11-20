@@ -16,9 +16,8 @@ struct Big2App: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            SkinnedRoot()
                 .environmentObject(viewModel)
-                .environment(\.appTheme, viewModel.theme)
                 .environment(\.locale, viewModel.region.locale)
                 .task {
                     // UMP consent → ATT → MobileAds.start. Skipped once ads are removed and
@@ -61,6 +60,7 @@ struct Big2App: App {
             try? FileManager.default.removeItem(at: fileURL)
             UserDefaults.standard.removeObject(forKey: ScoreConversion.enabledDefaultsKey)
             UserDefaults.standard.removeObject(forKey: ScoreConversion.multiplierDefaultsKey)
+            SkinPreferences.resetForUITests()
             return AppViewModel(
                 store: JSONFileStore(fileURL: fileURL),
                 ads: ads,
@@ -77,5 +77,25 @@ struct Big2App: App {
             viewModel?.applyStoreEntitlement(entitled)
         }
         return viewModel
+    }
+}
+
+/// Resolves the active skin × light/dark into the `Theme` every view reads, and applies the
+/// 外觀 preference (跟系統 / 淺色 / 深色) to the window.
+struct SkinnedRoot: View {
+    @EnvironmentObject private var vm: AppViewModel
+    @Environment(\.colorScheme) private var systemScheme
+
+    var body: some View {
+        let dark: Bool = {
+            switch vm.appearance {
+            case .dark: return true
+            case .light: return false
+            case .system: return systemScheme == .dark
+            }
+        }()
+        RootView()
+            .environment(\.appTheme, Theme.make(skin: vm.skin, dark: dark))
+            .preferredColorScheme(vm.appearance.colorScheme)
     }
 }

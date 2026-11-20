@@ -95,7 +95,7 @@ struct BannerSlotBackground: View {
 
     var body: some View {
         ZStack {
-            Color(theme.card)
+            Color(theme.adband)
             HStack(spacing: 6) {
                 Image("HomeLogo")
                     .resizable()
@@ -110,8 +110,8 @@ struct BannerSlotBackground: View {
         }
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color(theme.secondaryText).opacity(0.15))
-                .frame(height: 0.5)
+                .fill(Color(theme.line))
+                .frame(height: 1)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -162,10 +162,18 @@ struct BannerAdContainer: View {
 /// while an interstitial is showing. Accessibility id `banner`.
 struct BannerSlot: View {
     @EnvironmentObject private var vm: AppViewModel
+    @Environment(\.appTheme) private var theme
 
     var body: some View {
         if !vm.model.data.adsRemoved && !vm.isShowingInterstitial {
+            // 2.0 ad band: `adband` fill + 1pt `line` hairline; collapses after 移除廣告.
             BannerAdContainer(adsRemoved: false)
+                .padding(.vertical, 5)
+                .frame(maxWidth: .infinity)
+                .background(Color(theme.adband).ignoresSafeArea(edges: .bottom))
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Color(theme.line)).frame(height: 1)
+                }
         }
     }
 }

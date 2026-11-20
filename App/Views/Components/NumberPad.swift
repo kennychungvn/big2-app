@@ -11,7 +11,7 @@ struct NumberPad: View {
     @Environment(\.appTheme) private var theme
 
     /// 5 columns × 3 rows: 贏 1 2 3 4 / 5 6 7 8 9 / 10 11 12 13 ↶.
-    static let keyHeight: CGFloat = 56
+    static let keyHeight: CGFloat = 50
 
     private let keys: [Key] = {
         var result: [Key] = [.winner]
@@ -29,7 +29,7 @@ struct NumberPad: View {
     var body: some View {
         let selected = focusedValue
         return VStack(alignment: .leading, spacing: 8) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
                 ForEach(keys, id: \.self) { key in
                     padKey(key, selected: selected)
                 }
@@ -62,7 +62,7 @@ struct NumberPad: View {
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
-                            .stroke(Color.white, lineWidth: isSelected ? 3 : 0)
+                            .strokeBorder(Color(theme.sel), lineWidth: isSelected ? 2 : 0)
                     )
             }
             .buttonStyle(.plain)
@@ -78,12 +78,12 @@ struct NumberPad: View {
             } label: {
                 VStack(spacing: 3) {
                     Text("\(value)")
-                        .font(.system(size: 24, weight: .bold))
+                        .font(ThemeFont.numeric(theme, size: 21, weight: .semibold))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     if multiplier >= 2 {
                         Text("×\(multiplier)")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(ThemeFont.numeric(theme, size: 11, weight: .semibold))
                             .opacity(0.85)
                     }
                 }
@@ -94,10 +94,14 @@ struct NumberPad: View {
                 .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
-                        .stroke(Color.white, lineWidth: isSelected ? 3 : 0)
+                        .strokeBorder(Color(theme.line), lineWidth: multiplier >= 2 ? 0 : CGFloat(theme.cardBorderWidth))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
+                        .strokeBorder(Color(theme.sel), lineWidth: isSelected ? 2 : 0)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle(amount: 0.92))
             .disabled(!state.isPadEnabled)
             .accessibilityIdentifier("pad.\(value)")
             .accessibilityLabel(multiplier >= 2 ? tr("%@ 張，炒 %@ 倍", "\(value)", "\(multiplier)") : tr("%@ 張", "\(value)"))
@@ -132,8 +136,7 @@ struct ChaoBadgeView: View {
 
     var body: some View {
         Text("×\(multiplier)")
-            .font(.system(size: 12, weight: .bold))
-            .monospacedDigit()
+            .font(ThemeFont.numeric(theme, size: 12, weight: .bold))
             .foregroundColor(.white)
             .frame(width: Self.width)
             .padding(.vertical, 2)

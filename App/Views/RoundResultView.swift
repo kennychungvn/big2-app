@@ -29,7 +29,7 @@ struct RoundResultView: View {
                     Spacer()
                     Text(vm.format.resultTitle(sheet.roundNumber))
                         .accessibilityIdentifier("result.title")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(Color(theme.text))
                     Spacer()
                     Button(tr("編輯")) {
@@ -68,20 +68,20 @@ struct RoundResultView: View {
                                 .accessibilityIdentifier("result.undo")
                             }
                             .font(.system(size: 14))
-                            .foregroundColor(Color(hexResult: 0xCFE0FF))
+                            .foregroundColor(Color(theme.text))
+                            .tint(Color(theme.accentLink))
                             .padding(14)
-                            .background(Color(theme.toastBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .padding(.horizontal, 14)
+                            .themedCard(theme, fill: theme.toastBackground)
+                            .padding(.horizontal, 16)
                             .padding(.top, 10)
                         }
 
                         Text(vm.format.resultTotalsHeader(sheet.roundsCompleted))
                             .accessibilityIdentifier("result.totalsHeader")
-                            .font(.system(size: 14))
+                            .font(ThemeFont.sectionLabel(theme))
                             .foregroundColor(Color(theme.secondaryText))
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 18)
+                            .padding(.horizontal, 20)
                             .padding(.top, 14)
 
                         let order = zip(sheet.players.indices, sheet.totalsAfter)
@@ -100,9 +100,8 @@ struct RoundResultView: View {
                             .font(.system(size: 17))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Color(theme.historyRow))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                            .padding(.horizontal, 14)
+                            .themedCard(theme, radius: theme.keyCornerRadius)
+                            .padding(.horizontal, 16)
                             .padding(.vertical, 3)
                         }
 
@@ -114,15 +113,15 @@ struct RoundResultView: View {
                     if sheet.isReview { vm.reviewSheet = nil } else { vm.dismissResult() }
                 } label: {
                     Text(sheet.isReview ? tr("返回") : tr("下一局"))
-                        .font(.system(size: 19, weight: .bold))
+                        .font(.system(size: 18, weight: theme.monoNumbers ? .semibold : .bold))
                         .foregroundColor(Color(theme.primaryText))
-                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .frame(maxWidth: .infinity, minHeight: 56)
                         .background(Color(theme.primary))
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: theme.buttonCornerRadius, style: .continuous))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressStyle(amount: 0.97))
                 .accessibilityIdentifier(sheet.isReview ? "result.close" : "result.next")
-                .padding(.horizontal, 14)
+                .padding(.horizontal, 16)
                 .padding(.bottom, 12)
             }
             .background(Color(theme.background))
@@ -134,10 +133,10 @@ struct RoundResultView: View {
     private func resultRow(index: Int, display: RoundScoreDisplay, breakdown: String?) -> some View {
         let isWinner = display.cardsLeft == 0
         return HStack(spacing: 10) {
-            PlayerColorDot(index: index, height: 36)
+            PlayerColorDot(index: index)
             VStack(alignment: .leading, spacing: 2) {
                 Text(isWinner ? "\(sheet.players[index]) 👑" : sheet.players[index])
-                    .font(.system(size: 19, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(Color(theme.text))
                 Text(vm.format.roundDetail(score: display))
                     .font(.system(size: 13))
@@ -150,21 +149,14 @@ struct RoundResultView: View {
                 }
             }
             Spacer()
-            ScoreText(value: display.points, size: 28, format: vm.format)
+            ScoreText(value: display.points, size: 26, format: vm.format)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color(theme.card))
-        .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 5)
+        .themedCard(theme, selected: isWinner, selectedColor: theme.hi)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("result.row.\(index)")
-    }
-}
-
-private extension Color {
-    init(hexResult: UInt32) {
-        self.init(RGBColor(hex: hexResult))
     }
 }

@@ -60,6 +60,88 @@ final class DaLaoErUITests: XCTestCase {
         snap("DLE-03-settlement")
     }
 
+    /// 2.0 Ledger skin (light) on the Taiwan app: entry with ×2 chips, round result, 完場.
+    func testTaiwanLedgerSkinScreens() {
+        app.terminate()
+        app.launchArguments += ["-skin", "ledger", "-appearance", "light"]
+        app.launch()
+        element("home.title")
+        snap("DLE-L-01-home")
+        tap("home.newSession")
+        element("setup.name.0")
+        typeNames(["小明", "阿強", "小美", "志明"])
+        snap("DLE-L-02-setup")
+        tap("setup.start")
+        tap("scoreboard.addRound")
+        element("entry.title")
+        tap("pad.win")
+        tap("pad.10")
+        tap("pad.13")
+        tap("pad.5")
+        tap("entry.double.inc.1")
+        tap("entry.double.inc.2")
+        tap("entry.double.inc.2")
+        element("entry.total")
+        assertNoHongKongWording(on: "entry-ledger")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        snap("DLE-L-03-entry")
+        tap("entry.confirm")
+        element("result.title")
+        snap("DLE-L-04-result")
+        tap("result.next")
+        tap("scoreboard.finish")
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["結束"].tap()
+        let close = app.descendants(matching: .any)["interstitial.close"].firstMatch
+        if close.waitForExistence(timeout: 4) { close.tap() }
+        element("final.title")
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        assertNoHongKongWording(on: "final-ledger")
+        snap("DLE-L-05-final")
+        tap("nav.home")
+        tap("home.settings")
+        element("settings.done")
+        assertNoHongKongWording(on: "settings-ledger")
+        snap("DLE-L-06-settings")
+    }
+
+    /// Classic (default) skin, dark: entry and 完場.
+    func testTaiwanClassicDarkScreens() {
+        app.terminate()
+        app.launchArguments += ["-appearance", "dark"]
+        app.launch()
+        element("home.title")
+        tap("home.newSession")
+        element("setup.name.0")
+        typeNames(["小明", "阿強", "小美", "志明"])
+        tap("setup.start")
+        tap("scoreboard.addRound")
+        element("entry.title")
+        tap("pad.win")
+        tap("pad.10")
+        tap("pad.13")
+        tap("pad.5")
+        tap("entry.double.inc.1")
+        tap("entry.double.inc.2")
+        element("entry.total")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.6))
+        snap("DLE-C-03-entry")
+        tap("entry.confirm")
+        element("result.title")
+        tap("result.next")
+        tap("scoreboard.finish")
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        alert.buttons["結束"].tap()
+        let close = app.descendants(matching: .any)["interstitial.close"].firstMatch
+        if close.waitForExistence(timeout: 4) { close.tap() }
+        element("final.title")
+        RunLoop.current.run(until: Date().addingTimeInterval(1.0))
+        assertNoHongKongWording(on: "final-classic")
+        snap("DLE-C-05-final")
+    }
+
     // MARK: - Helpers
 
     private func snap(_ name: String) {

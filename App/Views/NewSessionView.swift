@@ -51,7 +51,7 @@ struct NewSessionView: View {
                                 chaoTile(cards: cards)
                             }
                         }
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 16)
 
                         if draft.usesRememberedChao {
                             Text(tr("已幫你填好上次用嘅炒法"))
@@ -92,7 +92,7 @@ struct NewSessionView: View {
                 }
             }
             .toolbarBackground(Color(theme.background), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
             .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { notification in
                 selectAll(in: notification.object as? UITextField)
             }
@@ -113,7 +113,7 @@ struct NewSessionView: View {
                     .font(.system(size: 12, weight: .medium))
                     .opacity(0.85)
                 Text("×\(multiplier)")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(ThemeFont.numeric(theme, size: 21, weight: .heavy))
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
             }
@@ -121,7 +121,11 @@ struct NewSessionView: View {
             .frame(maxWidth: .infinity)
             .frame(height: 58)
             .background(Color(theme.keyColor(forMultiplier: multiplier)))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
+                    .strokeBorder(Color(theme.line), lineWidth: multiplier >= 2 ? 0 : CGFloat(theme.cardBorderWidth))
+            )
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("setup.tile.\(cards)")
@@ -133,7 +137,7 @@ struct NewSessionView: View {
     private var nameSectionHeader: some View {
         HStack(alignment: .center, spacing: 8) {
             Text(tr("玩家"))
-                .font(.system(size: 13))
+                .font(ThemeFont.sectionLabel(theme))
                 .foregroundColor(Color(theme.secondaryText))
             Spacer()
             Button(tr("清除全部")) {
@@ -153,7 +157,7 @@ struct NewSessionView: View {
 
     private func nameField(index: Int) -> some View {
         HStack(spacing: 10) {
-            PlayerColorDot(index: index, height: 30)
+            PlayerColorDot(index: index)
             TextField(
                 vm.format.placeholderName(at: index),
                 text: $draft.names[index],
@@ -167,9 +171,9 @@ struct NewSessionView: View {
             .onSubmit {
                 focusedField = index < ScoringEngine.playerCount - 1 ? index + 1 : nil
             }
-            .font(.system(size: 18))
+            .font(.system(size: 18, weight: .medium))
             .foregroundColor(Color(theme.text))
-            .tint(Color(theme.primary))
+            .tint(Color(theme.hi))
             if !draft.names[index].isEmpty {
                 Button {
                     draft.names[index] = ""
@@ -186,11 +190,10 @@ struct NewSessionView: View {
             }
         }
         .padding(.horizontal, 12)
-        .frame(height: 54)
-        .background(Color(theme.card))
-        .clipShape(RoundedRectangle(cornerRadius: theme.textFieldCornerRadius, style: .continuous))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 5)
+        .frame(height: 56)
+        .themedCard(theme, selected: focusedField == index)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
     }
 
     private func selectAllInFocusedField() {
@@ -208,7 +211,7 @@ struct NewSessionView: View {
 
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 13))
+            .font(ThemeFont.sectionLabel(theme))
             .foregroundColor(Color(theme.secondaryText))
             .padding(.horizontal, 18)
             .padding(.top, 14)
@@ -229,7 +232,7 @@ struct NewSessionView: View {
                     draft.scoringMode = .pairwise
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
             .padding(.bottom, 10)
 
             Text(draft.scoringMode == .winnerTakesAll
@@ -257,7 +260,7 @@ struct NewSessionView: View {
                     chaoTile(cards: cards)
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 16)
 
             if draft.usesRememberedChao {
                 Text(tr("已幫你填好上次用嘅炒法"))
@@ -276,8 +279,7 @@ struct NewSessionView: View {
                 .foregroundColor(selected ? Color(theme.primaryText) : Color(theme.secondaryText))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(selected ? Color(theme.cardElevated) : Color(theme.card))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .themedCard(theme, radius: theme.keyCornerRadius, fill: selected ? theme.primary : theme.card)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(id)

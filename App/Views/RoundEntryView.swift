@@ -5,6 +5,7 @@ import ScoringEngine
 struct RoundEntryView: View {
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var sheet: RoundEntrySheet
 
     @State private var badgeScale: [Int: CGFloat] = [:]
@@ -82,7 +83,7 @@ struct RoundEntryView: View {
             Spacer()
             Text(vm.format.roundTitle(roundNumber))
                 .accessibilityIdentifier("entry.title")
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(Color(theme.text))
             Spacer()
             Text("　　")
@@ -104,7 +105,7 @@ struct RoundEntryView: View {
         return HStack(spacing: 10) {
             PlayerColorDot(index: index)
             Text(name)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(Color(theme.text))
                 .lineLimit(1)
             Spacer(minLength: 4)
@@ -112,14 +113,13 @@ struct RoundEntryView: View {
         }
         .padding(.horizontal, 12)
         .frame(height: 62)
-        .background(Color(isFocused ? theme.cardElevated : theme.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous)
-                .stroke(isFocused ? Color.white : Color.clear, lineWidth: 2)
+        .themedCard(
+            theme,
+            selected: isFocused || isWinner,
+            selectedColor: isFocused ? theme.sel : theme.hi
         )
-        .clipShape(RoundedRectangle(cornerRadius: theme.cardCornerRadius, style: .continuous))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
         .onTapGesture {
             sheet.state.selectPlayer(index)
@@ -145,14 +145,17 @@ struct RoundEntryView: View {
         HStack(spacing: CountPill.spacing) {
             if isWinner {
                 Text(tr("出晒 👑"))
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(Color(theme.primary))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(Color(theme.hi))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(theme.hiSoft))
+                    .clipShape(Capsule())
             } else if let cards {
                 Text("\(cards)")
-                    .font(.system(size: 22, weight: .bold))
-                    .monospacedDigit()
+                    .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
                     .foregroundColor(Color(theme.text))
                     .lineLimit(1)
                     .frame(width: CountPill.numberWidth, alignment: .trailing)
@@ -163,11 +166,11 @@ struct RoundEntryView: View {
                 }
             } else if isFocused {
                 Text("?")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
                     .foregroundColor(Color(theme.tertiaryText))
             } else {
                 Text("–")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(ThemeFont.numeric(theme, size: 20, weight: .bold))
                     .foregroundColor(Color(theme.tertiaryText))
             }
         }
@@ -185,7 +188,7 @@ struct RoundEntryView: View {
                 }
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
     }
 
     private func padSection(names: [String]) -> some View {
@@ -213,12 +216,12 @@ struct RoundEntryView: View {
 
             AdSafeGap()
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 16)
         .padding(.top, 10)
         .background(Color(theme.padBackground))
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Color.white.opacity(0.08))
+                .fill(Color(theme.line))
                 .frame(height: 1)
         }
     }
@@ -228,12 +231,13 @@ struct RoundEntryView: View {
         if vm.model.data.hapticsEnabled {
             ChaoHaptics.play(multiplier: badge.multiplier)
         }
-        guard vm.model.data.chaoAnimationEnabled else {
+        guard vm.model.data.chaoAnimationEnabled, !reduceMotion else {
             _ = sheet.state.consumePendingBadge()
             return
         }
-        badgeScale[badge.playerIndex] = 1.6
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.52)) {
+        // 炒倍 stamp (motion §8): ×N tag scales 1.25 → 1 with the skin spring, non-blocking.
+        badgeScale[badge.playerIndex] = 1.25
+        withAnimation(theme.monoNumbers ? .spring(response: 0.25, dampingFraction: 1.0) : .spring(response: 0.3, dampingFraction: 0.75)) {
             badgeScale[badge.playerIndex] = 1
         }
         _ = sheet.state.consumePendingBadge()

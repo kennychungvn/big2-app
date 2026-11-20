@@ -30,7 +30,7 @@ struct ScoreboardView: View {
             ToolbarItem(placement: .principal) {
                 Text(vm.format.homeProgress(stored?.session.roundsCompleted ?? 0))
                     .accessibilityIdentifier("scoreboard.title")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(Color(theme.text))
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -40,7 +40,7 @@ struct ScoreboardView: View {
             }
         }
         .toolbarBackground(Color(theme.background), for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbarColorScheme(theme.colorScheme, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .alert(tr("確定完場？"), isPresented: $isConfirmingFinish) {
             Button(tr("取消"), role: .cancel) {}
@@ -72,11 +72,11 @@ struct ScoreboardView: View {
                             playerCard(player)
                         }
                     }
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, 16)
                     .padding(.top, 4)
 
                     Text(tr("每局紀錄 · 㩒一行改分"))
-                        .font(.system(size: 13))
+                        .font(ThemeFont.sectionLabel(theme))
                         .foregroundColor(Color(theme.secondaryText))
                         .padding(.horizontal, 18)
                         .padding(.top, 14)
@@ -129,23 +129,21 @@ struct ScoreboardView: View {
                     Text("👑")
                 }
                 Text(player.name)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(Color(theme.text))
                     .lineLimit(1)
             }
-            ScoreText(value: player.total, size: 34, format: vm.format)
+            ScoreText(value: player.total, size: 30, format: vm.format)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 112)
-        .background(Color(theme.card))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(alignment: .leading) {
-            Rectangle()
-                .fill(Color(theme.playerColor(at: player.index)))
-                .frame(width: 6, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
-                .offset(y: -16)
+        .padding(.leading, 6)
+        .frame(height: 100)
+        .themedCard(theme)
+        .overlay(alignment: .topLeading) {
+            PlayerColorDot(index: player.index)
+                .padding(.leading, theme.squareMarker ? 9 : 7)
+                .padding(.top, theme.squareMarker ? 18 : 12)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(player.name) \(vm.format.points(player.total))")
@@ -180,12 +178,11 @@ struct ScoreboardView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
-        .font(.system(size: 14, weight: .medium))
+        .font(ThemeFont.numeric(theme, size: 14, weight: .medium))
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color(theme.historyRow))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .padding(.horizontal, 14)
+        .themedCard(theme, radius: theme.keyCornerRadius)
+        .padding(.horizontal, 16)
         .padding(.vertical, 3)
     }
 
@@ -204,17 +201,11 @@ struct ScoreboardView: View {
             .accessibilityIdentifier("scoreboard.undo")
         }
         .font(.system(size: 14))
-        .foregroundColor(Color(hexText: 0xCFE0FF))
+        .foregroundColor(Color(theme.text))
+        .tint(Color(theme.accentLink))
         .padding(14)
-        .background(Color(theme.toastBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .padding(.horizontal, 14)
+        .themedCard(theme, fill: theme.toastBackground)
+        .padding(.horizontal, 16)
         .padding(.top, 8)
-    }
-}
-
-private extension Color {
-    init(hexText: UInt32) {
-        self.init(RGBColor(hex: hexText))
     }
 }

@@ -131,6 +131,10 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertEqual(SkinID.ledger.alternateIconName, "AppIcon-Ledger")
         XCTAssertNil(SkinID.classic.alternateIconName)
         XCTAssertEqual(SkinID.ledger.displayName, "Ledger")
+        XCTAssertEqual(classicDark.suitBlack.hexString, "#3A3F4B")
+        XCTAssertEqual(ledgerLight.suitRed.hexString, "#AFC0F7")
+        XCTAssertTrue(ledgerLight.suitOutline)
+        XCTAssertFalse(classicLight.suitOutline)
     }
 
     @MainActor

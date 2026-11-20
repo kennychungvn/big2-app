@@ -78,6 +78,10 @@ public struct Theme: Equatable, Sendable {
     public var monoNumbers: Bool = false
     /// Player marker: Classic capsule 5×24, Ledger 9pt square.
     public var squareMarker: Bool = false
+    /// Ad placeholder suits (HANDOFF §3a): ♠♣ / ♥♦, filled (Classic) or 1.3pt outline (Ledger).
+    public var suitBlack: RGBColor = RGBColor(hex: 0x3A3F4B)
+    public var suitRed: RGBColor = RGBColor(hex: 0x4A4231)
+    public var suitOutline: Bool = false
 
     /// The default 街坊 skin: dark grey, yellow primary, rounded 14–16 pt.
     public static let neighbourhood = Theme(
@@ -169,6 +173,13 @@ public struct Theme: Equatable, Sendable {
         t.keyText = p.keyText
         t.toggle = p.toggle
         t.adband = p.adband
+        switch (skin, dark) {
+        case (.classic, false): t.suitBlack = RGBColor(hex: 0xCDD0D7); t.suitRed = RGBColor(hex: 0xE3D3A2)
+        case (.classic, true): t.suitBlack = RGBColor(hex: 0x3A3F4B); t.suitRed = RGBColor(hex: 0x4A4231)
+        case (.ledger, false): t.suitBlack = RGBColor(hex: 0xBFC4CE); t.suitRed = RGBColor(hex: 0xAFC0F7)
+        case (.ledger, true): t.suitBlack = RGBColor(hex: 0x2E3138); t.suitRed = RGBColor(hex: 0x2A3666)
+        }
+        t.suitOutline = skin == .ledger
         switch skin {
         case .classic:
             t.keyTier2 = RGBColor(hex: 0xF5C542)

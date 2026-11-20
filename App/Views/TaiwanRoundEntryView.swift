@@ -286,25 +286,27 @@ struct TaiwanRoundEntryView: View {
     }
 
     private func padAndConfirm(names: [String]) -> some View {
-        let enabled = sheet.state.isPadEnabled && vm.resultSheet == nil
+        // Once every seat is filled, hide the pad (as in the mockup) so the ×2
+        // steppers and 確定 stay on screen. Tapping a row brings the pad back.
+        let padVisible = sheet.state.focusedIndex != nil && vm.resultSheet == nil
         return VStack(spacing: 10) {
-            Text(sheet.state.padPrompt(playerNames: names, region: .taiwan))
-                .accessibilityIdentifier("entry.prompt")
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .font(.system(size: 13))
-                .foregroundColor(Color(theme.secondaryText))
+            if padVisible {
+                Text(sheet.state.padPrompt(playerNames: names, region: .taiwan))
+                    .accessibilityIdentifier("entry.prompt")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(theme.secondaryText))
 
-            NumberPad(
-                state: sheet.state,
-                onEnter: { value in
-                    sheet.state.enterCards(value)
-                },
-                onUndo: {
-                    sheet.state.undo()
-                }
-            )
-            .opacity(enabled ? 1 : 0.35)
-            .allowsHitTesting(enabled)
+                NumberPad(
+                    state: sheet.state,
+                    onEnter: { value in
+                        sheet.state.enterCards(value)
+                    },
+                    onUndo: {
+                        sheet.state.undo()
+                    }
+                )
+            }
 
             PrimaryButton(title: tr("確定"), enabled: sheet.state.canConfirm && vm.resultSheet == nil) {
                 sheet.state.confirm()

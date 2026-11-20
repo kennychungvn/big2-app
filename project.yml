@@ -196,6 +196,8 @@ targets:
         type: file
       - path: UITests/NameEntryUITests.swift
         type: file
+      - path: UITests/HangUITests.swift
+        type: file
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kenny.dalaoer.uitests

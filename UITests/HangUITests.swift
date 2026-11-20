@@ -3,8 +3,8 @@ import XCTest
 /// Build 77/79 「入名 / 入分 / 切換外觀 freeze 幾秒然後閃退」: plays several rounds and switches
 /// skins back and forth, timing every step. A main-thread hang shows up as a step that takes
 /// far longer than usual (XCUITest waits for the app to go idle after each tap).
-/// Runs in HK (`Big2UITests`) and TW (`DaLaoErUITests`). With `HANG_TEST_REAL_ADS=1` the real
-/// Google SDK (test units) loads banners, like TestFlight.
+/// Runs in HK (`Big2UITests`) and TW (`DaLaoErUITests`). With `HANG_TEST_SDK_ADS=1` the real
+/// Google SDK loads banners using official demo ad units (same path as TestFlight).
 final class HangUITests: XCTestCase {
     private var app: XCUIApplication!
     private var timings: [String] = []
@@ -14,7 +14,8 @@ final class HangUITests: XCTestCase {
     }
 
     private var realAds: Bool {
-        ProcessInfo.processInfo.environment["HANG_TEST_REAL_ADS"] == "1"
+        let env = ProcessInfo.processInfo.environment
+        return env["HANG_TEST_SDK_ADS"] == "1" || env["HANG_TEST_REAL_ADS"] == "1"
     }
 
     /// Generous for slow Intel CI simulators; a real hang is many seconds.
@@ -47,9 +48,9 @@ final class HangUITests: XCTestCase {
         app.launchArguments = args
         app.launch()
         dismissSystemAlerts(wait: 12)
-        let tag = "\(isTaiwan ? "DLE" : "HK")-HANG-\(skin)\(realAds ? "-realads" : "")"
+        let tag = "\(isTaiwan ? "DLE" : "HK")-HANG-\(skin)\(realAds ? "-demoad" : "")"
 
-        // Give the real banner time to load (TestFlight shows a real test ad).
+        // Give the SDK banner time to load (TestFlight / CI use official demo units).
         settle(realAds ? 6 : 1)
         tap("home.newSession")
         let names = ["小明", "阿強", "小美", "志明"]

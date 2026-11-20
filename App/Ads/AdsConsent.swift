@@ -3,6 +3,7 @@ import UIKit
 import AppTrackingTransparency
 import GoogleMobileAds
 import UserMessagingPlatform
+import AppCore
 
 /// Owns the start-up order Google and Apple require before any ad request:
 ///
@@ -49,6 +50,9 @@ final class AdsRuntime: ObservableObject {
         started = true
 
         await Self.waitUntilAppIsActive()
+        // Resolve TestFlight vs App Store in parallel with consent, so ad unit IDs
+        // are known before the first request. Debug / simulator resolve instantly.
+        async let storeResolution: Void = AdConfig.resolveInstallContext()
         let consent = ConsentInformation.shared
         var umpFailed = false
         do {
@@ -69,15 +73,21 @@ final class AdsRuntime: ObservableObject {
         // Google's rule: request ads only when UMP allows it. If UMP itself errors (e.g. a
         // privacy message not yet published in AdMob), Debug/TestFlight builds still start
         // non-personalised so the test ads remain visible during development.
+        await storeResolution
         let mayRequest = consent.canRequestAds
             || (umpFailed && AdConfig.isUsingTestAds && consent.consentStatus != .required)
         guard mayRequest else {
             NSLog("[Ads] Consent does not allow ad requests yet; no ads this launch.")
             return
         }
+        guard AdConfig.selection != .undetermined else {
+            NSLog("[Ads] Install source could not be determined; not requesting ads this launch.")
+            return
+        }
         if !personalizedAdsAllowed || consent.consentStatus == .required {
             personalizedAdsAllowed = false
         }
+        NSLog("[Ads] Using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
         Task { _ = await MobileAds.shared.start() }
         isReady = true
         let actions = readyActions

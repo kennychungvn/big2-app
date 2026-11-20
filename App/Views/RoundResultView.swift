@@ -84,6 +84,7 @@ struct RoundResultView: View {
                             .padding(.horizontal, 20)
                             .padding(.top, 14)
 
+                        let previous = ScoreRoll.totalsBefore(after: sheet.totalsAfter, points: sheet.round.points)
                         let order = zip(sheet.players.indices, sheet.totalsAfter)
                             .sorted { lhs, rhs in
                                 if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
@@ -95,7 +96,13 @@ struct RoundResultView: View {
                                 Text("\(position + 1). \(sheet.players[index])")
                                     .foregroundColor(Color(theme.text))
                                 Spacer()
-                                ScoreText(value: total, size: 17, format: vm.format)
+                                RollingScoreText(
+                                    value: total,
+                                    size: 17,
+                                    format: vm.format,
+                                    column: position,
+                                    appearFrom: sheet.isReview || !previous.indices.contains(index) ? nil : previous[index]
+                                )
                             }
                             .font(.system(size: 17))
                             .padding(.horizontal, 12)

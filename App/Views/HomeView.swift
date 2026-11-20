@@ -168,7 +168,7 @@ struct HomeView: View {
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.7)
                             }
-                            ScoreText(value: totals.indices.contains(index) ? totals[index] : 0, size: 24, format: vm.format)
+                            RollingScoreText(value: totals.indices.contains(index) ? totals[index] : 0, size: 24, format: vm.format, column: index)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.6)
                         }

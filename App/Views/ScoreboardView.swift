@@ -68,8 +68,8 @@ struct ScoreboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                        ForEach(ranking, id: \.index) { player in
-                            playerCard(player)
+                        ForEach(Array(ranking.enumerated()), id: \.element.index) { position, player in
+                            playerCard(player, column: position)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -122,7 +122,7 @@ struct ScoreboardView: View {
         }
     }
 
-    private func playerCard(_ player: RankedPlayer) -> some View {
+    private func playerCard(_ player: RankedPlayer, column: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 4) {
                 // Ledger: square inline before the name, centred on it (as on the entry rows).
@@ -138,7 +138,7 @@ struct ScoreboardView: View {
                     .foregroundColor(Color(theme.text))
                     .lineLimit(1)
             }
-            ScoreText(value: player.total, size: 30, format: vm.format)
+            RollingScoreText(value: player.total, size: 30, format: vm.format, column: column)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

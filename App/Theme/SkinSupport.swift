@@ -69,7 +69,7 @@ enum AppIconSwitcher {
 
     static func apply(_ skin: SkinID) {
         // UI tests: the system "icon changed" alert would block the flow.
-        if UITestSupport.isActive { return }
+        if UITestSupport.isActive && !ProcessInfo.processInfo.arguments.contains("-uiTestRealIcon") { return }
         let app = UIApplication.shared
         guard app.supportsAlternateIcons, app.applicationState == .active else { return }
         let name = skin.alternateIconName

@@ -1,0 +1,29 @@
+# Temporary probe (branch duo-probe only): does the runner's Xcode ship an iPhone Duo simulator?
+name: Duo probe
+"on":
+  push:
+    branches: [duo-probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15-intel, macos-15, macos-26]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - name: Probe
+        run: |
+          set +e
+          sw_vers
+          xcodebuild -version
+          ls -d /Applications/Xcode*.app
+          echo "== runtimes"; xcrun simctl list runtimes
+          echo "== devicetypes"; xcrun simctl list devicetypes
+          echo "== duo grep"; xcrun simctl list devicetypes | grep -i -E "duo|fold" || echo "NO DUO DEVICE TYPE"
+          for x in /Applications/Xcode*.app; do echo "-- $x"; DEVELOPER_DIR="$x/Contents/Developer" xcrun simctl list devicetypes 2>/dev/null | grep -i -E "duo|fold" || echo "none"; done

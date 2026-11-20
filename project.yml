@@ -44,6 +44,7 @@ targets:
           - Store/Products.storekit
           - PrivacyInfo.xcprivacy
           - Support/GoogleService-Info.plist
+          - Taiwan/**
       - path: App/Store/Products.storekit
         buildPhase: none
         type: file
@@ -116,6 +117,8 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: UITests
+        excludes:
+          - DaLaoErUITests.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kenny.daidee.uitests
@@ -126,6 +129,75 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
     dependencies:
       - target: Big2
+  DaLaoEr:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: App
+        excludes:
+          - Info.plist
+          - Store/Products.storekit
+          - PrivacyInfo.xcprivacy
+          - Support/GoogleService-Info.plist
+          - Taiwan/**
+      - path: App/Taiwan/Products.storekit
+        buildPhase: none
+        type: file
+      - path: App/PrivacyInfo.xcprivacy
+        buildPhase: resources
+        type: file
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kenny.dalaoer
+        PRODUCT_NAME: DaLaoEr
+        MARKETING_VERSION: "1.0.0"
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: App/Taiwan/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        SUPPORTS_MACCATALYST: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_EMIT_LOC_STRINGS: YES
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-ObjC"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/Frameworks"
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG TAIWAN"
+        Release:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "TAIWAN"
+    dependencies:
+      - package: AppCore
+        product: AppCore
+      - package: GoogleMobileAds
+        product: GoogleMobileAds
+      - package: GoogleUserMessagingPlatform
+        product: GoogleUserMessagingPlatform
+      # Crashlytics / Firebase intentionally omitted until Kenny creates a
+      # Firebase app for 大老二計分 (TODO). Do not reuse the 鋤大D GoogleService-Info.
+  DaLaoErUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: UITests/DaLaoErUITests.swift
+        type: file
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kenny.dalaoer.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: DaLaoEr
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        TARGETED_DEVICE_FAMILY: "1"
+    dependencies:
+      - target: DaLaoEr
 schemes:
   Big2:
     build:
@@ -138,5 +210,18 @@ schemes:
       config: Debug
       targets:
         - Big2UITests
+    archive:
+      config: Release
+  DaLaoEr:
+    build:
+      targets:
+        DaLaoEr: all
+    run:
+      config: Debug
+      storeKitConfiguration: App/Taiwan/Products.storekit
+    test:
+      config: Debug
+      targets:
+        - DaLaoErUITests
     archive:
       config: Release

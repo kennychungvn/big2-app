@@ -29,7 +29,13 @@ public struct ChaoTable: Codable, Equatable, Hashable, Sendable {
 
     /// 香港炒: 8-9 ×2, 10-12 ×3, 13 ×4.
     public static let hongKongDefault = ChaoTable(multipliers: [2, 2, 3, 3, 3, 4])
+    /// 大老二計分 (Taiwan-only app) default: 8–9 ×2, 10–12 ×3, 13 ×4. Same numbers as
+    /// `hongKongDefault`, kept as a named alias so the Taiwan app does not reuse the
+    /// milder `taiwanDefault` table used by the Hong Kong app's optional Taiwan toggle.
+    public static let daLaoErDefault = ChaoTable(multipliers: [2, 2, 3, 3, 3, 4])
     /// 台灣常見: 8-9 ×1, 10-12 ×2, 13 ×3.
+    /// Used only by the Hong Kong app when the in-app Taiwan interface is on; not the
+    /// default of the standalone 大老二計分 app (`daLaoErDefault`).
     public static let taiwanDefault = ChaoTable(multipliers: [1, 1, 2, 2, 2, 3])
     /// 唔炒 / 不加倍: every count ×1.
     public static let noMultiplier = ChaoTable(multipliers: [1, 1, 1, 1, 1, 1])

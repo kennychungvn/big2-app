@@ -3,7 +3,9 @@ import Foundation
 /// One-time HK$8 non-consumable 「移除廣告」. Real StoreKit 2 code lives in the iOS target.
 public enum StoreProduct: Sendable {
     /// Non-consumable in App Store Connect (HK$8 tier set there). Local testing: App/Store/Products.storekit.
-    public static let removeAdsProductID = "com.kenny.daidee.removeads"
+    /// Resolved from the target's Info.plist (`RemoveAdsProductID`). Falls back to the
+    /// Hong Kong product when the key is missing so the 鋤大D app is unchanged.
+    public static var removeAdsProductID: String { AppFlavor.removeAdsProductID }
     public static let removeAdsDisplayPrice = "HK$8"
     public static let removeAdsDisplayName = "移除廣告"
 }

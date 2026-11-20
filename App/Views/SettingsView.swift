@@ -1,5 +1,6 @@
 import SwiftUI
 import AppCore
+import ScoringEngine
 
 struct SettingsView: View {
     static let privacyPolicyURL = URL(string: "https://kennychungvn.github.io/daidee-site/privacy.html")!
@@ -13,7 +14,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
-                if L10n.taiwanEnabled {
+                if L10n.taiwanEnabled && !AppFlavor.current.isTaiwanApp {
                 Section {
                     Picker(tr("地區介面"), selection: regionBinding) {
                         ForEach(InterfaceRegionPreference.allCases, id: \.self) { preference in
@@ -27,6 +28,40 @@ struct SettingsView: View {
                 } footer: {
                     Text(tr("揀「台灣」會用大老二用語，第一次開場預設台灣常見炒法（10-12張 ×2 · 13張 ×3）。"))
                 }
+                }
+
+                if AppFlavor.current.isTaiwanApp {
+                    Section {
+                        Picker(tr("計分方式"), selection: scoringModeBinding) {
+                            Text(tr("贏家通吃")).tag(ScoringMode.winnerTakesAll)
+                            Text(tr("互對")).tag(ScoringMode.pairwise)
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("settings.scoringMode")
+                        Text(vm.model.data.lastSettings.scoringMode == .pairwise
+                             ? tr("互對：每兩位玩家依計算後分數的差額互相結算。")
+                             : tr("贏家通吃：其餘玩家依剩餘張數與門檻計算，全數給贏家。"))
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(theme.secondaryText))
+                    } header: {
+                        Text(tr("計分方式"))
+                    } footer: {
+                        Text(tr("下次開新牌局時套用，不會改到進行中的牌局。"))
+                    }
+
+                    Section {
+                        Text(tr("1–7 張固定 ×1。預設 8 張起 ×2、10 張起 ×3、13 張 ×4，點格可調整。"))
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(theme.secondaryText))
+                        HStack(spacing: 6) {
+                            ForEach(Array(ChaoTable.editableCounts), id: \.self) { cards in
+                                settingsTile(cards: cards)
+                            }
+                        }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                    } header: {
+                        Text(tr("加倍門檻"))
+                    }
                 }
 
                 Section {
@@ -121,11 +156,13 @@ struct SettingsView: View {
                     }
                     .accessibilityIdentifier("settings.version")
 
-                    Link(destination: ReviewPromptPolicy.writeReviewURL) {
-                        Text(tr("為 App 評分"))
+                    if let reviewURL = ReviewPromptPolicy.writeReviewURL {
+                        Link(destination: reviewURL) {
+                            Text(tr("為 App 評分"))
+                        }
+                        .foregroundColor(Color(theme.accentLink))
+                        .accessibilityIdentifier("settings.writeReview")
                     }
-                    .foregroundColor(Color(theme.accentLink))
-                    .accessibilityIdentifier("settings.writeReview")
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text(tr("免責聲明"))
@@ -199,5 +236,48 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
+    }
+
+
+    private var scoringModeBinding: Binding<ScoringMode> {
+        Binding(
+            get: { vm.model.data.lastSettings.scoringMode ?? AppFlavor.current.defaultScoringMode },
+            set: { vm.setDefaultScoringMode($0) }
+        )
+    }
+
+    private var settingsChaoTable: ChaoTable {
+        vm.model.data.lastSettings.chaoTable ?? AppFlavor.current.defaultChaoTable
+    }
+
+    private func settingsTile(cards: Int) -> some View {
+        let multiplier = settingsChaoTable.multiplier(forCards: cards)
+        let foreground = Color(theme.keyTextColor(forMultiplier: multiplier))
+        return Button {
+            var table = settingsChaoTable
+            table.cycle(cards: cards)
+            vm.setDefaultChaoTable(table)
+            if vm.model.data.hapticsEnabled {
+                ChaoHaptics.play(multiplier: table.multiplier(forCards: cards))
+            }
+        } label: {
+            VStack(spacing: 2) {
+                Text(tr("%@張", "\(cards)"))
+                    .font(.system(size: 12, weight: .medium))
+                    .opacity(0.85)
+                Text("×\(multiplier)")
+                    .font(.system(size: 18, weight: .heavy))
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+            }
+            .foregroundColor(foreground)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(Color(theme.keyColor(forMultiplier: multiplier)))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.tile.\(cards)")
+        .accessibilityValue("×\(multiplier)")
     }
 }

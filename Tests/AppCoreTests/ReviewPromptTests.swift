@@ -98,7 +98,7 @@ final class ReviewPromptTests: XCTestCase {
 
     func testWriteReviewURLPointsAtTheAppStoreReviewAction() {
         XCTAssertEqual(
-            ReviewPromptPolicy.writeReviewURL.absoluteString,
+            ReviewPromptPolicy.writeReviewURL?.absoluteString,
             "https://apps.apple.com/app/id6835281948?action=write-review"
         )
     }

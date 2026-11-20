@@ -100,10 +100,20 @@ public struct Session: Codable, Equatable, Sendable {
         return ranked
     }
 
-    /// Scores and appends a round. See `ScoringEngine.score(cardsLeft:rule:heldTwo:)`.
+    /// Scores and appends a round. See `ScoringEngine.score(cardsLeft:rule:heldTwo:mode:manualDoubles:)`.
     @discardableResult
-    public mutating func addRound(cardsLeft: [Int], heldTwo: [Bool]? = nil) throws -> Round {
-        let round = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule, heldTwo: heldTwo, mode: scoringMode)
+    public mutating func addRound(
+        cardsLeft: [Int],
+        heldTwo: [Bool]? = nil,
+        manualDoubles: [Int]? = nil
+    ) throws -> Round {
+        let round = try ScoringEngine.score(
+            cardsLeft: cardsLeft,
+            rule: rule,
+            heldTwo: heldTwo,
+            mode: scoringMode,
+            manualDoubles: manualDoubles
+        )
         rounds.append(round)
         return round
     }
@@ -122,12 +132,19 @@ public struct Session: Codable, Equatable, Sendable {
     public mutating func editRound(
         at index: Int,
         cardsLeft: [Int],
-        heldTwo: [Bool]? = nil
+        heldTwo: [Bool]? = nil,
+        manualDoubles: [Int]? = nil
     ) throws -> Round {
         guard rounds.indices.contains(index) else {
             throw ScoringError.invalidRoundIndex(index)
         }
-        let round = try ScoringEngine.score(cardsLeft: cardsLeft, rule: rule, heldTwo: heldTwo, mode: scoringMode)
+        let round = try ScoringEngine.score(
+            cardsLeft: cardsLeft,
+            rule: rule,
+            heldTwo: heldTwo,
+            mode: scoringMode,
+            manualDoubles: manualDoubles
+        )
         rounds[index] = round
         return round
     }

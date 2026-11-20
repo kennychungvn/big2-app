@@ -1,4 +1,5 @@
 import Foundation
+import ScoringEngine
 
 /// Remembered 開場設定 so the next session is mostly one tap.
 ///
@@ -9,19 +10,25 @@ public struct LastSettings: Codable, Equatable, Sendable {
     public var playerNames: [String]
     /// Last-used 炒法, or `nil` if the player has never started a session.
     public var chaoTable: ChaoTable?
+    /// Last-used settlement (贏家通吃 / 互對). `nil` in older saves; the Taiwan app
+    /// falls back to 贏家通吃. The Hong Kong app ignores this and stays pairwise.
+    public var scoringMode: ScoringMode?
 
     public init(
         playerNames: [String] = ["", "", "", ""],
-        chaoTable: ChaoTable? = nil
+        chaoTable: ChaoTable? = nil,
+        scoringMode: ScoringMode? = nil
     ) {
         self.playerNames = Self.padded(playerNames)
         self.chaoTable = chaoTable
+        self.scoringMode = scoringMode
     }
 
     private enum CodingKeys: String, CodingKey {
         case playerNames
         case chaoTable
         case rulePreset
+        case scoringMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -32,13 +39,15 @@ public struct LastSettings: Codable, Equatable, Sendable {
            let legacy = RulePreset(rawValue: raw) {
             table = legacy.chaoTable
         }
-        self.init(playerNames: names, chaoTable: table)
+        let mode = try container.decodeIfPresent(ScoringMode.self, forKey: .scoringMode)
+        self.init(playerNames: names, chaoTable: table, scoringMode: mode)
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(playerNames, forKey: .playerNames)
         try container.encodeIfPresent(chaoTable, forKey: .chaoTable)
+        try container.encodeIfPresent(scoringMode, forKey: .scoringMode)
     }
 
     private static func padded(_ names: [String]) -> [String] {

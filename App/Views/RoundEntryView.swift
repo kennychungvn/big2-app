@@ -11,13 +11,21 @@ struct RoundEntryView: View {
     @State private var lingeringBadge: [Int: Int] = [:]
 
     var body: some View {
+        if AppFlavor.current.isTaiwanApp {
+            TaiwanRoundEntryView(sheet: $sheet)
+        } else {
+            hongKongBody
+        }
+    }
+
+    private var hongKongBody: some View {
         let session = vm.model.currentSession?.session
         let names = session?.players ?? []
         let roundNumber: Int = {
             switch sheet.mode {
             case .new:
                 return (session?.roundsCompleted ?? 0) + 1
-            case .edit(let index, _):
+            case .edit(let index, _, _):
                 return index + 1
             }
         }()

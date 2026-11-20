@@ -10,7 +10,8 @@ public enum RoundPresentation: Sendable {
                 appliedMultiplier: score.appliedMultiplier,
                 heldTwoApplied: score.heldTwoApplied,
                 points: score.points,
-                baseMultiplier: score.baseMultiplier
+                baseMultiplier: score.baseMultiplier,
+                manualDoubles: score.manualDoubles
             )
         }
     }

@@ -39,11 +39,29 @@ enum AdConfig {
     }()
 
     static var bannerUnitID: String {
-        isUsingTestAds ? testAdaptiveBannerUnitID : releaseBannerUnitID
+        #if TAIWAN
+        // TODO: replace App/Taiwan/Info.plist GADBannerUnitID with the real DaLaoEr unit
+        // after Kenny creates the AdMob app. Test ids stay until then.
+        return plistString("GADBannerUnitID") ?? testAdaptiveBannerUnitID
+        #else
+        return isUsingTestAds ? testAdaptiveBannerUnitID : releaseBannerUnitID
+        #endif
     }
 
     static var interstitialUnitID: String {
-        isUsingTestAds ? testInterstitialUnitID : releaseInterstitialUnitID
+        #if TAIWAN
+        // TODO: replace App/Taiwan/Info.plist GADInterstitialUnitID with the real DaLaoEr unit
+        // after Kenny creates the AdMob app. Test ids stay until then.
+        return plistString("GADInterstitialUnitID") ?? testInterstitialUnitID
+        #else
+        return isUsingTestAds ? testInterstitialUnitID : releaseInterstitialUnitID
+        #endif
+    }
+
+    private static func plistString(_ key: String) -> String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     // MARK: UI tests

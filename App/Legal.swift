@@ -14,5 +14,10 @@ enum LegalCopy {
     }
 
     /// Disclaimer for the current 地區介面.
-    static var disclaimer: String { disclaimer(for: L10n.region) }
+    static var disclaimer: String {
+        if AppFlavor.current.isTaiwanApp {
+            return "這個 App 只用來計分，不涉及任何賭博或金錢交易。"
+        }
+        return disclaimer(for: L10n.region)
+    }
 }

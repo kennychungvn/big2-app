@@ -11,7 +11,9 @@ public enum ReviewPromptPolicy: Sendable {
     public static let completedGameCountKey = "reviewPrompt.completedGameCount"
     public static let lastPromptedVersionKey = "reviewPrompt.lastPromptedVersion"
 
-    public static let writeReviewURL = URL(string: "https://apps.apple.com/app/id6835281948?action=write-review")!
+    /// Hong Kong app: App Store id 6835281948, or Info.plist `AppStoreID` when set.
+    /// Taiwan app: `nil` until Kenny fills in `AppStoreID` (still TODO).
+    public static var writeReviewURL: URL? { AppFlavor.writeReviewURL }
 
     public static func shouldRequestReview(
         completedGameCount: Int,

@@ -17,7 +17,7 @@ struct RoundEntrySheet: Identifiable, Equatable {
 
     enum Mode: Equatable {
         case new
-        case edit(roundIndex: Int, previousCards: [Int])
+        case edit(roundIndex: Int, previousCards: [Int], previousManualDoubles: [Int] = [])
     }
 
     init(id: UUID = UUID(), mode: Mode, state: RoundEntryState) {
@@ -73,7 +73,7 @@ struct UndoWindow: Equatable {
 
     enum Kind: Equatable {
         case addedRound
-        case editedRound(index: Int, previousCards: [Int])
+        case editedRound(index: Int, previousCards: [Int], previousManualDoubles: [Int] = [])
     }
 }
 
@@ -186,7 +186,7 @@ final class AppViewModel: ObservableObject {
             let stored = try model.startNewSession(
                 players: draft.names,
                 chaoTable: draft.chaoTable,
-                scoringMode: region.defaultScoringMode
+                scoringMode: AppFlavor.current.isTaiwanApp ? draft.scoringMode : region.defaultScoringMode
             )
             persist()
             isPresentingNewSession = false
@@ -292,7 +292,10 @@ final class AppViewModel: ObservableObject {
         lastCommitted = nil
         roundEntry = RoundEntrySheet(
             mode: .new,
-            state: RoundEntryState(rule: current.session.rule)
+            state: RoundEntryState(
+                rule: current.session.rule,
+                requiresConfirm: AppFlavor.current.isTaiwanApp
+            )
         )
     }
 
@@ -300,10 +303,16 @@ final class AppViewModel: ObservableObject {
         guard let session = model.currentSession?.session,
               session.rounds.indices.contains(index) else { return }
         let cards = session.rounds[index].scores.map(\.cardsLeft)
+        let doubles = session.rounds[index].scores.map(\.manualDoubles)
         lastCommitted = nil
         roundEntry = RoundEntrySheet(
-            mode: .edit(roundIndex: index, previousCards: cards),
-            state: RoundEntryState(rule: session.rule, prefill: cards)
+            mode: .edit(roundIndex: index, previousCards: cards, previousManualDoubles: doubles),
+            state: RoundEntryState(
+                rule: session.rule,
+                prefill: cards,
+                prefillManualDoubles: doubles,
+                requiresConfirm: AppFlavor.current.isTaiwanApp
+            )
         )
     }
 
@@ -352,23 +361,23 @@ final class AppViewModel: ObservableObject {
             return
         }
         lastCommitted = (cards, sheet.id)
-        commit(cards: cards, mode: sheet.mode)
+        commit(cards: cards, manualDoubles: sheet.state.completeManualDoubles, mode: sheet.mode)
     }
 
-    private func commit(cards: [Int], mode: RoundEntrySheet.Mode) {
+    private func commit(cards: [Int], manualDoubles: [Int]?, mode: RoundEntrySheet.Mode) {
         do {
             let round: Round
             let isEdit: Bool
             let undoKind: UndoWindow.Kind
             switch mode {
             case .new:
-                round = try model.addRound(cardsLeft: cards)
+                round = try model.addRound(cardsLeft: cards, manualDoubles: manualDoubles)
                 isEdit = false
                 undoKind = .addedRound
-            case .edit(let index, let previous):
-                round = try model.editRound(at: index, cardsLeft: cards)
+            case .edit(let index, let previous, let previousDoubles):
+                round = try model.editRound(at: index, cardsLeft: cards, manualDoubles: manualDoubles)
                 isEdit = true
-                undoKind = .editedRound(index: index, previousCards: previous)
+                undoKind = .editedRound(index: index, previousCards: previous, previousManualDoubles: previousDoubles)
             }
             persist()
             guard let current = model.currentSession else { return }
@@ -379,7 +388,7 @@ final class AppViewModel: ObservableObject {
                 roundNumber: {
                     switch mode {
                     case .new: return current.session.roundsCompleted
-                    case .edit(let index, _): return index + 1
+                    case .edit(let index, _, _): return index + 1
                     }
                 }(),
                 isEdit: isEdit,
@@ -388,7 +397,7 @@ final class AppViewModel: ObservableObject {
                 roundIndex: {
                     switch mode {
                     case .new: return current.session.roundsCompleted - 1
-                    case .edit(let index, _): return index
+                    case .edit(let index, _, _): return index
                     }
                 }()
             )
@@ -409,7 +418,8 @@ final class AppViewModel: ObservableObject {
         if case .new = sheet.mode, let current = model.currentSession {
             let index = current.session.roundsCompleted - 1
             let cards = current.session.rounds[index].scores.map(\.cardsLeft)
-            sheet.mode = .edit(roundIndex: index, previousCards: cards)
+            let doubles = current.session.rounds[index].scores.map(\.manualDoubles)
+            sheet.mode = .edit(roundIndex: index, previousCards: cards, previousManualDoubles: doubles)
         }
         roundEntry = sheet
     }
@@ -430,8 +440,8 @@ final class AppViewModel: ObservableObject {
             switch window.kind {
             case .addedRound:
                 _ = try model.undoLastRound()
-            case .editedRound(let index, let previous):
-                _ = try model.editRound(at: index, cardsLeft: previous)
+            case .editedRound(let index, let previous, let previousDoubles):
+                _ = try model.editRound(at: index, cardsLeft: previous, manualDoubles: previousDoubles)
             }
             persist()
         } catch {
@@ -533,14 +543,35 @@ final class AppViewModel: ObservableObject {
 
     /// Re-reads the setting and device locale, then points string lookups at that region.
     func refreshRegion() {
-        let resolved = model.data.interfaceRegion(
-            systemRegion: L10n.systemRegion,
-            taiwanEnabled: L10n.taiwanEnabled
-        )
+        let resolved: InterfaceRegion
+        if AppFlavor.current.isTaiwanApp {
+            resolved = .taiwan
+        } else {
+            resolved = model.data.interfaceRegion(
+                systemRegion: L10n.systemRegion,
+                taiwanEnabled: L10n.taiwanEnabled
+            )
+        }
         L10n.region = resolved
         if region != resolved {
             region = resolved
         }
+    }
+
+    func setDefaultScoringMode(_ mode: ScoringMode) {
+        guard AppFlavor.current.isTaiwanApp else { return }
+        var settings = model.data.lastSettings
+        settings.scoringMode = mode
+        model.data.lastSettings = settings
+        persist()
+    }
+
+    func setDefaultChaoTable(_ table: ChaoTable) {
+        guard AppFlavor.current.isTaiwanApp else { return }
+        var settings = model.data.lastSettings
+        settings.chaoTable = table
+        model.data.lastSettings = settings
+        persist()
     }
 
     func setRegionPreference(_ preference: InterfaceRegionPreference) {

@@ -49,7 +49,7 @@ struct RoundResultView: View {
                             resultRow(
                                 index: index,
                                 display: displays[index],
-                                breakdown: breakdown.map { vm.format.pairwiseBreakdown($0[index], names: sheet.players) }
+                                breakdown: breakdown.map { vm.format.pairwiseBreakdown($0[index], names: sheet.players, unitSuffix: AppFlavor.current.isTaiwanApp ? "" : " 張") }
                             )
                         }
 

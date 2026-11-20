@@ -9,6 +9,8 @@ public struct NewSessionDraft: Equatable, Sendable {
     public var chaoTable: ChaoTable
     /// True when `chaoTable` came from the last session, so the screen shows 已幫你填好上次用嘅炒法.
     public var usesRememberedChao: Bool
+    /// 計分方式 for the Taiwan-only app (贏家通吃 default, or 互對). Ignored by the Hong Kong app.
+    public var scoringMode: ScoringMode
 
     /// - Parameter region: Supplies the first-time 炒法 when nothing is remembered.
     /// - Parameter sessions: Used only when `lastSettings` has no names, to prefill from the most recent game.
@@ -22,8 +24,15 @@ public struct NewSessionDraft: Equatable, Sendable {
             self.chaoTable = remembered
             self.usesRememberedChao = true
         } else {
-            self.chaoTable = region.defaultChaoTable
+            // Taiwan-only app uses 8–9 ×2 / 10–12 ×3 / 13 ×4, not InterfaceRegion.taiwan's
+            // milder 台灣常見 table (that table stays for the HK app's optional TW toggle).
+            self.chaoTable = AppFlavor.current.isTaiwanApp ? AppFlavor.current.defaultChaoTable : region.defaultChaoTable
             self.usesRememberedChao = false
+        }
+        if AppFlavor.current.isTaiwanApp {
+            self.scoringMode = settings.scoringMode ?? AppFlavor.current.defaultScoringMode
+        } else {
+            self.scoringMode = region.defaultScoringMode
         }
     }
 

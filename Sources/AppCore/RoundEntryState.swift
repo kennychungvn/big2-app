@@ -7,19 +7,24 @@ import ScoringEngine
 /// Flow: a new round starts focused on player 1. Each pad press fills the focused row and
 /// moves to the next empty row, in seat order. The pad's 贏 key enters 0 cards (the winner).
 /// Only one winner is allowed: once someone has 贏, the key is disabled for everyone else
-/// until the winner row is focused again and changed. The round auto-scores once all four
-/// rows are filled and exactly one of them is the winner.
+/// until the winner row is focused again and changed. The Hong Kong app auto-scores once
+/// all four rows are filled and exactly one of them is the winner. The Taiwan-only app
+/// (`requiresConfirm`) waits for a 確定 tap so the user can set per-player ×2 steppers.
 public struct RoundEntryState: Equatable, Sendable {
     /// Pad value for the 贏 key.
     public static let winnerValue = 0
 
     public let rule: ScoringRule
+    /// When `true`, filling every row does not auto-complete; call `confirm()` after
+    /// setting manual doubles. Used by the Taiwan-only app.
+    public let requiresConfirm: Bool
     public private(set) var cards: [Int?]
+    public private(set) var manualDoubles: [Int]
     public private(set) var focusedIndex: Int?
     /// Set after an input whose multiplier is 2 or more. The view should
     /// animate it, then call `consumePendingBadge()`.
     public private(set) var pendingBadge: ChaoBadge?
-    /// Becomes `true` only on the input that makes the round complete.
+    /// Becomes `true` only on the input that makes the round complete (or on `confirm()`).
     public private(set) var justCompleted: Bool
 
     public struct ChaoBadge: Equatable, Sendable {
@@ -48,13 +53,22 @@ public struct RoundEntryState: Equatable, Sendable {
 
     private struct Snapshot: Equatable, Sendable {
         var cards: [Int?]
+        var manualDoubles: [Int]
         var focusedIndex: Int?
     }
 
     /// - Parameter prefill: Cards of an existing round (edit mode). Nothing is focused until
     ///   the user taps a row. Without a prefill the new round starts focused on player 1.
-    public init(rule: ScoringRule = .hongKongDefault, prefill: [Int]? = nil) {
+    /// - Parameter prefillManualDoubles: Manual ×2 counts aligned with `prefill`.
+    /// - Parameter requiresConfirm: Taiwan-app entry waits for 確定 instead of auto-scoring.
+    public init(
+        rule: ScoringRule = .hongKongDefault,
+        prefill: [Int]? = nil,
+        prefillManualDoubles: [Int]? = nil,
+        requiresConfirm: Bool = false
+    ) {
         self.rule = rule
+        self.requiresConfirm = requiresConfirm
         self.pendingBadge = nil
         self.justCompleted = false
         self.undoStack = []
@@ -64,6 +78,16 @@ public struct RoundEntryState: Equatable, Sendable {
         } else {
             self.cards = Array(repeating: nil, count: ScoringEngine.playerCount)
             self.focusedIndex = 0
+        }
+        if let prefillManualDoubles, prefillManualDoubles.count == ScoringEngine.playerCount {
+            self.manualDoubles = prefillManualDoubles.map(ScoringEngine.clampManualDoubles)
+        } else {
+            self.manualDoubles = Array(repeating: 0, count: ScoringEngine.playerCount)
+        }
+        for index in self.cards.indices {
+            if self.cards[index] == Self.winnerValue {
+                self.manualDoubles[index] = 0
+            }
         }
     }
 
@@ -97,6 +121,14 @@ public struct RoundEntryState: Equatable, Sendable {
 
     public var isComplete: Bool { completeCards != nil }
 
+    /// Manual doubles to pass into `ScoringEngine.score`, once the round is complete.
+    public var completeManualDoubles: [Int]? {
+        guard isComplete else { return nil }
+        return manualDoubles
+    }
+
+    public var canConfirm: Bool { requiresConfirm && isComplete }
+
     public var status: Status {
         if let complete = completeCards { return .complete(cardsLeft: complete) }
         if cards.allSatisfy({ $0 == nil }) { return .notStarted }
@@ -115,6 +147,9 @@ public struct RoundEntryState: Equatable, Sendable {
         case .entering:
             return taiwan ? "輸入後會自動跳到下一位，點任一列可修改" : "入完自動跳下一個，㩒邊行都改得"
         case .complete:
+            if requiresConfirm {
+                return "輸入完成，點「確定」計分"
+            }
             return taiwan ? "輸入完成，正在記分…" : "入完喇，計緊分…"
         }
     }
@@ -131,6 +166,26 @@ public struct RoundEntryState: Equatable, Sendable {
     public func multiplier(forCardsLeft cardsLeft: Int) -> Int? {
         guard cardsLeft >= ScoringEngine.minLoserCards else { return nil }
         return try? rule.multiplier(forCardsLeft: cardsLeft)
+    }
+
+    /// Live penalty for a filled row (`cards × base × 2^doubles`). `nil` if empty; `0` for the winner.
+    public func livePenalty(at index: Int) -> Int? {
+        guard cards.indices.contains(index), let cardsLeft = cards[index] else { return nil }
+        if cardsLeft == Self.winnerValue { return 0 }
+        let base = multiplier(forCardsLeft: cardsLeft) ?? 1
+        return ScoringEngine.penalty(
+            cardsLeft: cardsLeft,
+            baseMultiplier: base,
+            manualDoubles: manualDoubles[index]
+        )
+    }
+
+    /// Sum of loser penalties when every row is filled (the 贏家通吃 pot). `nil` otherwise.
+    public var liveWinnerTakesAllTotal: Int? {
+        guard isComplete else { return nil }
+        return (0..<playerCount).reduce(0) { sum, index in
+            sum + (livePenalty(at: index) ?? 0)
+        }
     }
 
     /// The pad's 贏 key: the focused player went out first.
@@ -151,6 +206,9 @@ public struct RoundEntryState: Equatable, Sendable {
         justCompleted = false
         pushUndo()
         cards[focus] = count
+        if isWinner {
+            manualDoubles[focus] = 0
+        }
         if !isWinner, let multiplier = multiplier(forCardsLeft: count), multiplier >= 2 {
             pendingBadge = ChaoBadge(
                 playerIndex: focus,
@@ -161,11 +219,39 @@ public struct RoundEntryState: Equatable, Sendable {
             pendingBadge = nil
         }
         if completeCards != nil {
-            justCompleted = true
-            focusedIndex = nil
+            if requiresConfirm {
+                focusedIndex = nextUnset(after: focus)
+            } else {
+                justCompleted = true
+                focusedIndex = nil
+            }
         } else {
             focusedIndex = nextUnset(after: focus) ?? focus
         }
+    }
+
+    public mutating func incrementDoubles(at index: Int) {
+        guard cards.indices.contains(index) else { return }
+        guard cards[index] != Self.winnerValue else { return }
+        guard manualDoubles[index] < ScoringEngine.maxManualDoubles else { return }
+        justCompleted = false
+        pushUndo()
+        manualDoubles[index] += 1
+    }
+
+    public mutating func decrementDoubles(at index: Int) {
+        guard cards.indices.contains(index) else { return }
+        guard manualDoubles[index] > 0 else { return }
+        justCompleted = false
+        pushUndo()
+        manualDoubles[index] -= 1
+    }
+
+    /// Taiwan-app 確定: marks the filled round complete so the view model can commit it.
+    public mutating func confirm() {
+        guard requiresConfirm, completeCards != nil else { return }
+        justCompleted = true
+        focusedIndex = nil
     }
 
     /// Tapping a row focuses it so its value can be changed.
@@ -181,6 +267,7 @@ public struct RoundEntryState: Equatable, Sendable {
         pendingBadge = nil
         guard let snapshot = undoStack.popLast() else { return }
         cards = snapshot.cards
+        manualDoubles = snapshot.manualDoubles
         focusedIndex = snapshot.focusedIndex
     }
 
@@ -191,7 +278,7 @@ public struct RoundEntryState: Equatable, Sendable {
     }
 
     private mutating func pushUndo() {
-        undoStack.append(Snapshot(cards: cards, focusedIndex: focusedIndex))
+        undoStack.append(Snapshot(cards: cards, manualDoubles: manualDoubles, focusedIndex: focusedIndex))
     }
 
     private func nextUnset(after index: Int) -> Int? {

@@ -35,27 +35,31 @@ struct NewSessionView: View {
                         })
                     }
 
-                    sectionTitle(tr("炒法"))
-                        .padding(.top, 8)
-                    Text(tr("1-7 張固定 ×1，㩒格轉倍數（×1 至 ×4）"))
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(theme.secondaryText))
-                        .padding(.horizontal, 18)
-                        .padding(.bottom, 8)
-
-                    HStack(spacing: 6) {
-                        ForEach(Array(ChaoTable.editableCounts), id: \.self) { cards in
-                            chaoTile(cards: cards)
-                        }
-                    }
-                    .padding(.horizontal, 14)
-
-                    if draft.usesRememberedChao {
-                        Text(tr("已幫你填好上次用嘅炒法"))
+                    if AppFlavor.current.isTaiwanApp {
+                        taiwanModeSection
+                    } else {
+                        sectionTitle(tr("炒法"))
+                            .padding(.top, 8)
+                        Text(tr("1-7 張固定 ×1，㩒格轉倍數（×1 至 ×4）"))
                             .font(.system(size: 13))
                             .foregroundColor(Color(theme.secondaryText))
                             .padding(.horizontal, 18)
-                            .padding(.top, 10)
+                            .padding(.bottom, 8)
+
+                        HStack(spacing: 6) {
+                            ForEach(Array(ChaoTable.editableCounts), id: \.self) { cards in
+                                chaoTile(cards: cards)
+                            }
+                        }
+                        .padding(.horizontal, 14)
+
+                        if draft.usesRememberedChao {
+                            Text(tr("已幫你填好上次用嘅炒法"))
+                                .font(.system(size: 13))
+                                .foregroundColor(Color(theme.secondaryText))
+                                .padding(.horizontal, 18)
+                                .padding(.top, 10)
+                        }
                     }
                 }
                 .padding(.bottom, 24)
@@ -209,5 +213,74 @@ struct NewSessionView: View {
             .padding(.horizontal, 18)
             .padding(.top, 14)
             .padding(.bottom, 6)
+    }
+
+
+    private var taiwanModeSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sectionTitle(tr("計分方式"))
+                .padding(.top, 8)
+
+            HStack(spacing: 8) {
+                modeChip(title: tr("贏家通吃"), selected: draft.scoringMode == .winnerTakesAll, id: "setup.mode.winnerTakesAll") {
+                    draft.scoringMode = .winnerTakesAll
+                }
+                modeChip(title: tr("互對"), selected: draft.scoringMode == .pairwise, id: "setup.mode.pairwise") {
+                    draft.scoringMode = .pairwise
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
+
+            Text(draft.scoringMode == .winnerTakesAll
+                 ? tr("贏家通吃：其餘玩家依剩餘張數與門檻計算，全數給贏家。")
+                 : tr("互對：每兩位玩家依計算後分數的差額互相結算。"))
+                .font(.system(size: 13))
+                .foregroundColor(Color(theme.secondaryText))
+                .padding(.horizontal, 18)
+                .padding(.bottom, 16)
+                .accessibilityIdentifier("setup.modeHint")
+
+            sectionTitle(tr("加倍門檻"))
+            Text(tr("1–7 張固定 ×1。"))
+                .font(.system(size: 13))
+                .foregroundColor(Color(theme.secondaryText))
+                .padding(.horizontal, 18)
+            Text(tr("預設 8 張起 ×2、10 張起 ×3、13 張 ×4，點格可調整。"))
+                .font(.system(size: 13))
+                .foregroundColor(Color(theme.secondaryText))
+                .padding(.horizontal, 18)
+                .padding(.bottom, 8)
+
+            HStack(spacing: 6) {
+                ForEach(Array(ChaoTable.editableCounts), id: \.self) { cards in
+                    chaoTile(cards: cards)
+                }
+            }
+            .padding(.horizontal, 14)
+
+            if draft.usesRememberedChao {
+                Text(tr("已幫你填好上次用嘅炒法"))
+                    .font(.system(size: 13))
+                    .foregroundColor(Color(theme.secondaryText))
+                    .padding(.horizontal, 18)
+                    .padding(.top, 10)
+            }
+        }
+    }
+
+    private func modeChip(title: String, selected: Bool, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(selected ? Color(theme.primaryText) : Color(theme.secondaryText))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(selected ? Color(theme.cardElevated) : Color(theme.card))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

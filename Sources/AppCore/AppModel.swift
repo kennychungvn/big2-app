@@ -80,7 +80,7 @@ public struct AppModel: Equatable, Sendable {
         // A session nobody entered a round in is not worth keeping once a new one starts.
         data.removeEmptySessions()
         data.sessions.append(stored)
-        data.lastSettings = LastSettings(playerNames: names, chaoTable: chaoTable)
+        data.lastSettings = LastSettings(playerNames: names, chaoTable: chaoTable, scoringMode: scoringMode)
         data.remember(playerNames: names)
         currentSessionID = stored.id
         return stored
@@ -110,10 +110,11 @@ public struct AppModel: Equatable, Sendable {
     public mutating func addRound(
         cardsLeft: [Int],
         heldTwo: [Bool]? = nil,
+        manualDoubles: [Int]? = nil,
         clock: any Clock = SystemClock()
     ) throws -> Round {
         try mutateCurrent(clock: clock) { session in
-            try session.addRound(cardsLeft: cardsLeft, heldTwo: heldTwo)
+            try session.addRound(cardsLeft: cardsLeft, heldTwo: heldTwo, manualDoubles: manualDoubles)
         }
     }
 
@@ -129,10 +130,11 @@ public struct AppModel: Equatable, Sendable {
         at index: Int,
         cardsLeft: [Int],
         heldTwo: [Bool]? = nil,
+        manualDoubles: [Int]? = nil,
         clock: any Clock = SystemClock()
     ) throws -> Round {
         try mutateCurrent(clock: clock) { session in
-            try session.editRound(at: index, cardsLeft: cardsLeft, heldTwo: heldTwo)
+            try session.editRound(at: index, cardsLeft: cardsLeft, heldTwo: heldTwo, manualDoubles: manualDoubles)
         }
     }
 

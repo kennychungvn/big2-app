@@ -1,4 +1,5 @@
 import Foundation
+import ScoringEngine
 
 /// Traditional Chinese display helpers for points, dates, and rounds, in Hong Kong or Taiwan wording.
 public struct ScoreFormatting: Equatable, Sendable {
@@ -56,11 +57,29 @@ public struct ScoreFormatting: Equatable, Sendable {
         if score.cardsLeft == 0 {
             return isTaiwan ? "出完" : "出晒"
         }
+        if score.manualDoubles > 0 {
+            var text = "\(score.cardsLeft) 張 ×\(score.baseMultiplier)"
+            for _ in 0..<score.manualDoubles { text += " ×2" }
+            return text
+        }
         var text = "\(score.cardsLeft) 張 ×\(score.appliedMultiplier)"
         if score.heldTwoApplied {
             text += "（有 2 再 ×2）"
         }
         return text
+    }
+
+    /// Live formula as shown on the Taiwan entry screen, e.g. `10 張 ×3 ×2 = 60`.
+    public func penaltyFormula(cardsLeft: Int, baseMultiplier: Int, manualDoubles: Int) -> String {
+        guard cardsLeft > 0 else { return "贏" }
+        var text = "\(cardsLeft) 張 ×\(baseMultiplier)"
+        for _ in 0..<max(0, manualDoubles) { text += " ×2" }
+        let value = ScoringEngine.penalty(
+            cardsLeft: cardsLeft,
+            baseMultiplier: baseMultiplier,
+            manualDoubles: manualDoubles
+        )
+        return "\(text) = \(value)"
     }
 
     /// Header above the running totals on the result screen, e.g. `累計 · 打咗 6 局`.
@@ -70,12 +89,12 @@ public struct ScoreFormatting: Equatable, Sendable {
 
     /// Pairwise settlement line, e.g. `贏阿珍 52 張、贏阿強 33 張、贏阿芬 3 張`.
     /// Same wording in both regions; equal penalties read `和{name}`.
-    public func pairwiseBreakdown(_ items: [PairwiseItem], names: [String]) -> String {
+    public func pairwiseBreakdown(_ items: [PairwiseItem], names: [String], unitSuffix: String = " 張") -> String {
         items.map { item in
             let name = item.opponent < names.count ? names[item.opponent] : placeholderName(at: item.opponent)
             switch item.outcome {
-            case .win: return "贏\(name) \(item.amount) 張"
-            case .lose: return "輸\(name) \(item.amount) 張"
+            case .win: return "贏\(name) \(item.amount)\(unitSuffix)"
+            case .lose: return "輸\(name) \(item.amount)\(unitSuffix)"
             case .tie: return "和\(name)"
             }
         }
@@ -88,7 +107,8 @@ public struct ScoreFormatting: Equatable, Sendable {
 
     /// App name used in shared results.
     public var appTitle: String {
-        isTaiwan ? "大老二記分" : "鋤大D計分"
+        if AppFlavor.current.isTaiwanApp { return "大老二計分" }
+        return isTaiwan ? "大老二記分" : "鋤大D計分"
     }
 }
 
@@ -100,12 +120,21 @@ public struct RoundScoreDisplay: Equatable, Sendable {
     public var points: Int
     /// 炒倍 from the session rule, before 有 2 再 ×2.
     public var baseMultiplier: Int
+    public var manualDoubles: Int
 
-    public init(cardsLeft: Int, appliedMultiplier: Int, heldTwoApplied: Bool, points: Int, baseMultiplier: Int? = nil) {
+    public init(
+        cardsLeft: Int,
+        appliedMultiplier: Int,
+        heldTwoApplied: Bool,
+        points: Int,
+        baseMultiplier: Int? = nil,
+        manualDoubles: Int = 0
+    ) {
         self.cardsLeft = cardsLeft
         self.appliedMultiplier = appliedMultiplier
         self.heldTwoApplied = heldTwoApplied
         self.points = points
         self.baseMultiplier = baseMultiplier ?? (heldTwoApplied ? appliedMultiplier / 2 : appliedMultiplier)
+        self.manualDoubles = manualDoubles
     }
 }

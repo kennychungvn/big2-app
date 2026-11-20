@@ -73,6 +73,52 @@ jobs:
       - name: Run ScoringEngine tests
         run: swift test --package-path Packages/ScoringEngine
 
+  # Taiwan-only app (scheme DaLaoEr). Build + privacy check only.
+  # No TestFlight upload: Kenny must create the App Store Connect app record first.
+  build-and-test-taiwan:
+    name: Build DaLaoEr (Simulator)
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build DaLaoEr for iOS Simulator (no signing)
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project Big2.xcodeproj \
+            -scheme DaLaoEr \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData-DaLaoEr \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Check privacy manifests (DaLaoEr)
+        run: |
+          set -euo pipefail
+          python3 scripts/check_privacy_manifests.py App/PrivacyInfo.xcprivacy
+          APP=DerivedData-DaLaoEr/Build/Products/Debug-iphonesimulator/DaLaoEr.app
+          echo "Every PrivacyInfo.xcprivacy in the DaLaoEr simulator build:"
+          find "${APP}" -name PrivacyInfo.xcprivacy -print
+          python3 scripts/check_privacy_manifests.py "${APP}"
+
   testflight:
     name: Archive & Upload to TestFlight
     needs: build-and-test

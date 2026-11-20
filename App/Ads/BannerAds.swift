@@ -102,7 +102,7 @@ struct BannerSlotBackground: View {
                     .scaledToFit()
                     .frame(width: 24, height: 24)
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                Text(tr("鋤大D計分"))
+                Text(AppFlavor.current.isTaiwanApp ? AppFlavor.current.displayName : tr("鋤大D計分"))
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(Color(theme.text))
             }

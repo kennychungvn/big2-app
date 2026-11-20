@@ -16,7 +16,7 @@ struct HomeView: View {
                         .frame(width: 88, height: 88)
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .accessibilityHidden(true)
-                    Text(tr("鋤大D計分"))
+                    Text(AppFlavor.current.isTaiwanApp ? AppFlavor.current.displayName : tr("鋤大D計分"))
                         .accessibilityIdentifier("home.title")
                         .font(.system(size: 28, weight: .heavy))
                         .foregroundColor(Color(theme.text))

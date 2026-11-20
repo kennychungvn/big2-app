@@ -37,8 +37,10 @@ enum L10n {
 
     /// Taiwan interface switch: `FeatureFlags.taiwanEnabledByDefault`, or the `-enableTaiwan`
     /// launch argument (UI tests only).
-    static let taiwanEnabled: Bool =
-        FeatureFlags.taiwanEnabledByDefault || ProcessInfo.processInfo.arguments.contains("-enableTaiwan")
+    static var taiwanEnabled: Bool {
+        if AppFlavor.current.isTaiwanApp { return true }
+        return FeatureFlags.taiwanEnabledByDefault || ProcessInfo.processInfo.arguments.contains("-enableTaiwan")
+    }
 
     static func string(_ key: String, region: InterfaceRegion) -> String {
         // Context keys look like "完場|nav"; if a lookup ever misses, show the text before "|".

@@ -43,9 +43,9 @@ final class DaLaoErUITests: XCTestCase {
         tap("pad.13")
         tap("pad.5")
         element("entry.double.inc.1")
-        tap("entry.double.inc.1")
-        tap("entry.double.inc.2")
-        tap("entry.double.inc.2")
+        tapVisible("entry.double.inc.1")
+        tapVisible("entry.double.inc.2")
+        tapVisible("entry.double.inc.2")
         element("entry.total")
         XCTAssertTrue(label("entry.total").contains("273") || app.staticTexts["273"].exists)
         assertText("本局合計")
@@ -79,6 +79,20 @@ final class DaLaoErUITests: XCTestCase {
     private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
         let target = element(id, file: file, line: line)
         waitUntil(file: file, line: line) { target.isHittable }
+        target.tap()
+    }
+
+    /// Scrolls the entry list if a stepper sits under the confirm bar.
+    private func tapVisible(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+        let target = element(id, file: file, line: line)
+        if !target.isHittable {
+            app.swipeUp()
+        }
+        waitUntil(timeout: 12, file: file, line: line) {
+            if target.isHittable { return true }
+            app.swipeUp()
+            return target.isHittable
+        }
         target.tap()
     }
 

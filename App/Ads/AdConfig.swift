@@ -1,8 +1,8 @@
 import Foundation
 
 /// Every AdMob identifier the app uses lives here (plus `GADApplicationIdentifier` in
-/// App/Info.plist, which the SDK reads directly: the real app id
-/// ca-app-pub-3610638329659252~9118674558 is already there).
+/// App/Info.plist and App/Taiwan/Info.plist, which the SDK reads directly).
+/// HK (鋤大D計分) and TW (大老二計分, `TAIWAN`) are separate AdMob apps with their own units.
 ///
 /// Which units are used:
 /// - Debug builds and TestFlight builds → Google's official TEST units (no invalid traffic).
@@ -11,9 +11,17 @@ import Foundation
 enum AdConfig {
     // MARK: Real ids (AdMob publisher pub-3610638329659252)
 
+    #if TAIWAN
+    // 大老二計分 (com.kenny.dalaoer)
+    static let releaseAppID = "ca-app-pub-3610638329659252~6972663415"
+    static let releaseBannerUnitID = "ca-app-pub-3610638329659252/5512689191"
+    static let releaseInterstitialUnitID = "ca-app-pub-3610638329659252/4199607523"
+    #else
+    // 鋤大D計分 (com.kenny.daidee)
     static let releaseAppID = "ca-app-pub-3610638329659252~9118674558"
     static let releaseBannerUnitID = "ca-app-pub-3610638329659252/6728314939"
     static let releaseInterstitialUnitID = "ca-app-pub-3610638329659252/4651835990"
+    #endif
 
     // MARK: Google's official test ids (https://developers.google.com/admob/ios/test-ads)
 
@@ -38,30 +46,13 @@ enum AdConfig {
         Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
     }()
 
+    /// Same rule for both apps: test units in Debug / TestFlight, real units in App Store builds.
     static var bannerUnitID: String {
-        #if TAIWAN
-        // TODO: replace App/Taiwan/Info.plist GADBannerUnitID with the real DaLaoEr unit
-        // after Kenny creates the AdMob app. Test ids stay until then.
-        return plistString("GADBannerUnitID") ?? testAdaptiveBannerUnitID
-        #else
-        return isUsingTestAds ? testAdaptiveBannerUnitID : releaseBannerUnitID
-        #endif
+        isUsingTestAds ? testAdaptiveBannerUnitID : releaseBannerUnitID
     }
 
     static var interstitialUnitID: String {
-        #if TAIWAN
-        // TODO: replace App/Taiwan/Info.plist GADInterstitialUnitID with the real DaLaoEr unit
-        // after Kenny creates the AdMob app. Test ids stay until then.
-        return plistString("GADInterstitialUnitID") ?? testInterstitialUnitID
-        #else
-        return isUsingTestAds ? testInterstitialUnitID : releaseInterstitialUnitID
-        #endif
-    }
-
-    private static func plistString(_ key: String) -> String? {
-        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String else { return nil }
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        isUsingTestAds ? testInterstitialUnitID : releaseInterstitialUnitID
     }
 
     // MARK: UI tests

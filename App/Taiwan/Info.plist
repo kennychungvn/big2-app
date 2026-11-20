@@ -24,23 +24,18 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<!-- TODO: Replace these Google TEST AdMob ids with the real 大老二計分 app / units
-	     after Kenny creates the AdMob iOS app. Test ids:
-	     https://developers.google.com/admob/ios/test-ads -->
+	<!-- AdMob iOS app id for 大老二計分 (publisher pub-3610638329659252). Ad unit ids: App/Ads/AdConfig.swift
+	     (Google test units in Debug and TestFlight, real units in App Store builds, as for HK). -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
-	<key>GADBannerUnitID</key>
-	<string>ca-app-pub-3940256099942544/2435281174</string>
-	<key>GADInterstitialUnitID</key>
-	<string>ca-app-pub-3940256099942544/4411468910</string>
+	<string>ca-app-pub-3610638329659252~6972663415</string>
 	<!-- IAP product id. TODO: create this non-consumable in App Store Connect. -->
 	<key>RemoveAdsProductID</key>
 	<string>com.kenny.dalaoer.removeads</string>
 	<key>AppFlavor</key>
 	<string>taiwan</string>
-	<!-- TODO: fill in after Kenny creates the App Store Connect app record. -->
+	<!-- App Store Connect Apple ID of 大老二計分. -->
 	<key>AppStoreID</key>
-	<string>TODO</string>
+	<string>6837262479</string>
 	<!-- App Tracking Transparency prompt (shown after Google UMP consent, before any ad request). -->
 	<key>NSUserTrackingUsageDescription</key>
 	<string>本 App 會使用此識別碼為您提供更相關的廣告。即使選擇不允許，您仍可正常使用所有計分功能，只會看到一般（非個人化）廣告；您亦可隨時在「設定」中更改。</string>

@@ -1,7 +1,9 @@
 import SwiftUI
 import AppCore
+#if !TAIWAN
 import FirebaseCore
 import FirebaseCrashlytics
+#endif
 
 @main
 struct Big2App: App {
@@ -31,12 +33,18 @@ struct Big2App: App {
     /// Info.plist / GoogleService-Info.plist). Crash reports are collected in Release builds
     /// (TestFlight / App Store); Debug builds do not send them.
     private static func configureCrashlytics() {
+        #if TAIWAN
+        // TODO: add a Firebase/Crashlytics app for 大老二計分 once Kenny creates it.
+        // Do not reuse the 鋤大D GoogleService-Info.plist.
+        return
+        #else
         guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else { return }
         FirebaseApp.configure()
         #if DEBUG
         Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(false)
         #else
         Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+        #endif
         #endif
     }
 

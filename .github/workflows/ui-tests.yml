@@ -282,9 +282,14 @@ jobs:
 
   # Build 79 hang: Release build with the REAL Google Mobile Ads SDK (test units, network on),
   # like TestFlight. Plays 5 rounds and switches skins, failing on any step > 8 s.
+  #
+  # Runs on Apple-silicon runners: on the Intel simulator the 8 s limit is dominated by
+  # simulator/XCUITest latency, not the app. Baseline (hang-compare run 44793545208, same
+  # Intel setup): 1.0.2 build 63, which is fine on device, took 8.4 s to focus the first name
+  # field and 32.8 s to focus the second. The test and its 8 s limit are unchanged.
   hang-real-ads:
     name: Hang test real ads ${{ matrix.scheme }} (Release)
-    runs-on: macos-15-intel
+    runs-on: macos-15
     timeout-minutes: 60
     strategy:
       fail-fast: false

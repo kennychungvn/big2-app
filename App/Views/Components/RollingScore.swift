@@ -1,7 +1,7 @@
 import SwiftUI
 import AppCore
 
-/// One-shot count-up for a signed total (motion spec §4 / §5).
+/// One-shot count-up for a signed total (motion spec §4 / §5 / §7).
 ///
 /// Interpolates `value` when the parent animates it. Colour follows the
 /// in-flight number and flips at 0. Never loops: no `repeatForever`,
@@ -35,11 +35,37 @@ struct RollingScore: View, Animatable {
     }
 }
 
+/// Timing for a one-shot roll. Never loops.
+enum RollingScoreMotion {
+    /// 確定 totals and the home 進行中 card (spec §4 / §5): 450 ms, 40 ms stagger.
+    case totals
+    /// 換算 (spec §7): 350 ms crisp curve, every row at once.
+    case conversion
+
+    var duration: Double {
+        switch self {
+        case .totals: return 0.45
+        case .conversion: return 0.35
+        }
+    }
+
+    var stagger: Double {
+        switch self {
+        case .totals: return 0.04
+        case .conversion: return 0
+        }
+    }
+
+    /// Ledger always uses the crisp curve; 換算 uses it in both skins.
+    var alwaysCrisp: Bool {
+        self == .conversion
+    }
+}
+
 /// Running-total presentation. The model value is the source of truth and is
 /// never delayed; only this display rolls.
 ///
-/// - Motion on, Reduce Motion off: 450 ms ease-out (Ledger: crisp), 40 ms
-///   stagger per `column`, then stop.
+/// - Motion on, Reduce Motion off: interpolates with `motion`, then stops.
 /// - Reduce Motion: 150 ms crossfade, no interpolation.
 /// - 動畫效果 off: instant swap.
 struct RollingScoreText: View {
@@ -47,11 +73,12 @@ struct RollingScoreText: View {
     var size: CGFloat = 28
     var format: ScoreFormatting = ScoreFormatting()
     var weight: Font.Weight = .heavy
-    /// 0-based column / position for the 40 ms stagger.
+    /// 0-based column / position for the stagger (``RollingScoreMotion.totals``).
     var column: Int = 0
     /// When set (and different from `value`), the first appearance rolls from
     /// this number. Otherwise the first frame snaps to `value` (no roll-from-0).
     var appearFrom: Int? = nil
+    var motion: RollingScoreMotion = .totals
 
     @Environment(\.appTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -65,7 +92,8 @@ struct RollingScoreText: View {
         format: ScoreFormatting = ScoreFormatting(),
         weight: Font.Weight = .heavy,
         column: Int = 0,
-        appearFrom: Int? = nil
+        appearFrom: Int? = nil,
+        motion: RollingScoreMotion = .totals
     ) {
         self.value = value
         self.size = size
@@ -73,6 +101,7 @@ struct RollingScoreText: View {
         self.weight = weight
         self.column = column
         self.appearFrom = appearFrom
+        self.motion = motion
         let start = appearFrom ?? value
         _displayed = State(initialValue: Double(start))
         _shownValue = State(initialValue: start)
@@ -127,10 +156,11 @@ struct RollingScoreText: View {
     }
 
     private func animateInterpolation(to target: Int) {
-        let curve: Animation = theme.monoNumbers
-            ? .timingCurve(0.2, 0, 0, 1, duration: 0.45)
-            : .easeOut(duration: 0.45)
-        withAnimation(curve.delay(Double(column) * 0.04)) {
+        let crisp = motion.alwaysCrisp || theme.monoNumbers
+        let curve: Animation = crisp
+            ? .timingCurve(0.2, 0, 0, 1, duration: motion.duration)
+            : .easeOut(duration: motion.duration)
+        withAnimation(curve.delay(Double(column) * motion.stagger)) {
             displayed = Double(target)
         }
     }

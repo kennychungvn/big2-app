@@ -147,16 +147,16 @@ struct FinalView: View {
 
     @ViewBuilder
     private func rankScore(_ total: Int) -> some View {
-        if let multiplier = appliedMultiplier {
-            let converted = ScoreConversion.multiply(total, by: multiplier)
-            VStack(alignment: .trailing, spacing: 2) {
-                ScoreText(value: converted, size: 26, format: vm.format)
+        // One stable RollingScoreText so 換算 (and turning it off) rolls in place
+        // instead of swapping views. Display-only: the raw total is unchanged.
+        let displayed = appliedMultiplier.map { ScoreConversion.multiply(total, by: $0) } ?? total
+        VStack(alignment: .trailing, spacing: 2) {
+            RollingScoreText(value: displayed, size: 26, format: vm.format, motion: .conversion)
+            if let multiplier = appliedMultiplier {
                 Text("\(vm.format.points(total)) ×\(multiplier)")
                     .font(ThemeFont.numeric(theme, size: 12, weight: .semibold))
                     .foregroundColor(Color(theme.tertiaryText))
             }
-        } else {
-            ScoreText(value: total, size: 26, format: vm.format)
         }
     }
 

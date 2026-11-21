@@ -337,7 +337,7 @@ jobs:
             -only-testing:${T}/HangUITests \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO > test.log 2>&1
           status=$?
-          grep -E "Test Case|error:|failed|UI hang|s  (tap|probe|focus|type)|\*\* TEST" test.log | tail -200
+          grep -E "Test Case|error:|failed|UI hang|s  (tap|probe|focus|type)|\*\* TEST|HANG_DETECTOR|HangDetector" test.log | tail -240
           exit $status
       - if: always()
         uses: actions/upload-artifact@v4

@@ -25,11 +25,11 @@ struct AdMobBannerSlotView: View {
         let adSize = Self.adaptiveSize()
         ZStack {
             BannerSlotBackground()
-            // Hang tests start the real SDK but must not mount the live BannerView:
-            // a filled demo creative is a WKWebView that keeps XCUITest waiting for
-            // idle (first name-field focus was 15–18 s). Production / TestFlight
-            // still show the real banner. The reserved slot and placeholder stay.
-            if runtime.isReady && !UITestSupport.isActive {
+            // Regular UI tests keep the static placeholder: a filled demo BannerView
+            // is a WKWebView that keeps XCUITest waiting for idle (first name-field
+            // focus was 15–18 s). Production, TestFlight, and `-uiTestLiveBanner`
+            // still mount the live banner. The reserved slot stays either way.
+            if runtime.isReady && UITestSupport.showsLiveBanner {
                 AdMobBannerView(adSize: adSize) { loaded in
                     withAnimation(.easeIn(duration: 0.25)) { adLoaded = loaded }
                 }

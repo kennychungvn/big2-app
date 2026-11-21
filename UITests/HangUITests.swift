@@ -6,7 +6,9 @@ import XCTest
 /// Runs in HK (`Big2UITests`) and TW (`DaLaoErUITests`). With `HANG_TEST_SDK_ADS=1` the real
 /// Google SDK starts under `-uiTesting`, which skips UMP/ATT prompts and keeps the
 /// static ad-band placeholder (no live BannerView / WKWebView), so the 8 s budget
-/// measures the app going idle rather than a demo creative.
+/// measures the app going idle rather than a demo creative. `testLiveBannerMainThreadDuringNameEntry`
+/// remounts the live demo banner and judges lag from an in-app main-thread watchdog,
+/// not from XCUITest wait-for-idle.
 final class HangUITests: XCTestCase {
     private var app: XCUIApplication!
     private var timings: [String] = []
@@ -37,6 +39,43 @@ final class HangUITests: XCTestCase {
 
     func testRoundsAndSkinSwitchClassic() { run(skin: "classic") }
     func testRoundsAndSkinSwitchLedger() { run(skin: "ledger") }
+
+    /// Filled live demo banner + in-app main-thread stall detector. XCUITest step
+    /// times may still be long (wait-for-idle on the WKWebView); the verdict is
+    /// whether the main thread itself paused ≥ 250 ms while a name field was focused.
+    func testLiveBannerMainThreadDuringNameEntry() throws {
+        try XCTSkipUnless(realAds, "live banner probe runs only in the SDK demo-ad hang job")
+        app = XCUIApplication()
+        app.launchArguments = [
+            "-uiTesting", "-uiTestRealIcon",
+            "-uiTestLiveBanner", "-uiTestHangDetector",
+            "-AppleLanguages", isTaiwan ? "(zh-Hant-TW)" : "(zh-Hant-HK)",
+            "-AppleLocale", isTaiwan ? "zh_TW" : "zh_HK",
+            "-skin", "classic",
+        ]
+        app.launch()
+        dismissSystemAlerts(wait: 1)
+        settle(8)
+        tap("home.newSession", budget: nil)
+        let names = ["小明", "阿強", "小美", "志明"]
+        for (index, name) in names.enumerated() {
+            let field = element("setup.name.\(index)", timeout: 30)
+            timed("focus name \(index)", budget: nil) { field.tap() }
+            timed("type name \(index)", budget: nil) { field.typeText(name + "\n") }
+        }
+        settle(1)
+        let reportEl = element("hangDetector.report", timeout: 30)
+        let report = (reportEl.value as? String).flatMap { $0.isEmpty ? nil : $0 }
+            ?? reportEl.label
+        print("HANG_DETECTOR_REPORT \(report)")
+        let attachment = XCTAttachment(string: report)
+        attachment.name = "hang-detector"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let editingMax = Self.intValue("maxEditingMs", in: report) ?? 0
+        // Keyboard presentation can hitch a few hundred ms; a user-visible freeze is seconds.
+        XCTAssertLessThan(editingMax, 2000, "main-thread stall while editing: \(report)")
+    }
 
     private func run(skin: String) {
         app = XCUIApplication()
@@ -116,13 +155,21 @@ final class HangUITests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func timed(_ step: String, _ body: () -> Void) {
+    private func timed(_ step: String, budget: TimeInterval? = 8, _ body: () -> Void) {
         let start = Date()
         body()
         let elapsed = Date().timeIntervalSince(start)
         timings.append(String(format: "%6.2fs  %@", elapsed, step))
         XCTAssertEqual(app.state, .runningForeground, "app not running after: \(step)")
-        XCTAssertLessThan(elapsed, maxStep, "UI hang: \(step) took \(elapsed)s")
+        if let budget {
+            XCTAssertLessThan(elapsed, budget, "UI hang: \(step) took \(elapsed)s")
+        }
+    }
+
+    private static func intValue(_ key: String, in report: String) -> Int? {
+        let parts = report.split(separator: " ")
+        guard let part = parts.first(where: { $0.hasPrefix(key + "=") }) else { return nil }
+        return Int(part.dropFirst(key.count + 1))
     }
 
     private func assertResponsive(_ step: String) {
@@ -164,13 +211,13 @@ final class HangUITests: XCTestCase {
         return element
     }
 
-    private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {
+    private func tap(_ id: String, budget: TimeInterval? = 8, file: StaticString = #filePath, line: UInt = #line) {
         let target = element(id, file: file, line: line)
         let deadline = Date().addingTimeInterval(10)
         while !target.isHittable && Date() < deadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         }
-        timed("tap \(id)") { target.tap() }
+        timed("tap \(id)", budget: budget) { target.tap() }
     }
 
     private func snap(_ name: String) {

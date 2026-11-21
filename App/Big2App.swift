@@ -93,7 +93,31 @@ struct SkinnedRoot: View {
         RootView()
             .environment(\.appTheme, theme)
             .preferredColorScheme(theme.colorScheme)
-            .onAppear { SkinWindowStyle.apply(vm.skin) }
+            .onAppear {
+                SkinWindowStyle.apply(vm.skin)
+                MainThreadHangDetector.shared.start()
+            }
             .onChange(of: vm.skin) { SkinWindowStyle.apply($0) }
+            .overlay(alignment: .topLeading) {
+                if MainThreadHangDetector.isEnabled {
+                    HangDetectorReportAnchor()
+                }
+            }
+    }
+}
+
+/// Hidden 1 pt anchor so HangUITests can read the main-thread stall report
+/// without adding visible UI. Only mounted under `-uiTestHangDetector`.
+private struct HangDetectorReportAnchor: View {
+    @ObservedObject private var detector = MainThreadHangDetector.shared
+
+    var body: some View {
+        Color.clear
+            .frame(width: 1, height: 1)
+            .accessibilityElement()
+            .accessibilityIdentifier("hangDetector.report")
+            .accessibilityLabel(detector.report)
+            .accessibilityValue(detector.report)
+            .allowsHitTesting(false)
     }
 }

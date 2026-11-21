@@ -11,6 +11,13 @@ enum UITestSupport {
     static var isActive: Bool {
         ProcessInfo.processInfo.arguments.contains("-uiTesting")
     }
+
+    /// Regular `-uiTesting` keeps the static placeholder so XCUITest idle is not held
+    /// by a demo WKWebView. `-uiTestLiveBanner` mounts the real `BannerView` so the
+    /// hang probe can measure main-thread stalls with a filled live banner.
+    static var showsLiveBanner: Bool {
+        !isActive || ProcessInfo.processInfo.arguments.contains("-uiTestLiveBanner")
+    }
 }
 
 /// Full-screen stand-in for an AdMob interstitial so UI tests can see and close it.

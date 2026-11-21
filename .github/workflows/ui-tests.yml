@@ -18,7 +18,8 @@ jobs:
     name: XCUITest (Simulator)
     # macos-latest (arm64) jobs sat unacquired for 15+ min on 2026-11-12; Intel picks them up.
     runs-on: macos-15-intel
-    timeout-minutes: 60
+    # 90: sign-off stills add two launches per app; 60 min was hit mid-suite (7534fd4).
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -163,7 +164,7 @@ jobs:
   ui-tests-taiwan:
     name: XCUITest DaLaoEr (Simulator)
     runs-on: macos-15-intel
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - name: Checkout
         uses: actions/checkout@v4

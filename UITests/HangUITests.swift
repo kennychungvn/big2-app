@@ -4,9 +4,9 @@ import XCTest
 /// skins back and forth, timing every step. A main-thread hang shows up as a step that takes
 /// far longer than usual (XCUITest waits for the app to go idle after each tap).
 /// Runs in HK (`Big2UITests`) and TW (`DaLaoErUITests`). With `HANG_TEST_SDK_ADS=1` the real
-/// Google SDK starts and requests official demo units. Under `-uiTesting` the app skips
-/// UMP/ATT prompts and freezes a filled banner to a static snapshot, so the 8 s budget
-/// measures the app going idle rather than a demo creative's WKWebView.
+/// Google SDK starts under `-uiTesting`, which skips UMP/ATT prompts and keeps the
+/// static ad-band placeholder (no live BannerView / WKWebView), so the 8 s budget
+/// measures the app going idle rather than a demo creative.
 final class HangUITests: XCTestCase {
     private var app: XCUIApplication!
     private var timings: [String] = []
@@ -136,10 +136,12 @@ final class HangUITests: XCTestCase {
 
     private func dismissSystemAlerts(wait: TimeInterval) {
         guard realAds else { return }
+        // `-uiTesting` skips the ATT prompt, so do not wait 12 s (or snapshot the
+        // hierarchy on every miss). A short check still clears a leftover alert.
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         for label in ["Ask App Not to Track", "要求 App 不要追蹤", "Allow", "允許"] {
             let button = springboard.buttons[label]
-            if button.waitForExistence(timeout: label == "Ask App Not to Track" ? wait : 0.5) {
+            if button.waitForExistence(timeout: min(wait, 1)) {
                 button.tap()
                 return
             }

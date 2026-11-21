@@ -67,7 +67,10 @@ final class HangUITests: XCTestCase {
         }
         let homeState = (homeBanner.value as? String) ?? homeBanner.label
         print("HOME_BANNER_STATE \(homeState)")
-        tap("home.newSession", budget: nil)
+        // XCUITest can miss the first CTA tap once the live banner has filled
+        // (57c5eaa recording: empty home still on screen). The CTA itself does
+        // not move, and the overlay is only the bottom 60 pt slot.
+        openNameEntryFromHome(budget: nil)
         let names = ["小明", "阿強", "小美", "志明"]
         for (index, name) in names.enumerated() {
             let field = element("setup.name.\(index)", timeout: 30)
@@ -235,6 +238,34 @@ final class HangUITests: XCTestCase {
         let element = app.descendants(matching: .any)[id].firstMatch
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "missing \(id) (app state \(app.state.rawValue))", file: file, line: line)
         return element
+    }
+
+    /// Tap 新開一場 / 開新牌局 and wait for the name-entry sheet. Retries once if
+    /// the first synthetic tap does not open it.
+    private func openNameEntryFromHome(budget: TimeInterval? = 8, file: StaticString = #filePath, line: UInt = #line) {
+        let ctaButton = app.buttons["home.newSession"].firstMatch
+        let cta = ctaButton.waitForExistence(timeout: 2) ? ctaButton : element("home.newSession", file: file, line: line)
+        let deadline = Date().addingTimeInterval(10)
+        while !cta.isHittable && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        timed("tap home.newSession", budget: budget) { tapCTA(cta) }
+        let field = app.descendants(matching: .any)["setup.name.0"].firstMatch
+        if !field.waitForExistence(timeout: 5) {
+            timed("retry tap home.newSession", budget: budget) { tapCTA(cta) }
+        }
+        XCTAssertTrue(field.waitForExistence(timeout: 30), "missing setup.name.0 (app state \(app.state.rawValue))", file: file, line: line)
+    }
+
+    private func tapCTA(_ cta: XCUIElement) {
+        let frame = cta.frame
+        if frame.height > 100, frame.height > 0 {
+            // Combined cluster frame: the 60 pt CTA sits at the bottom.
+            let dy = min(1, max(0, (frame.height - 30) / frame.height))
+            cta.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: dy)).tap()
+        } else {
+            cta.tap()
+        }
     }
 
     private func tap(_ id: String, budget: TimeInterval? = 8, file: StaticString = #filePath, line: UInt = #line) {

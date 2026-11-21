@@ -140,7 +140,13 @@ struct FinalView: View {
                                 .delay(reduceMotion ? 0 : Double(position) * 0.06),
                             value: revealed
                         )
-                        .accessibilityElement(children: .combine)
+                        // Explicit label (same pattern as the scoreboard): children:.combine
+                        // dropped RollingScoreText's target-value label because the
+                        // animated glyph is accessibilityHidden, so VoiceOver/XCUITest
+                        // saw the name but not "+124". Always the settled total, never
+                        // the in-flight count-up (input never waits on animation).
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(rankAccessibilityLabel(name: player.name, total: player.total))
                         .accessibilityIdentifier("final.rank.\(player.rank)")
                     }
                 }
@@ -175,6 +181,17 @@ struct FinalView: View {
                     .foregroundColor(Color(theme.tertiaryText))
             }
         }
+    }
+
+
+    /// Settled score only (plus the raw ×N line when 換算 is on). The rolling
+    /// glyph is display-only and hidden from VoiceOver.
+    private func rankAccessibilityLabel(name: String, total: Int) -> String {
+        let displayed = appliedMultiplier.map { ScoreConversion.multiply(total, by: $0) } ?? total
+        if let multiplier = appliedMultiplier {
+            return "\(name) \(vm.format.points(displayed)) \(vm.format.points(total)) ×\(multiplier)"
+        }
+        return "\(name) \(vm.format.points(displayed))"
     }
 
     private var conversionButtonTitle: String {

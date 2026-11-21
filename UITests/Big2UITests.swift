@@ -359,10 +359,10 @@ final class Big2UITests: XCTestCase {
 
         // Final
         element("final.title")
-        XCTAssertTrue(label("final.rank.1").contains("小肥"))
-        XCTAssertTrue(label("final.rank.1").contains("+124"))
-        XCTAssertTrue(label("final.rank.4").contains("呀南"))
-        XCTAssertTrue(label("final.rank.4").contains("−196"))
+        XCTAssertTrue(label("final.rank.1").contains("小肥"), label("final.rank.1"))
+        XCTAssertTrue(label("final.rank.1").contains("+124"), label("final.rank.1"))
+        XCTAssertTrue(label("final.rank.4").contains("呀南"), label("final.rank.4"))
+        XCTAssertTrue(label("final.rank.4").contains("−196"), label("final.rank.4"))
         assertBanner("final")
         snap("final")
 

@@ -12,7 +12,9 @@ import AppCore
 /// 3. then `MobileAds.shared.start` – nothing loads before this point.
 ///
 /// Ads are requested as non-personalised (`npa=1`) unless the user allowed tracking.
-/// Never runs when ads are removed or under `-uiTestAds`.
+/// Never runs when ads are removed or under `-uiTestAds`. Under `-uiTesting` with the
+/// real SDK, UMP and ATT prompts are skipped so `app.launch()` is not blocked by a
+/// system dialog; the SDK still starts and demo banners still load.
 @MainActor
 final class AdsRuntime: ObservableObject {
     static let shared = AdsRuntime()
@@ -48,6 +50,15 @@ final class AdsRuntime: ObservableObject {
     func start() async {
         guard !started, !AdConfig.usesStubAds else { return }
         started = true
+
+        // Hang tests launch with `-uiTesting` and the real SDK. A UMP form or the ATT
+        // prompt during `app.launch()` leaves XCUITest waiting for idle / a background
+        // assertion, and the first case (Classic) dies. Skip those prompts only in UI
+        // tests; production and TestFlight still show them. Demo banners still load.
+        if UITestSupport.isActive {
+            await startSDKForUITests()
+            return
+        }
 
         await Self.waitUntilAppIsActive()
         // Resolve TestFlight vs App Store in parallel with consent, so ad unit IDs
@@ -88,6 +99,21 @@ final class AdsRuntime: ObservableObject {
             personalizedAdsAllowed = false
         }
         NSLog("[Ads] Using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
+        Task { _ = await MobileAds.shared.start() }
+        isReady = true
+        let actions = readyActions
+        readyActions.removeAll()
+        actions.forEach { $0() }
+    }
+
+    private func startSDKForUITests() async {
+        await AdConfig.resolveInstallContext()
+        personalizedAdsAllowed = false
+        guard AdConfig.selection != .undetermined else {
+            NSLog("[Ads] Install source could not be determined; not requesting ads this launch.")
+            return
+        }
+        NSLog("[Ads] UI tests: skip UMP/ATT, using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
         Task { _ = await MobileAds.shared.start() }
         isReady = true
         let actions = readyActions

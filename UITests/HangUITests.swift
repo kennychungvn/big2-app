@@ -4,7 +4,9 @@ import XCTest
 /// skins back and forth, timing every step. A main-thread hang shows up as a step that takes
 /// far longer than usual (XCUITest waits for the app to go idle after each tap).
 /// Runs in HK (`Big2UITests`) and TW (`DaLaoErUITests`). With `HANG_TEST_SDK_ADS=1` the real
-/// Google SDK loads banners using official demo ad units (same path as TestFlight).
+/// Google SDK starts and requests official demo units. Under `-uiTesting` the app skips
+/// UMP/ATT prompts and freezes a filled banner to a static snapshot, so the 8 s budget
+/// measures the app going idle rather than a demo creative's WKWebView.
 final class HangUITests: XCTestCase {
     private var app: XCUIApplication!
     private var timings: [String] = []

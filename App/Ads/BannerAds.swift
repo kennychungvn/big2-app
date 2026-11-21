@@ -50,6 +50,59 @@ struct AdMobBannerSlotView: View {
     }
 }
 
+/// Holds the live `BannerView`. In UI tests the live creative (a WKWebView that often
+/// keeps animating) is replaced with a static snapshot after the first fill, so
+/// XCUITest's wait-for-idle measures the app rather than the demo ad.
+private final class BannerHostView: UIView {
+    let banner: BannerView
+    private let snapshot = UIImageView()
+    private(set) var isFrozen = false
+
+    init(adSize: AdSize) {
+        banner = BannerView(adSize: adSize)
+        super.init(frame: .zero)
+        banner.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(banner)
+        snapshot.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        snapshot.contentMode = .scaleToFill
+        snapshot.isUserInteractionEnabled = false
+        snapshot.isAccessibilityElement = false
+        if UITestSupport.isActive {
+            banner.isAutoloadEnabled = false
+        }
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if !isFrozen {
+            banner.frame = bounds
+        }
+        snapshot.frame = bounds
+    }
+
+    /// Snapshot the filled banner and remove the live view from the hierarchy.
+    /// No-op outside `-uiTesting`, and only runs once.
+    func freezeLiveBannerForUITesting() {
+        guard UITestSupport.isActive, !isFrozen else { return }
+        isFrozen = true
+        banner.isAutoloadEnabled = false
+        layoutIfNeeded()
+        if bounds.width >= 1, bounds.height >= 1 {
+            let format = UIGraphicsImageRendererFormat.default()
+            format.scale = window?.screen.scale ?? UIScreen.main.scale
+            let renderer = UIGraphicsImageRenderer(bounds: bounds, format: format)
+            snapshot.image = renderer.image { _ in
+                drawHierarchy(in: bounds, afterScreenUpdates: true)
+            }
+            snapshot.frame = bounds
+            addSubview(snapshot)
+        }
+        banner.removeFromSuperview()
+    }
+}
+
 private struct AdMobBannerView: UIViewRepresentable {
     let adSize: AdSize
     /// `true` once an ad is received, `false` after a failed load / refresh.
@@ -57,30 +110,36 @@ private struct AdMobBannerView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator(onLoadedChange: onLoadedChange) }
 
-    func makeUIView(context: Context) -> BannerView {
-        let banner = BannerView(adSize: adSize)
-        banner.adUnitID = AdConfig.bannerUnitID
-        banner.delegate = context.coordinator
-        banner.load(AdsRuntime.shared.makeRequest())
-        return banner
+    func makeUIView(context: Context) -> BannerHostView {
+        let host = BannerHostView(adSize: adSize)
+        host.banner.adUnitID = AdConfig.bannerUnitID
+        host.banner.delegate = context.coordinator
+        context.coordinator.host = host
+        host.banner.load(AdsRuntime.shared.makeRequest())
+        return host
     }
 
-    func updateUIView(_ banner: BannerView, context: Context) {
+    func updateUIView(_ host: BannerHostView, context: Context) {
         context.coordinator.onLoadedChange = onLoadedChange
-        if !isAdSizeEqualToSize(size1: banner.adSize, size2: adSize) {
-            banner.adSize = adSize
+        context.coordinator.host = host
+        if !host.isFrozen, !isAdSizeEqualToSize(size1: host.banner.adSize, size2: adSize) {
+            host.banner.adSize = adSize
         }
     }
 
     final class Coordinator: NSObject, BannerViewDelegate {
         var onLoadedChange: (Bool) -> Void
+        weak var host: BannerHostView?
 
         init(onLoadedChange: @escaping (Bool) -> Void) {
             self.onLoadedChange = onLoadedChange
         }
 
         func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            DispatchQueue.main.async { self.onLoadedChange(true) }
+            DispatchQueue.main.async { [weak self] in
+                self?.host?.freezeLiveBannerForUITesting()
+                self?.onLoadedChange(true)
+            }
         }
 
         func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {

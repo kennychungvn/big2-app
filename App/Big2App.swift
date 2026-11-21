@@ -66,7 +66,7 @@ struct Big2App: App {
                 shop: StubStoreManager()
             )
         }
-        SkinPreferences.clearLegacyAppearance()
+        SkinPreferences.clearLegacyKeys()
         let shop = StoreKitStoreManager()
         let viewModel = AppViewModel(
             store: JSONFileStore(fileURL: fileURL),
@@ -86,6 +86,7 @@ struct Big2App: App {
 /// system alerts match the skin too.
 struct SkinnedRoot: View {
     @EnvironmentObject private var vm: AppViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         let theme = Theme.make(skin: vm.skin)
@@ -94,9 +95,16 @@ struct SkinnedRoot: View {
             .preferredColorScheme(theme.colorScheme)
             .onAppear {
                 SkinWindowStyle.apply(vm.skin)
+                AppIconSwitcher.apply(vm.skin)
                 MainThreadHangDetector.shared.start()
             }
             .onChange(of: vm.skin) { SkinWindowStyle.apply($0) }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active {
+                    SkinWindowStyle.apply(vm.skin)
+                    AppIconSwitcher.apply(vm.skin)
+                }
+            }
             .overlay(alignment: .topLeading) {
                 if MainThreadHangDetector.isEnabled {
                     HangDetectorReportAnchor()

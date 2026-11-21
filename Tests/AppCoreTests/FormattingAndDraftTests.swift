@@ -136,7 +136,12 @@ final class FormattingAndDraftTests: XCTestCase {
 
         XCTAssertEqual(SkinID.ledger.alternateIconName, "AppIcon-Ledger")
         XCTAssertNil(SkinID.classic.alternateIconName)
+        XCTAssertEqual(SkinID.fromAlternateIconName("AppIcon-Ledger"), .ledger)
+        XCTAssertEqual(SkinID.fromAlternateIconName(nil), .classic)
+        XCTAssertEqual(SkinID.classic.displayName, "經典")
         XCTAssertEqual(SkinID.ledger.displayName, "Ledger")
+        XCTAssertEqual(SkinID.classic.iconPreviewName, "IconPreview-Classic")
+        XCTAssertEqual(SkinID.ledger.iconPreviewName, "IconPreview-Ledger")
     }
 
     func testLedgerHiSoftMatchesTokens() {

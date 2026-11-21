@@ -8,32 +8,26 @@ enum SkinPreferences {
     static let skinKey = "skin"
     /// 2.0 betas had a 外觀 picker; the key is no longer read and is cleared on launch.
     static let legacyAppearanceKey = "appearance"
-    static let iconFollowsSkinKey = "iconFollowsSkin"
+    /// 2.0 betas had a separate App 圖示 picker + 跟隨主題 toggle. The icon now
+    /// always follows the theme; this key is no longer read and is cleared on launch.
+    static let legacyIconFollowsSkinKey = "iconFollowsSkin"
 
     static func loadSkin(_ defaults: UserDefaults = .standard) -> SkinID {
         defaults.string(forKey: skinKey).flatMap(SkinID.init(rawValue:)) ?? .classic
-    }
-
-    static func loadIconFollowsSkin(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.object(forKey: iconFollowsSkinKey) as? Bool ?? true
     }
 
     static func save(skin: SkinID, _ defaults: UserDefaults = .standard) {
         defaults.set(skin.rawValue, forKey: skinKey)
     }
 
-    static func clearLegacyAppearance(_ defaults: UserDefaults = .standard) {
+    static func clearLegacyKeys(_ defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: legacyAppearanceKey)
-    }
-
-    static func save(iconFollowsSkin: Bool, _ defaults: UserDefaults = .standard) {
-        defaults.set(iconFollowsSkin, forKey: iconFollowsSkinKey)
+        defaults.removeObject(forKey: legacyIconFollowsSkinKey)
     }
 
     static func resetForUITests(_ defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: skinKey)
-        defaults.removeObject(forKey: legacyAppearanceKey)
-        defaults.removeObject(forKey: iconFollowsSkinKey)
+        clearLegacyKeys(defaults)
     }
 }
 

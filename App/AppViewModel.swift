@@ -97,10 +97,9 @@ final class AppViewModel: ObservableObject {
     @Published private(set) var isStoreBusy = false
     /// Effective 地區介面 (Hong Kong or Taiwan wording).
     @Published private(set) var region: InterfaceRegion = .hongKong
-    /// 2.0 skin (`skin` key, default 經典). The skin fixes the look: 經典 dark, Ledger light.
+    /// 2.0 skin (`skin` key, default 經典). The skin fixes the look and the app icon:
+    /// 經典 dark / primary icon, Ledger light / AppIcon-Ledger.
     @Published private(set) var skin: SkinID = SkinPreferences.loadSkin()
-    /// 「App 圖示 · 跟隨主題」 (`iconFollowsSkin`, default on).
-    @Published private(set) var iconFollowsSkin: Bool = SkinPreferences.loadIconFollowsSkin()
 
     let store: AppStoring
     let ads: AdManaging
@@ -546,25 +545,12 @@ final class AppViewModel: ObservableObject {
             SkinWindowStyle.apply(newSkin)
         }
         SkinPreferences.save(skin: newSkin)
-        if iconFollowsSkin {
-            // After the 250 ms crossfade; iOS shows its own "icon changed" alert.
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 300_000_000)
-                AppIconSwitcher.apply(newSkin)
-            }
+        // After the 250 ms crossfade; iOS shows its own "icon changed" alert
+        // only when the icon actually changes.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            AppIconSwitcher.apply(newSkin)
         }
-    }
-
-    func setIconFollowsSkin(_ follows: Bool) {
-        iconFollowsSkin = follows
-        SkinPreferences.save(iconFollowsSkin: follows)
-        if follows { AppIconSwitcher.apply(skin) }
-    }
-
-    /// Manual icon choice (跟隨主題 off).
-    func chooseIcon(_ icon: SkinID) {
-        AppIconSwitcher.apply(icon)
-        objectWillChange.send()
     }
 
     func setChaoAnimationEnabled(_ enabled: Bool) {

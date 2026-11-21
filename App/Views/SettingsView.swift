@@ -233,7 +233,8 @@ struct SettingsView: View {
 
     // MARK: 主題及外觀 (2.0)
 
-    /// Two fixed looks: 經典 (dark) and Ledger (light). No separate 外觀 picker.
+    /// Two fixed looks: 經典 (dark) and Ledger (light). Tapping a tile
+    /// switches the theme and the matching app icon together.
     private var skinSection: some View {
         Section {
             HStack(spacing: 10) {
@@ -242,21 +243,6 @@ struct SettingsView: View {
                 }
             }
             .padding(.vertical, 4)
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 12) {
-                    Text(tr("App 圖示"))
-                    Spacer()
-                    ForEach(SkinID.allCases) { icon in
-                        iconPreview(icon)
-                    }
-                }
-                Toggle(isOn: iconFollowsBinding) {
-                    Text(tr("跟隨主題"))
-                }
-                .accessibilityIdentifier("settings.iconFollowsSkin")
-            }
-            .padding(.vertical, 2)
         } header: {
             sectionHeader(tr("主題及外觀"))
         }
@@ -265,21 +251,18 @@ struct SettingsView: View {
 
     private func skinTile(_ skin: SkinID) -> some View {
         let selected = vm.skin == skin
-        let preview = Theme.make(skin: skin)
         return Button {
             vm.setSkin(skin)
         } label: {
             HStack(spacing: 8) {
-                SkinMiniPreview(theme: preview)
-                    .frame(width: 30, height: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(skin.displayName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(Color(theme.text))
-                    Text(selected ? tr("使用中") : tr("撳一下切換"))
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(theme.secondaryText))
-                }
+                Image(skin.iconPreviewName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                Text(skin.displayName)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(Color(theme.text))
                 Spacer(minLength: 0)
             }
             .padding(8)
@@ -291,44 +274,6 @@ struct SettingsView: View {
         .accessibilityIdentifier("settings.skin.\(skin.rawValue)")
         .accessibilityLabel(skin.displayName)
         .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private func iconPreview(_ icon: SkinID) -> some View {
-        let active = vm.iconFollowsSkin ? vm.skin : AppIconSwitcher.current
-        let isActive = active == icon
-        return Button {
-            guard !vm.iconFollowsSkin else { return }
-            vm.chooseIcon(icon)
-        } label: {
-            VStack(spacing: 3) {
-                Image(icon.iconPreviewName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 46, height: 46)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(Color(theme.sel), lineWidth: isActive ? 2 : 0)
-                            .padding(-3)
-                    )
-                    .opacity(isActive || !vm.iconFollowsSkin ? 1 : 0.4)
-                Text(vm.iconFollowsSkin && isActive ? "\(icon.displayName) · \(tr("自動"))" : icon.displayName)
-                    .font(.system(size: 10))
-                    .foregroundColor(Color(theme.secondaryText))
-                    .lineLimit(1)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("settings.icon.\(icon.rawValue)")
-        .accessibilityLabel(tr("App 圖示") + " " + icon.displayName)
-        .accessibilityAddTraits(isActive ? .isSelected : [])
-    }
-
-    private var iconFollowsBinding: Binding<Bool> {
-        Binding(
-            get: { vm.iconFollowsSkin },
-            set: { vm.setIconFollowsSkin($0) }
-        )
     }
 
     private var animationBinding: Binding<Bool> {
@@ -357,7 +302,6 @@ struct SettingsView: View {
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
     }
-
 
     private var scoringModeBinding: Binding<ScoringMode> {
         Binding(
@@ -402,29 +346,3 @@ struct SettingsView: View {
     }
 }
 
-/// Tiny phone-ish preview of a skin for the 主題 picker: bg, two cards, accent bar.
-private struct SkinMiniPreview: View {
-    let theme: Theme
-
-    var body: some View {
-        let r = CGFloat(max(3, theme.cardCornerRadius / 4))
-        VStack(spacing: 3) {
-            RoundedRectangle(cornerRadius: r, style: .continuous)
-                .fill(Color(theme.card))
-                .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).strokeBorder(Color(theme.line), lineWidth: CGFloat(theme.cardBorderWidth) * 0.5))
-                .frame(height: 9)
-            RoundedRectangle(cornerRadius: r, style: .continuous)
-                .fill(Color(theme.card))
-                .overlay(RoundedRectangle(cornerRadius: r, style: .continuous).strokeBorder(Color(theme.line), lineWidth: CGFloat(theme.cardBorderWidth) * 0.5))
-                .frame(height: 9)
-            Spacer(minLength: 0)
-            RoundedRectangle(cornerRadius: r, style: .continuous)
-                .fill(Color(theme.primary))
-                .frame(height: 7)
-        }
-        .padding(4)
-        .background(Color(theme.background))
-        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Color(theme.line), lineWidth: 1))
-    }
-}

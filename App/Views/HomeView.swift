@@ -111,7 +111,7 @@ struct HomeView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image((vm.iconFollowsSkin ? vm.skin : AppIconSwitcher.current).iconPreviewName)
+            Image(vm.skin.iconPreviewName)
                 .resizable()
                 .scaledToFit()
                 .frame(width: 36, height: 36)

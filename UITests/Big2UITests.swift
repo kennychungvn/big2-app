@@ -488,6 +488,10 @@ final class Big2UITests: XCTestCase {
             XCTAssertTrue(element("settings.skin.\(config.skin)").isSelected)
             // 外觀 picker removed: each skin has one fixed look.
             XCTAssertFalse(app.descendants(matching: .any)["settings.appearance"].exists)
+            // App 圖示 picker and 跟隨主題 toggle removed: the icon follows the theme.
+            XCTAssertFalse(app.descendants(matching: .any)["settings.iconFollowsSkin"].exists)
+            XCTAssertFalse(app.descendants(matching: .any)["settings.icon.classic"].exists)
+            XCTAssertFalse(app.descendants(matching: .any)["settings.icon.ledger"].exists)
             snap("settings")
             tap("settings.done")
             app.terminate()

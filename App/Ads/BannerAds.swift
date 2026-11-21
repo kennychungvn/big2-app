@@ -38,8 +38,10 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
 
     private var banner: BannerView?
     private var didRequestLoad = false
+    private var keyboardVisible = false
     private var adSize: AdSize?
     private var hosts: [BannerHostView] = []
+    private var keyboardObservers: [NSObjectProtocol] = []
 
     private override init() {
         super.init()
@@ -59,11 +61,24 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         banner.isAutoloadEnabled = false
         banner.rootViewController = AdsRuntime.topViewController()
         self.banner = banner
+        observeKeyboard()
         requestLoadIfAllowed()
     }
 
+    /// Defer the first `load()` while the keyboard is up, and keep
+    /// `isAutoloadEnabled` off so the SDK does not start a new request mid-typing.
+    /// An already-shown creative stays visible if the slot is still on screen
+    /// above the keyboard.
+    func setKeyboardVisible(_ visible: Bool) {
+        keyboardVisible = visible
+        banner?.isAutoloadEnabled = false
+        if !visible {
+            requestLoadIfAllowed()
+        }
+    }
+
     func requestLoadIfAllowed() {
-        guard let banner, !didRequestLoad else { return }
+        guard let banner, !didRequestLoad, !keyboardVisible else { return }
         didRequestLoad = true
         banner.rootViewController = AdsRuntime.topViewController() ?? banner.rootViewController
         banner.load(AdsRuntime.shared.makeRequest())
@@ -124,6 +139,29 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         if !isAdSizeEqualToSize(size1: banner.adSize, size2: adSize) {
             banner.adSize = adSize
         }
+    }
+
+    private func observeKeyboard() {
+        guard keyboardObservers.isEmpty else { return }
+        let center = NotificationCenter.default
+        keyboardObservers.append(center.addObserver(
+            forName: UIResponder.keyboardWillShowNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.setKeyboardVisible(true)
+            }
+        })
+        keyboardObservers.append(center.addObserver(
+            forName: UIResponder.keyboardWillHideNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.setKeyboardVisible(false)
+            }
+        })
     }
 
     private static func isInFrontmostPresentation(_ view: UIView) -> Bool {

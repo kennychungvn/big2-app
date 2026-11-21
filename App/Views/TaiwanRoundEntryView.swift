@@ -221,13 +221,13 @@ struct TaiwanRoundEntryView: View {
             ForEach(0..<doubles, id: \.self) { chip in
                 Text("×2")
                     .font(ThemeFont.numeric(theme, size: 13, weight: .bold))
-                    .foregroundColor(Color(theme.hi))
+                    .foregroundColor(Color(theme.chipHiInk))
                     .padding(.horizontal, 8)
                     .frame(height: 28)
                     .background(Color(theme.hiSoft))
                     .overlay(
                         RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous)
-                            .strokeBorder(Color(theme.hi), lineWidth: 1)
+                            .strokeBorder(Color(theme.chipHiInk), lineWidth: 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: theme.keyCornerRadius, style: .continuous))
                     .transition(

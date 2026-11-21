@@ -61,10 +61,14 @@ public struct Theme: Equatable, Sendable {
     public var surface2: RGBColor = RGBColor(hex: 0x363B48)
     /// Divider / card border (only drawn when `cardBorderWidth > 0`).
     public var line: RGBColor = RGBColor(hex: 0x343844)
-    /// Highlight text / stroke (winner, ×2 chips, caret).
+    /// Highlight text / stroke (winner, caret). Brand colour; not the ×2 chip ink.
     public var hi: RGBColor = RGBColor(hex: 0xF5C542)
     /// Highlight tint (winner badge, ×2 chip background).
     public var hiSoft: RGBColor = RGBColor(hex: 0x4A3F1E)
+    /// Label and 1pt stroke on ×2 / ×N chips over `hiSoft`. Ledger is a darker
+    /// blue than brand `hi` so 13pt chip text meets WCAG AA (5.13:1 on #E6ECFF).
+    /// Classic equals `hi`.
+    public var chipHiInk: RGBColor = RGBColor(hex: 0xF5C542)
     /// Selected row / key stroke.
     public var sel: RGBColor = RGBColor(hex: 0xF5C542)
     public var keyText: RGBColor = RGBColor(hex: 0xFFFFFF)
@@ -173,6 +177,7 @@ public struct Theme: Equatable, Sendable {
         t.line = p.line
         t.hi = p.hi
         t.hiSoft = p.hiSoft
+        t.chipHiInk = skin == .ledger ? RGBColor(hex: 0x2A52E8) : p.hi
         t.sel = p.sel
         t.keyText = p.keyText
         t.toggle = p.toggle

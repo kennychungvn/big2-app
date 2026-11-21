@@ -20,8 +20,8 @@ struct FinalView: View {
     @State private var fieldWasFocused = false
     @FocusState private var isFieldFocused: Bool
 
-    @AppStorage(ScoreConversion.enabledDefaultsKey) private var isEnabled = false
-    @AppStorage(ScoreConversion.multiplierDefaultsKey) private var savedMultiplier = 0
+    @State private var isEnabled = false
+    @State private var sessionMultiplier = 0
 
     var body: some View {
         Group {
@@ -71,12 +71,12 @@ struct FinalView: View {
         vm.model.data.sessions.first(where: { $0.id == sessionID })
     }
 
-    /// Live multiplier while editing; otherwise the persisted one.
+    /// Live multiplier while editing; otherwise the value entered this 完場.
     private var appliedMultiplier: Int? {
         if isEditing {
             return ScoreConversion.appliedMultiplier(enabled: true, input: input)
         }
-        return ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: savedMultiplier)
+        return ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: sessionMultiplier)
     }
 
     @ViewBuilder
@@ -256,11 +256,6 @@ struct FinalView: View {
                 }
                 .accessibilityIdentifier("final.conversion.field")
                 .accessibilityLabel(tr("倍數"))
-            Text(tr("下次會記住呢個倍數"))
-                .font(.system(size: 12))
-                .foregroundColor(Color(theme.secondaryText))
-                .frame(maxWidth: .infinity)
-                .padding(.top, 2)
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -362,12 +357,9 @@ struct FinalView: View {
     }
 
     private func restoreInput() {
-        if savedMultiplier >= 1 && input.isEmpty {
-            input = String(savedMultiplier)
-        }
-        if ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: savedMultiplier) == nil {
-            isEnabled = false
-        }
+        ScoreConversion.clearPersistedMultiplier()
+        // Do not prefill. The money value per card changes every game, so 倍數
+        // starts empty on each 完場. In-session @State is kept if this fires again.
         isEditing = false
     }
 
@@ -377,7 +369,7 @@ struct FinalView: View {
             input = sanitized
         }
         if let value = ScoreConversion.parse(sanitized), value >= 1 {
-            savedMultiplier = value
+            sessionMultiplier = value
             isEnabled = value >= 2
         } else {
             isEnabled = false
@@ -390,17 +382,17 @@ struct FinalView: View {
             collapseField()
             return
         }
-        if ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: savedMultiplier) != nil {
+        if ScoreConversion.appliedMultiplier(enabled: isEnabled, multiplier: sessionMultiplier) != nil {
             isEnabled = false
             return
         }
-        if savedMultiplier >= 1 {
-            input = String(savedMultiplier)
+        if sessionMultiplier >= 1 {
+            input = String(sessionMultiplier)
         } else {
             input = ""
         }
         isEditing = true
-        isEnabled = savedMultiplier >= 2
+        isEnabled = sessionMultiplier >= 2
     }
 
     private func collapseField() {

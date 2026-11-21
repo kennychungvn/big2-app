@@ -116,7 +116,17 @@ final class ScoreConversionTests: XCTestCase {
         XCTAssertEqual(ShareSummary(stored: stored, conversionMultiplier: 0).conversionLine, nil)
     }
 
+    func testClearPersistedMultiplierRemovesDefaultsKeys() {
+        let defaults = UserDefaults.standard
+        defaults.set(true, forKey: ScoreConversion.enabledDefaultsKey)
+        defaults.set(5, forKey: ScoreConversion.multiplierDefaultsKey)
+        ScoreConversion.clearPersistedMultiplier()
+        XCTAssertNil(defaults.object(forKey: ScoreConversion.enabledDefaultsKey))
+        XCTAssertNil(defaults.object(forKey: ScoreConversion.multiplierDefaultsKey))
+    }
+
     private func sampleSession() throws -> StoredSession {
+
         var session = try Session(players: ["阿明", "Kenny", "阿強", "阿May"])
         try session.addRound(cardsLeft: [5, 0, 9, 11])
         return StoredSession(

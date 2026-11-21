@@ -7,6 +7,12 @@ public enum ScoreConversion: Sendable {
     public static let enabledDefaultsKey = "huansuan.enabled"
     public static let multiplierDefaultsKey = "huansuan.multiplier"
 
+    /// 換算 is entered fresh on every 完場; drop any leftover UserDefaults from earlier builds.
+    public static func clearPersistedMultiplier() {
+        UserDefaults.standard.removeObject(forKey: enabledDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: multiplierDefaultsKey)
+    }
+
     /// Digits only, at most `maxDigits`, no leading zeros (a lone `0` is kept).
     public static func sanitize(_ raw: String) -> String {
         var digits = ""

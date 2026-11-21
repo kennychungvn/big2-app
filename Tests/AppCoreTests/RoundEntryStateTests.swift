@@ -205,6 +205,24 @@ final class RoundEntryStateTests: XCTestCase {
         XCTAssertEqual(state.completeCards, [0, 4, 9, 11])
     }
 
+    func testChangingToACountWithoutMultiplierClearsTheBadgeAndUsesTimesOne() {
+        var state = make()
+        state.enterCards(8)
+        XCTAssertEqual(state.displayedBadgeMultiplier(at: 0), 2)
+        XCTAssertEqual(state.livePenalty(at: 0), 16)
+        state.selectPlayer(0)
+        state.enterCards(4)
+        XCTAssertEqual(state.cards[0], 4)
+        XCTAssertNil(state.displayedBadgeMultiplier(at: 0))
+        XCTAssertNil(state.pendingBadge)
+        XCTAssertEqual(state.livePenalty(at: 0), 4)
+        state.selectPlayer(0)
+        state.enterCards(13)
+        XCTAssertEqual(state.displayedBadgeMultiplier(at: 0), 4)
+        XCTAssertEqual(state.livePenalty(at: 0), 52)
+        XCTAssertEqual(state.pendingBadge?.multiplier, 4)
+    }
+
     func testConsumePendingBadgeClearsIt() {
         var state = make()
         state.enterCards(9)

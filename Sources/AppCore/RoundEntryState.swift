@@ -168,6 +168,15 @@ public struct RoundEntryState: Equatable, Sendable {
         return try? rule.multiplier(forCardsLeft: cardsLeft)
     }
 
+    /// Row ×N badge for the current cards. `nil` when empty, winner, or ×1.
+    /// Always derived from the current count so a change from e.g. 8 (×3) to 4 (×1)
+    /// clears the badge; the scored penalty uses the same multiplier.
+    public func displayedBadgeMultiplier(at index: Int) -> Int? {
+        guard cards.indices.contains(index), let cardsLeft = cards[index], cardsLeft > 0 else { return nil }
+        guard let multiplier = multiplier(forCardsLeft: cardsLeft), multiplier >= 2 else { return nil }
+        return multiplier
+    }
+
     /// Live penalty for a filled row (`cards × base × 2^doubles`). `nil` if empty; `0` for the winner.
     public func livePenalty(at index: Int) -> Int? {
         guard cards.indices.contains(index), let cardsLeft = cards[index] else { return nil }

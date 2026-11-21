@@ -9,7 +9,6 @@ struct RoundEntryView: View {
     @Binding var sheet: RoundEntrySheet
 
     @State private var badgeScale: [Int: CGFloat] = [:]
-    @State private var lingeringBadge: [Int: Int] = [:]
 
     var body: some View {
         #if TAIWAN
@@ -99,8 +98,7 @@ struct RoundEntryView: View {
         let cards = sheet.state.cards[index]
         let isWinner = cards == 0
         let isFocused = sheet.state.focusedIndex == index && vm.resultSheet == nil
-        let multiplier = cards.flatMap { sheet.state.multiplier(forCardsLeft: $0) } ?? 1
-        let badgeMultiplier = lingeringBadge[index] ?? ((cards != nil && cards != 0 && multiplier >= 2) ? multiplier : nil)
+        let badgeMultiplier = sheet.state.displayedBadgeMultiplier(at: index)
 
         return HStack(spacing: 10) {
             PlayerColorDot(index: index)
@@ -208,7 +206,6 @@ struct RoundEntryView: View {
                 },
                 onUndo: {
                     sheet.state.undo()
-                    syncLingeringBadges()
                 }
             )
             .opacity(enabled ? 1 : 0.35)
@@ -227,7 +224,6 @@ struct RoundEntryView: View {
     }
 
     private func presentBadge(_ badge: RoundEntryState.ChaoBadge) {
-        lingeringBadge[badge.playerIndex] = badge.multiplier
         if vm.model.data.hapticsEnabled {
             ChaoHaptics.play(multiplier: badge.multiplier)
         }
@@ -243,13 +239,4 @@ struct RoundEntryView: View {
         _ = sheet.state.consumePendingBadge()
     }
 
-    private func syncLingeringBadges() {
-        var next: [Int: Int] = [:]
-        for (index, cards) in sheet.state.cards.enumerated() {
-            if let cards, cards > 0, let multiplier = sheet.state.multiplier(forCardsLeft: cards), multiplier >= 2 {
-                next[index] = multiplier
-            }
-        }
-        lingeringBadge = next
-    }
 }

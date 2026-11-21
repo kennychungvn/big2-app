@@ -19,7 +19,8 @@ import AppCore
 final class AdsRuntime: ObservableObject {
     static let shared = AdsRuntime()
 
-    /// `true` once consent + ATT are done and the SDK has started; banners load only then.
+    /// `true` once consent + ATT are done and `MobileAds.shared.start()` has finished;
+    /// banners load only then.
     @Published private(set) var isReady = false
     /// UMP says this user must be able to change their consent later (Settings shows a button).
     @Published private(set) var privacyOptionsRequired = false
@@ -99,7 +100,7 @@ final class AdsRuntime: ObservableObject {
             personalizedAdsAllowed = false
         }
         NSLog("[Ads] Using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
-        Task { _ = await MobileAds.shared.start() }
+        _ = await MobileAds.shared.start()
         isReady = true
         let actions = readyActions
         readyActions.removeAll()
@@ -114,7 +115,7 @@ final class AdsRuntime: ObservableObject {
             return
         }
         NSLog("[Ads] UI tests: skip UMP/ATT, using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
-        Task { _ = await MobileAds.shared.start() }
+        _ = await MobileAds.shared.start()
         isReady = true
         let actions = readyActions
         readyActions.removeAll()

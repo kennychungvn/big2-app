@@ -22,7 +22,10 @@ struct RootView: View {
         .tint(Color(theme.accentLink))
         .sheet(isPresented: $vm.isPresentingNewSession) {
             NewSessionView(draft: vm.model.newSessionDraft(region: vm.region))
-                .bannerSlot()
+                // Placeholder only: do not re-parent the live BannerView onto this
+                // sheet. Moving it mid-load blocked the main thread for 13.8 s
+                // while the first name was being typed (run 44874686825).
+                .bannerSlot(liveBanner: false)
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
                 .preferredColorScheme(theme.colorScheme)

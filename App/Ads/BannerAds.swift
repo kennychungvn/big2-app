@@ -195,6 +195,10 @@ final class BannerHostView: UIView {
 }
 
 struct AdMobBannerSlotView: View {
+    /// When `false`, the slot keeps the reserved placeholder and does not
+    /// borrow the shared `BannerView`. Used on the name-entry sheet so
+    /// typing never re-parents a loading WKWebView.
+    var liveBanner: Bool = true
     @ObservedObject private var runtime = AdsRuntime.shared
     @ObservedObject private var sharedBanner = SharedBannerController.shared
 
@@ -209,7 +213,7 @@ struct AdMobBannerSlotView: View {
             // is a WKWebView that keeps XCUITest waiting for idle (first name-field
             // focus was 15–18 s). Production, TestFlight, and `-uiTestLiveBanner`
             // still mount the live banner. The reserved slot stays either way.
-            if runtime.isReady && UITestSupport.showsLiveBanner {
+            if liveBanner && runtime.isReady && UITestSupport.showsLiveBanner {
                 SharedBannerHostRepresentable(adSize: adSize)
                     .frame(width: adSize.size.width, height: adSize.size.height)
                     .opacity(sharedBanner.hasAd ? 1 : 0)
@@ -325,6 +329,7 @@ struct BannerPlaceholderView: View {
 
 struct BannerAdContainer: View {
     var adsRemoved: Bool
+    var liveBanner: Bool = true
 
     var body: some View {
         if adsRemoved {
@@ -332,19 +337,23 @@ struct BannerAdContainer: View {
         } else if AdConfig.usesStubAds {
             BannerPlaceholderView()
         } else {
-            AdMobBannerSlotView()
+            AdMobBannerSlotView(liveBanner: liveBanner)
         }
     }
 }
 
 /// The bottom banner every screen shows, including sheets and full-screen covers.
-/// Sheets cover the root slot, so each still reserves the 60pt band; they reuse one
-/// shared `BannerView` (re-parented into the frontmost host) instead of loading a
-/// second ad. Hidden while an interstitial is showing (instant). After 移除廣告,
+/// Sheets cover the root slot, so each still reserves the 60pt band. Most sheets
+/// reuse one shared `BannerView` (re-parented into the frontmost host) instead of
+/// loading a second ad. The name-entry sheet keeps a placeholder and leaves the
+/// home banner where it is, because moving a loading `BannerView` onto that sheet
+/// stalled the main thread for 13.8 s when the ad request timed out.
+/// Hidden while an interstitial is showing (instant). After 移除廣告,
 /// the 60pt band collapses to 0 over 220 ms when 動畫效果 is on and Reduce Motion
 /// is off; otherwise it collapses instantly.
 /// SuitPatternRow stays static — only the slot height animates, once.
 struct BannerSlot: View {
+    var liveBanner: Bool = true
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -360,7 +369,7 @@ struct BannerSlot: View {
         ZStack(alignment: .top) {
             if holdsContent && !hideForInterstitial {
                 // 2.0 ad band: `adband` fill + 1pt `line` hairline. No content animation.
-                BannerAdContainer(adsRemoved: false)
+                BannerAdContainer(adsRemoved: false, liveBanner: liveBanner)
                     .padding(.vertical, 5)
                     .frame(maxWidth: .infinity)
                     .background(Color(theme.adband).ignoresSafeArea(edges: .bottom))
@@ -405,18 +414,19 @@ extension View {
     /// bottom inset, so the banner covered 入今局 / 開波 (seen in UI test screenshots).
     /// The VStack gives the content only the space above the banner, so every bottom
     /// button sits above it; the slot keeps the banner's full height while ads are on.
-    func bannerSlot() -> some View {
-        modifier(BannerSlotModifier())
+    func bannerSlot(liveBanner: Bool = true) -> some View {
+        modifier(BannerSlotModifier(liveBanner: liveBanner))
     }
 }
 
 private struct BannerSlotModifier: ViewModifier {
+    var liveBanner: Bool = true
     @Environment(\.appTheme) private var theme
 
     func body(content: Content) -> some View {
         VStack(spacing: 0) {
             content
-            BannerSlot()
+            BannerSlot(liveBanner: liveBanner)
         }
         .background(Color(theme.background).ignoresSafeArea())
     }

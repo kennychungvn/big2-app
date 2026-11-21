@@ -56,6 +56,17 @@ final class HangUITests: XCTestCase {
         app.launch()
         dismissSystemAlerts(wait: 1)
         settle(8)
+        // The banner must fill on the home screen before 新開一場 opens, so the
+        // first load is not still in flight when the sheet and keyboard appear.
+        let homeBanner = element("banner.home", timeout: 20)
+        let homeFillDeadline = Date().addingTimeInterval(20)
+        while Date() < homeFillDeadline {
+            let value = (homeBanner.value as? String) ?? homeBanner.label
+            if value.contains("filled") { break }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        let homeState = (homeBanner.value as? String) ?? homeBanner.label
+        print("HOME_BANNER_STATE \(homeState)")
         tap("home.newSession", budget: nil)
         let names = ["小明", "阿強", "小美", "志明"]
         for (index, name) in names.enumerated() {

@@ -47,6 +47,8 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
     private var keyboardObservers: [NSObjectProtocol] = []
     private var overlayWindow: UIWindow?
     private var overlayHidden = false
+    /// Name-entry sheet is on screen. No new ad request until it is dismissed.
+    private var nameEntryVisible = false
 
     private static let slotHeight: CGFloat = 60
     private static let verticalPadding: CGFloat = 5
@@ -81,38 +83,71 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
     /// interstitial is on screen. The reserved slot still collapses on its own.
     func setOverlayHidden(_ hidden: Bool) {
         overlayHidden = hidden
-        if hidden {
-            overlayWindow?.isHidden = true
-        } else {
+        if !hidden {
             installOverlayIfNeeded()
-            overlayWindow?.isHidden = false
         }
+        applyOverlayVisibility()
     }
 
     /// Defer the first `load()` while the keyboard is up, and keep
     /// `isAutoloadEnabled` off so the SDK does not start a new request mid-typing.
-    /// An already-shown creative stays visible if the slot is still on screen
-    /// above the keyboard.
+    /// The overlay window is also hidden while the keyboard is visible: the
+    /// banner sits under the keyboard anyway, and laying out its WKWebView
+    /// as the keyboard comes up is what stalled DaLaoEr for 25 s on first
+    /// name-field focus (run 44897372915, maxEditingMs=25355).
     func setKeyboardVisible(_ visible: Bool) {
         keyboardVisible = visible
         banner?.isAutoloadEnabled = false
         if !visible {
+            installOverlayIfNeeded()
+            applyOverlayVisibility()
+            if !nameEntryVisible {
+                requestLoadIfAllowed()
+            }
+        } else {
+            applyOverlayVisibility()
+        }
+    }
+
+    /// Call from the name-entry sheet's reserved slot. While the sheet is up
+    /// there is no new ad request and the banner is not moved. If the first
+    /// load has not filled yet, the overlay stays hidden (suit placeholder).
+    /// After dismissal the overlay returns and a pending first load may start.
+    func setNameEntryVisible(_ visible: Bool) {
+        nameEntryVisible = visible
+        banner?.isAutoloadEnabled = false
+        if !visible {
+            installOverlayIfNeeded()
+            applyOverlayVisibility()
             requestLoadIfAllowed()
+        } else {
+            applyOverlayVisibility()
         }
     }
 
     func requestLoadIfAllowed() {
-        guard let banner, !didRequestLoad, !keyboardVisible else { return }
+        guard let banner, !didRequestLoad, !keyboardVisible, !nameEntryVisible else { return }
         didRequestLoad = true
         isLoadInFlight = true
         banner.rootViewController = overlayWindow?.rootViewController ?? AdsRuntime.topViewController() ?? banner.rootViewController
         banner.load(AdsRuntime.shared.makeRequest())
     }
 
+    /// Hide the overlay for 移除廣告 / interstitials, while the keyboard is up,
+    /// or while the name-entry sheet is up and there is not yet a filled ad.
+    /// Never sets `banner.isHidden` — a hidden BannerView may never fill.
+    private var shouldHideOverlay: Bool {
+        overlayHidden || keyboardVisible || (nameEntryVisible && !hasAd)
+    }
+
+    private func applyOverlayVisibility() {
+        overlayWindow?.isHidden = shouldHideOverlay
+    }
+
     private func installOverlayIfNeeded() {
         guard UITestSupport.showsLiveBanner, let banner else { return }
         if overlayWindow != nil {
-            overlayWindow?.isHidden = overlayHidden
+            applyOverlayVisibility()
             return
         }
         guard let scene = Self.activeWindowScene() else { return }
@@ -139,8 +174,8 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             banner.topAnchor.constraint(equalTo: host.view.topAnchor, constant: Self.verticalPadding),
             banner.heightAnchor.constraint(equalToConstant: Self.slotHeight - Self.verticalPadding * 2),
         ])
-        window.isHidden = overlayHidden
         overlayWindow = window
+        applyOverlayVisibility()
         NSLog("[Ads] Banner overlay window installed")
     }
 
@@ -180,7 +215,11 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             self.hasAd = true
             self.banner?.alpha = 1
             self.banner?.isHidden = false
-            self.installOverlayIfNeeded()
+            // Do not reveal a freshly filled WKWebView under a rising keyboard.
+            if !self.keyboardVisible {
+                self.installOverlayIfNeeded()
+            }
+            self.applyOverlayVisibility()
         }
     }
 
@@ -220,11 +259,11 @@ struct AdMobBannerSlotView: View {
         let adSize = anchoredAdaptiveBannerSize()
         ZStack {
             BannerSlotBackground()
-            if kind == .sheet {
+            if kind == .sheet || kind == .shared {
                 Color.clear
                     .frame(width: 1, height: 1)
                     .accessibilityElement()
-                    .accessibilityIdentifier("banner.sheet")
+                    .accessibilityIdentifier(kind == .sheet ? "banner.sheet" : "banner.home")
                     .accessibilityLabel(sharedBanner.hasAd ? "filled" : "placeholder")
                     .accessibilityValue(sharedBanner.hasAd ? "filled" : "placeholder")
                     .allowsHitTesting(false)
@@ -366,6 +405,14 @@ struct BannerSlot: View {
             SharedBannerController.shared.setOverlayHidden(
                 vm.model.data.adsRemoved || hideForInterstitial
             )
+            if kind == .sheet {
+                SharedBannerController.shared.setNameEntryVisible(true)
+            }
+        }
+        .onDisappear {
+            if kind == .sheet {
+                SharedBannerController.shared.setNameEntryVisible(false)
+            }
         }
         .onChange(of: vm.model.data.adsRemoved) { removed in
             applyAdsRemoved(removed, animated: true)

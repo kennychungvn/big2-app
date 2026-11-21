@@ -65,6 +65,10 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         guard banner == nil else { return }
         let size = anchoredAdaptiveBannerSize()
         adSize = size
+        // Register first so we hide the overlay at the start of keyboardWillShow,
+        // before AdMob's own observer lays out the WKWebView (8ff7a12 TW still
+        // stalled 3.2 s at the first name-field tap after the ad was already filled).
+        observeKeyboard()
         let banner = BannerView(adSize: size)
         banner.adUnitID = AdConfig.bannerUnitID
         banner.delegate = self
@@ -74,7 +78,6 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         // on the 新開一場 screenshot, and a 3 s stall while the request hung).
         banner.alpha = 1
         self.banner = banner
-        observeKeyboard()
         installOverlayIfNeeded()
         requestLoadIfAllowed()
     }
@@ -126,7 +129,11 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
     }
 
     func requestLoadIfAllowed() {
-        guard let banner, !didRequestLoad, !keyboardVisible, !nameEntryVisible else { return }
+        // Do not block the first home-screen load on keyboardVisible: a stuck
+        // or spurious keyboard flag would skip load() entirely (8ff7a12 HK
+        // stayed on placeholder for 20 s on home). Defer only while 新開一場
+        // is up, so we never start a request mid-typing.
+        guard let banner, !didRequestLoad, !nameEntryVisible else { return }
         didRequestLoad = true
         isLoadInFlight = true
         banner.rootViewController = overlayWindow?.rootViewController ?? AdsRuntime.topViewController() ?? banner.rootViewController
@@ -135,9 +142,13 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
 
     /// Hide the overlay for 移除廣告 / interstitials, while the keyboard is up,
     /// or while the name-entry sheet is up and there is not yet a filled ad.
-    /// Never sets `banner.isHidden` — a hidden BannerView may never fill.
+    /// Never hide the window while a load is in flight — a hidden BannerView
+    /// may never fill (44894994224, and 8ff7a12 HK: HOME/SHEET placeholder,
+    /// maxEditingMs=2289). Never sets `banner.isHidden`.
     private var shouldHideOverlay: Bool {
-        overlayHidden || keyboardVisible || (nameEntryVisible && !hasAd)
+        if overlayHidden { return true }
+        if isLoadInFlight { return false }
+        return keyboardVisible || (nameEntryVisible && !hasAd)
     }
 
     private func applyOverlayVisibility() {
@@ -187,7 +198,9 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
+            // Already on the main thread. Do not hop via Task — that lets
+            // AdMob lay out the WKWebView under the rising keyboard first.
+            MainActor.assumeIsolated {
                 self?.setKeyboardVisible(true)
             }
         })
@@ -196,7 +209,7 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in
+            MainActor.assumeIsolated {
                 self?.setKeyboardVisible(false)
             }
         })

@@ -198,6 +198,8 @@ targets:
         type: file
       - path: UITests/HangUITests.swift
         type: file
+      - path: UITests/SignOffUITests.swift
+        type: file
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.kenny.dalaoer.uitests

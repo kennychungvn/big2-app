@@ -60,11 +60,16 @@ struct Big2App: App {
             try? FileManager.default.removeItem(at: fileURL)
             ScoreConversion.clearPersistedMultiplier()
             SkinPreferences.resetForUITests()
-            return AppViewModel(
+            let viewModel = AppViewModel(
                 store: JSONFileStore(fileURL: fileURL),
                 ads: ads,
                 shop: StubStoreManager()
             )
+            if let names = UITestSupport.seededKnownNames {
+                viewModel.model.data.knownPlayerNames = names
+                viewModel.persist()
+            }
+            return viewModel
         }
         SkinPreferences.clearLegacyKeys()
         let shop = StoreKitStoreManager()

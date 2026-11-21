@@ -6,7 +6,8 @@ import AppCore
 /// Native `List` `.onDelete` left the trailing 刪除 action unclipped (it sat outside the
 /// inset-grouped card) and, in edit mode, left the confirmation open on the cell that
 /// the next name slid into. Both modes now share one clipped card so the action stays
-/// inside the rounded frame; confirmation is keyed by name, not row index.
+/// inside the rounded frame; confirmation is keyed by name, not row index. In 編輯,
+/// the minus and name stay on the left; only the handle yields room for the pill.
 struct KnownNamesSettingsView: View {
     @EnvironmentObject private var vm: AppViewModel
     @Environment(\.appTheme) private var theme
@@ -95,11 +96,20 @@ struct KnownNamesSettingsView: View {
             .animation(rowAnimation, value: displayedNames)
             .background(Color(theme.card))
             .clipShape(RoundedRectangle(cornerRadius: groupedCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: groupedCornerRadius, style: .continuous)
+                    .strokeBorder(Color(theme.line), lineWidth: CGFloat(theme.cardBorderWidth))
+            )
             .padding(.horizontal, groupedHorizontalPadding)
             .padding(.top, 20)
             .padding(.bottom, 16)
         }
-        .background(Color(theme.background).ignoresSafeArea())
+        .background {
+            Color(theme.background)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { dismissConfirm() }
+        }
     }
 
     @ViewBuilder
@@ -114,6 +124,7 @@ struct KnownNamesSettingsView: View {
                 isDragging: draggingName == name,
                 dragOffset: draggingName == name ? dragOffset : 0,
                 onToggleConfirm: { toggleConfirm(name) },
+                onDismissConfirm: { dismissConfirm() },
                 onDelete: { deleteName(name) },
                 onDragChanged: { dragChanged(name, $0) },
                 onDragEnded: { dragEnded(name) }
@@ -148,6 +159,11 @@ struct KnownNamesSettingsView: View {
         withAnimation(rowAnimation) {
             confirmingName = confirmingName == name ? nil : name
         }
+    }
+
+    private func dismissConfirm() {
+        guard confirmingName != nil else { return }
+        withAnimation(rowAnimation) { confirmingName = nil }
     }
 
     private func deleteName(_ name: String) {
@@ -302,7 +318,9 @@ private struct KnownNameSwipeRow: View {
 // MARK: - Edit
 
 /// Edit-mode row in the same clipped card: minus + 刪除 + reorder handle.
-/// Confirmation is per-name, and the 刪除 action is laid out inside the card.
+/// Confirmation is per-name. Unlike swipe-to-delete, the minus and name stay
+/// visible on the left; only the trailing handle yields 88 pt so the pill
+/// sits inside the card inset (HANDOFF names-delete spec).
 private struct KnownNameEditRow: View {
     let name: String
     let showSeparator: Bool
@@ -311,6 +329,7 @@ private struct KnownNameEditRow: View {
     let isDragging: Bool
     let dragOffset: CGFloat
     let onToggleConfirm: () -> Void
+    let onDismissConfirm: () -> Void
     let onDelete: () -> Void
     let onDragChanged: (CGFloat) -> Void
     let onDragEnded: () -> Void
@@ -338,7 +357,11 @@ private struct KnownNameEditRow: View {
 
                     Text(name)
                         .foregroundColor(Color(theme.text))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onDismissConfirm() }
 
                     Image(systemName: "line.3.horizontal")
                         .font(.system(size: 16, weight: .semibold))
@@ -349,7 +372,7 @@ private struct KnownNameEditRow: View {
                         .accessibilityHidden(true)
                 }
                 .padding(.leading, 10)
-                .padding(.trailing, 12)
+                .padding(.trailing, isConfirming ? 0 : 12)
                 .frame(minHeight: 44)
 
                 if showSeparator {
@@ -358,8 +381,10 @@ private struct KnownNameEditRow: View {
                         .padding(.leading, 16)
                 }
             }
-            .background(Color(theme.card))
-            .offset(x: isConfirming ? -revealWidth : 0)
+            // Shrink the content, do not offset it: the minus and name stay on the
+            // left, the handle shifts, and the 刪除 pill occupies the trailing inset.
+            .padding(.trailing, isConfirming ? revealWidth : 0)
+            .background(isDragging ? Color(theme.card) : Color.clear)
         }
         .frame(minHeight: 44)
         .offset(y: dragOffset)

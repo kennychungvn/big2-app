@@ -12,6 +12,19 @@ enum UITestSupport {
         ProcessInfo.processInfo.arguments.contains("-uiTesting")
     }
 
+    /// `-uiTestKnownNames A,B,C,D` seeds the 快速填入 list on a fresh `-uiTesting` launch
+    /// so screenshot tests can open 管理快速填入名稱 without playing a game first.
+    static var seededKnownNames: [String]? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let index = args.firstIndex(of: "-uiTestKnownNames"),
+              args.indices.contains(index + 1) else { return nil }
+        let names = args[index + 1]
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return names.isEmpty ? nil : names
+    }
+
     /// Regular `-uiTesting` keeps the static placeholder so XCUITest idle is not held
     /// by a demo WKWebView. `-uiTestLiveBanner` mounts the real `BannerView` so the
     /// hang probe can measure main-thread stalls with a filled live banner.

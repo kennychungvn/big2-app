@@ -101,6 +101,7 @@ final class AdsRuntime: ObservableObject {
         }
         NSLog("[Ads] Using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
         _ = await MobileAds.shared.start()
+        SharedBannerController.shared.prepare()
         isReady = true
         let actions = readyActions
         readyActions.removeAll()
@@ -116,6 +117,7 @@ final class AdsRuntime: ObservableObject {
         }
         NSLog("[Ads] UI tests: skip UMP/ATT, using %@ ad units", AdConfig.isUsingTestAds ? "Google demo" : "production")
         _ = await MobileAds.shared.start()
+        SharedBannerController.shared.prepare()
         isReady = true
         let actions = readyActions
         readyActions.removeAll()

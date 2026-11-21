@@ -14,15 +14,157 @@ import AppCore
 /// placeholder, never collapses.
 /// The slot is exactly the ad size and clips, so the ad never overflows onto bottom buttons.
 /// With 移除廣告 bought, `BannerSlot` collapses the 60pt band (220 ms when motion is on).
+
+/// Standard anchored adaptive size for the current (portrait-only) orientation at full
+/// width. Not the "large" anchored variant: that one is far taller (a quarter of the
+/// screen on build 41) and hid the sheets' bottom buttons.
+func anchoredAdaptiveBannerSize() -> AdSize {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let width = scenes.first?.screen.bounds.width ?? 375
+    return currentOrientationAnchoredAdaptiveBanner(width: width)
+}
+
+/// One long-lived `BannerView`, created and loaded once after `MobileAds.shared.start()`
+/// finishes. Every `BannerSlot` re-parents this same instance into the frontmost visible
+/// host instead of allocating a new view and calling `load()` again. A slot that does not
+/// currently hold the banner keeps the reserved placeholder. The banner is never left
+/// refreshing under a sheet (Google: ads should be on screen).
+@MainActor
+final class SharedBannerController: NSObject, ObservableObject, BannerViewDelegate {
+    static let shared = SharedBannerController()
+
+    /// `true` once an ad is received, `false` after a failed load / refresh.
+    @Published private(set) var hasAd = false
+
+    private var banner: BannerView?
+    private var didRequestLoad = false
+    private var adSize: AdSize?
+    private var hosts: [BannerHostView] = []
+
+    private override init() {
+        super.init()
+    }
+
+    /// Call once `MobileAds.shared.start()` has completed. No-op under `-uiTesting`
+    /// unless `-uiTestLiveBanner` is also set, so regular UI tests keep the static
+    /// placeholder (824a377).
+    func prepare() {
+        guard UITestSupport.showsLiveBanner else { return }
+        guard banner == nil else { return }
+        let size = anchoredAdaptiveBannerSize()
+        adSize = size
+        let banner = BannerView(adSize: size)
+        banner.adUnitID = AdConfig.bannerUnitID
+        banner.delegate = self
+        banner.isAutoloadEnabled = false
+        banner.rootViewController = AdsRuntime.topViewController()
+        self.banner = banner
+        requestLoadIfAllowed()
+    }
+
+    func requestLoadIfAllowed() {
+        guard let banner, !didRequestLoad else { return }
+        didRequestLoad = true
+        banner.rootViewController = AdsRuntime.topViewController() ?? banner.rootViewController
+        banner.load(AdsRuntime.shared.makeRequest())
+    }
+
+    func attach(to host: BannerHostView, adSize: AdSize) {
+        self.adSize = adSize
+        if !hosts.contains(where: { $0 === host }) {
+            hosts.append(host)
+        }
+        applyAdSizeIfNeeded()
+        reassign()
+    }
+
+    func detach(from host: BannerHostView) {
+        hosts.removeAll { $0 === host }
+        if banner?.superview === host {
+            banner?.removeFromSuperview()
+        }
+        reassign()
+    }
+
+    func hostDidChangeWindow() {
+        reassign()
+    }
+
+    private func reassign() {
+        hosts.removeAll { $0.window == nil }
+        // Only a host on the frontmost screen may show the banner, so a live ad is
+        // never left refreshing under a sheet.
+        let visible = hosts.filter { Self.isInFrontmostPresentation($0) }
+        moveBanner(to: visible.last)
+    }
+
+    private func moveBanner(to host: BannerHostView?) {
+        guard let banner else { return }
+        applyAdSizeIfNeeded()
+        guard let host else {
+            banner.removeFromSuperview()
+            return
+        }
+        if banner.superview !== host {
+            banner.removeFromSuperview()
+            banner.translatesAutoresizingMaskIntoConstraints = false
+            host.addSubview(banner)
+            NSLayoutConstraint.activate([
+                banner.topAnchor.constraint(equalTo: host.topAnchor),
+                banner.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+                banner.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+                banner.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+            ])
+        }
+        banner.rootViewController = AdsRuntime.topViewController() ?? banner.rootViewController
+    }
+
+    private func applyAdSizeIfNeeded() {
+        guard let banner, let adSize else { return }
+        if !isAdSizeEqualToSize(size1: banner.adSize, size2: adSize) {
+            banner.adSize = adSize
+        }
+    }
+
+    private static func isInFrontmostPresentation(_ view: UIView) -> Bool {
+        guard view.window != nil, !view.isHidden, view.alpha > 0.01 else { return false }
+        guard let topView = AdsRuntime.topViewController()?.viewIfLoaded else { return true }
+        return view.isDescendant(of: topView)
+    }
+
+    nonisolated func bannerViewDidReceiveAd(_ bannerView: BannerView) {
+        Task { @MainActor [weak self] in
+            self?.hasAd = true
+        }
+    }
+
+    nonisolated func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
+        NSLog("[Ads] Banner failed to load: \(error.localizedDescription)")
+        Task { @MainActor [weak self] in
+            self?.hasAd = false
+        }
+    }
+}
+
+/// Container a `BannerSlot` uses to borrow the shared `BannerView`.
+final class BannerHostView: UIView {
+    var onWindowChange: (() -> Void)?
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        onWindowChange?()
+    }
+}
+
 struct AdMobBannerSlotView: View {
     @ObservedObject private var runtime = AdsRuntime.shared
-    @State private var adLoaded = false
+    @ObservedObject private var sharedBanner = SharedBannerController.shared
 
     // Build 79 hang fix: back to the 1.0.2 slot (which never froze on device): a static
     // placeholder under the ad, one opacity fade when an ad arrives. No loading shimmer,
     // no per-state animations.
     var body: some View {
-        let adSize = Self.adaptiveSize()
+        let adSize = anchoredAdaptiveBannerSize()
         ZStack {
             BannerSlotBackground()
             // Regular UI tests keep the static placeholder: a filled demo BannerView
@@ -30,11 +172,10 @@ struct AdMobBannerSlotView: View {
             // focus was 15–18 s). Production, TestFlight, and `-uiTestLiveBanner`
             // still mount the live banner. The reserved slot stays either way.
             if runtime.isReady && UITestSupport.showsLiveBanner {
-                AdMobBannerView(adSize: adSize) { loaded in
-                    withAnimation(.easeIn(duration: 0.25)) { adLoaded = loaded }
-                }
-                .frame(width: adSize.size.width, height: adSize.size.height)
-                .opacity(adLoaded ? 1 : 0)
+                SharedBannerHostRepresentable(adSize: adSize)
+                    .frame(width: adSize.size.width, height: adSize.size.height)
+                    .opacity(sharedBanner.hasAd ? 1 : 0)
+                    .animation(.easeIn(duration: 0.25), value: sharedBanner.hasAd)
             }
         }
         .frame(maxWidth: .infinity)
@@ -43,54 +184,33 @@ struct AdMobBannerSlotView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("banner")
     }
-
-    /// Standard anchored adaptive size for the current (portrait-only) orientation at full
-    /// width. Not the "large" anchored variant: that one is far taller (a quarter of the
-    /// screen on build 41) and hid the sheets' bottom buttons.
-    private static func adaptiveSize() -> AdSize {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        let width = scenes.first?.screen.bounds.width ?? 375
-        return currentOrientationAnchoredAdaptiveBanner(width: width)
-    }
 }
 
-private struct AdMobBannerView: UIViewRepresentable {
+/// Re-parents the shared `BannerView` into this slot when the slot is on the
+/// frontmost screen. `dismantleUIView` does not destroy the banner.
+private struct SharedBannerHostRepresentable: UIViewRepresentable {
     let adSize: AdSize
-    /// `true` once an ad is received, `false` after a failed load / refresh.
-    let onLoadedChange: (Bool) -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onLoadedChange: onLoadedChange) }
-
-    func makeUIView(context: Context) -> BannerView {
-        let banner = BannerView(adSize: adSize)
-        banner.adUnitID = AdConfig.bannerUnitID
-        banner.delegate = context.coordinator
-        banner.load(AdsRuntime.shared.makeRequest())
-        return banner
+    func makeUIView(context: Context) -> BannerHostView {
+        let host = BannerHostView()
+        host.backgroundColor = .clear
+        host.clipsToBounds = true
+        host.onWindowChange = {
+            Task { @MainActor in
+                SharedBannerController.shared.hostDidChangeWindow()
+            }
+        }
+        SharedBannerController.shared.attach(to: host, adSize: adSize)
+        return host
     }
 
-    func updateUIView(_ banner: BannerView, context: Context) {
-        context.coordinator.onLoadedChange = onLoadedChange
-        if !isAdSizeEqualToSize(size1: banner.adSize, size2: adSize) {
-            banner.adSize = adSize
-        }
+    func updateUIView(_ host: BannerHostView, context: Context) {
+        SharedBannerController.shared.attach(to: host, adSize: adSize)
     }
 
-    final class Coordinator: NSObject, BannerViewDelegate {
-        var onLoadedChange: (Bool) -> Void
-
-        init(onLoadedChange: @escaping (Bool) -> Void) {
-            self.onLoadedChange = onLoadedChange
-        }
-
-        func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            DispatchQueue.main.async { self.onLoadedChange(true) }
-        }
-
-        func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
-            NSLog("[Ads] Banner failed to load: \(error.localizedDescription)")
-            DispatchQueue.main.async { self.onLoadedChange(false) }
-        }
+    static func dismantleUIView(_ host: BannerHostView, coordinator: ()) {
+        host.onWindowChange = nil
+        SharedBannerController.shared.detach(from: host)
     }
 }
 
@@ -179,10 +299,12 @@ struct BannerAdContainer: View {
     }
 }
 
-/// The bottom banner every screen shows, including sheets and full-screen covers (they
-/// cover the root's banner, so each hosts its own). Hidden while an interstitial is
-/// showing (instant). After 移除廣告, the 60pt band collapses to 0 over 220 ms when
-/// 動畫效果 is on and Reduce Motion is off; otherwise it collapses instantly.
+/// The bottom banner every screen shows, including sheets and full-screen covers.
+/// Sheets cover the root slot, so each still reserves the 60pt band; they reuse one
+/// shared `BannerView` (re-parented into the frontmost host) instead of loading a
+/// second ad. Hidden while an interstitial is showing (instant). After 移除廣告,
+/// the 60pt band collapses to 0 over 220 ms when 動畫效果 is on and Reduce Motion
+/// is off; otherwise it collapses instantly.
 /// SuitPatternRow stays static — only the slot height animates, once.
 struct BannerSlot: View {
     @EnvironmentObject private var vm: AppViewModel

@@ -20,7 +20,7 @@ final class MainThreadHangDetector: NSObject, ObservableObject {
     }
 
     /// Compact, parseable report, e.g. `maxMs=0 count=0 maxEditingMs=0 countEditing=0 events=`.
-    @Published private(set) var report: String = Self.emptyReport
+    @Published private(set) var report: String
 
     private static let emptyReport = "maxMs=0 count=0 maxEditingMs=0 countEditing=0 events="
     private static let thresholdMs = 250
@@ -39,6 +39,7 @@ final class MainThreadHangDetector: NSObject, ObservableObject {
     private var events: [(ms: Int, editing: Bool)] = []
 
     private override init() {
+        report = MainThreadHangDetector.emptyReport
         super.init()
     }
 

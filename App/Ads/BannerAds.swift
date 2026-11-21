@@ -67,7 +67,10 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         banner.adUnitID = AdConfig.bannerUnitID
         banner.delegate = self
         banner.isAutoloadEnabled = false
-        banner.isHidden = true
+        // Must stay visible in the window. A hidden BannerView never fills
+        // (hang test run 44894994224: SHEET_BANNER_STATE=placeholder, no ad
+        // on the 新開一場 screenshot, and a 3 s stall while the request hung).
+        banner.alpha = 1
         self.banner = banner
         observeKeyboard()
         installOverlayIfNeeded()
@@ -120,7 +123,8 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         let height = Self.slotHeight + safeBottom
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(x: 0, y: screen.height - height, width: screen.width, height: height)
-        window.windowLevel = UIWindow.Level.normal + 1
+        // Above sheets in the main window, below alerts and the keyboard.
+        window.windowLevel = UIWindow.Level.alert - 1
         window.backgroundColor = .clear
         window.isOpaque = false
         let host = UIViewController()
@@ -174,6 +178,7 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             guard let self else { return }
             self.isLoadInFlight = false
             self.hasAd = true
+            self.banner?.alpha = 1
             self.banner?.isHidden = false
             self.installOverlayIfNeeded()
         }
@@ -186,7 +191,7 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             self.isLoadInFlight = false
             self.hasAd = false
             // Keep the suit placeholder; do not start another request.
-            self.banner?.isHidden = true
+            self.banner?.alpha = 0
         }
     }
 }

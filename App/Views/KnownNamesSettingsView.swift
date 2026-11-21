@@ -89,7 +89,14 @@ struct KnownNamesSettingsView: View {
             VStack(spacing: 0) {
                 ForEach(Array(displayedNames.enumerated()), id: \.element) { index, name in
                     row(name: name, index: index, editing: editMode.isEditing)
-                        .accessibilityIdentifier(identifier(for: name))
+                        .accessibilityElement(children: .contain)
+                        .overlay(alignment: .topLeading) {
+                            // Sign-off tests wait on this; kept off the row so minus / 刪除 stay visible.
+                            Color.clear
+                                .frame(width: 1, height: 1)
+                                .accessibilityIdentifier(identifier(for: name))
+                                .allowsHitTesting(false)
+                        }
                         .transition(.opacity)
                 }
             }

@@ -345,11 +345,8 @@ private struct KnownNameEditRow: View {
 
     var body: some View {
         ZStack(alignment: .trailing) {
-            KnownNameDeleteAction(theme: theme, onDelete: onDelete)
-                .opacity(isConfirming ? 1 : 0)
-                .allowsHitTesting(isConfirming)
-                .accessibilityIdentifier(deleteIdentifier)
-
+            // Content first, 刪除 on top: trailing padding used to sit over the
+            // pill and swallow the tap, so B was never removed. Visuals unchanged.
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     Button(action: onToggleConfirm) {
@@ -392,6 +389,11 @@ private struct KnownNameEditRow: View {
             // left, the handle shifts, and the 刪除 pill occupies the trailing inset.
             .padding(.trailing, isConfirming ? revealWidth : 0)
             .background(isDragging ? Color(theme.card) : Color.clear)
+
+            KnownNameDeleteAction(theme: theme, onDelete: onDelete)
+                .opacity(isConfirming ? 1 : 0)
+                .allowsHitTesting(isConfirming)
+                .accessibilityIdentifier(deleteIdentifier)
         }
         .frame(minHeight: 44)
         .offset(y: dragOffset)

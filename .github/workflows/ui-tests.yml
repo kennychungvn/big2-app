@@ -18,8 +18,9 @@ jobs:
     name: XCUITest (Simulator)
     # macos-latest (arm64) jobs sat unacquired for 15+ min on 2026-11-12; Intel picks them up.
     runs-on: macos-15-intel
-    # 90: sign-off stills add two launches per app; 60 min was hit mid-suite (7534fd4).
-    timeout-minutes: 90
+    # 120: 7150f91's HK suite ran ~78 min of xcodebuild and the 90 min cap
+    # cancelled the job just after the screenshot upload.
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4

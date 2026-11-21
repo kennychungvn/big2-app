@@ -39,6 +39,13 @@ final class SignOffUITests: XCTestCase {
         // Deleting B must leave C closed (keyed by name, not row index).
         deleteB.tap()
         waitGone("settings.knownNames.minus.B")
+        XCTAssertFalse(
+            app.descendants(matching: .any)["settings.knownNames.minus.B"].firstMatch.exists,
+            "刪除 did not remove B"
+        )
+        element("settings.knownNames.minus.A")
+        element("settings.knownNames.minus.C")
+        element("settings.knownNames.minus.D")
         let deleteC = app.descendants(matching: .any)["settings.knownNames.delete.C"].firstMatch
         waitUntil { !deleteC.exists || !deleteC.isHittable }
         XCTAssertFalse(deleteC.exists && deleteC.isHittable, "C opened 刪除 after deleting B")

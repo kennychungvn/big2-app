@@ -22,10 +22,8 @@ struct RootView: View {
         .tint(Color(theme.accentLink))
         .sheet(isPresented: $vm.isPresentingNewSession) {
             NewSessionView(draft: vm.model.newSessionDraft(region: vm.region))
-                // Borrow the already-filled home banner after the sheet settles.
-                // A second BannerView+load() here stalled typing for 7.8 s
-                // (run 44890158068); moving the shared view mid-load stalled
-                // 13.8 s. Until the borrow is safe, the slot stays a placeholder.
+                // Same 60pt slot as every other screen. The live banner lives in a
+                // window overlay, so this sheet never re-parents or reloads it.
                 .bannerSlot(.sheet)
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)

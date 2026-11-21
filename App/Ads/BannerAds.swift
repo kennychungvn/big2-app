@@ -24,34 +24,32 @@ func anchoredAdaptiveBannerSize() -> AdSize {
     return currentOrientationAnchoredAdaptiveBanner(width: width)
 }
 
-/// One long-lived `BannerView`, created and loaded once after `MobileAds.shared.start()`
-/// finishes. Home, Settings and other slots re-parent this instance into the frontmost
-/// visible host. The 新開一場 sheet borrows this same view only after the creative has
-/// already filled and no request is in flight: a second BannerView+load() during
-/// name entry stalled the main thread for 7.8 s (run 44890158068), and moving this
-/// view mid-load stalled it for 13.8 s. Until the borrow is safe, the sheet keeps
-/// the reserved suit placeholder and stays usable.
+/// One long-lived `BannerView`, created and loaded once after `MobileAds.shared.start()`.
+/// It lives in a small overlay `UIWindow` pinned to the bottom of the screen, so
+/// presenting 新開一場 never re-parents the view and never starts a second WKWebView.
+/// Re-parenting a filled banner onto that sheet still stalled the main thread for 9 s
+/// while typing (run 44892572340); a second BannerView+load() stalled 7.8 s
+/// (44890158068); moving it mid-load stalled 13.8 s. Each screen still reserves a
+/// 60 pt slot with the suit placeholder until an ad is in; the overlay sits on top
+/// and is hidden on load failure, no-fill, 移除廣告, or an interstitial. Autoload stays off.
 @MainActor
 final class SharedBannerController: NSObject, ObservableObject, BannerViewDelegate {
     static let shared = SharedBannerController()
 
     /// `true` once an ad is received, `false` after a failed load / refresh.
     @Published private(set) var hasAd = false
-    /// `true` when the filled banner is actually in the name-entry sheet host.
-    @Published private(set) var isHostedOnSheet = false
-    /// `true` between `load()` and the matching success or failure callback.
-    /// The banner is never re-parented while this is set.
-    private(set) var isLoadInFlight = false
 
     private var banner: BannerView?
     private var didRequestLoad = false
+    private var isLoadInFlight = false
     private var keyboardVisible = false
     private var adSize: AdSize?
-    private var hosts: [BannerHostView] = []
-    private var sheetHosts: [BannerHostView] = []
     private var keyboardObservers: [NSObjectProtocol] = []
-    private var sheetBorrowTask: Task<Void, Never>?
-    private var sheetIsSettled = false
+    private var overlayWindow: UIWindow?
+    private var overlayHidden = false
+
+    private static let slotHeight: CGFloat = 60
+    private static let verticalPadding: CGFloat = 5
 
     private override init() {
         super.init()
@@ -69,10 +67,23 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         banner.adUnitID = AdConfig.bannerUnitID
         banner.delegate = self
         banner.isAutoloadEnabled = false
-        banner.rootViewController = AdsRuntime.topViewController()
+        banner.isHidden = true
         self.banner = banner
         observeKeyboard()
+        installOverlayIfNeeded()
         requestLoadIfAllowed()
+    }
+
+    /// Hide the overlay (and its touch target) while ads are removed or an
+    /// interstitial is on screen. The reserved slot still collapses on its own.
+    func setOverlayHidden(_ hidden: Bool) {
+        overlayHidden = hidden
+        if hidden {
+            overlayWindow?.isHidden = true
+        } else {
+            installOverlayIfNeeded()
+            overlayWindow?.isHidden = false
+        }
     }
 
     /// Defer the first `load()` while the keyboard is up, and keep
@@ -91,139 +102,42 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         guard let banner, !didRequestLoad, !keyboardVisible else { return }
         didRequestLoad = true
         isLoadInFlight = true
-        banner.rootViewController = AdsRuntime.topViewController() ?? banner.rootViewController
+        banner.rootViewController = overlayWindow?.rootViewController ?? AdsRuntime.topViewController() ?? banner.rootViewController
         banner.load(AdsRuntime.shared.makeRequest())
     }
 
-    func attach(to host: BannerHostView, adSize: AdSize) {
-        self.adSize = adSize
-        if !hosts.contains(where: { $0 === host }) {
-            hosts.append(host)
-        }
-        applyAdSizeIfNeeded()
-        reassign()
-    }
-
-    func detach(from host: BannerHostView) {
-        hosts.removeAll { $0 === host }
-        if banner?.superview === host {
-            banner?.removeFromSuperview()
-        }
-        reassign()
-    }
-
-    func hostDidChangeWindow() {
-        reassign()
-    }
-
-    /// The name-entry sheet registers here instead of `attach`, so a still-loading
-    /// home banner is never moved onto the sheet.
-    func attachSheet(to host: BannerHostView, adSize: AdSize) {
-        self.adSize = adSize
-        if !sheetHosts.contains(where: { $0 === host }) {
-            sheetHosts.append(host)
-        }
-        applyAdSizeIfNeeded()
-        scheduleSheetBorrow()
-    }
-
-    func detachSheet(from host: BannerHostView) {
-        sheetHosts.removeAll { $0 === host }
-        if banner?.superview === host {
-            banner?.removeFromSuperview()
-            isHostedOnSheet = false
-        }
-        if visibleSheetHost() == nil {
-            sheetBorrowTask?.cancel()
-            sheetBorrowTask = nil
-            sheetIsSettled = false
-        }
-        reassign()
-    }
-
-    func sheetHostDidChangeWindow() {
-        if visibleSheetHost() != nil {
-            scheduleSheetBorrow()
-        } else {
-            sheetBorrowTask?.cancel()
-            sheetBorrowTask = nil
-            sheetIsSettled = false
-            reassign()
-        }
-    }
-
-    /// Wait for the sheet present animation to finish before borrowing the
-    /// already-filled banner, so the move does not overlap presentation.
-    private func scheduleSheetBorrow() {
-        if sheetIsSettled {
-            reassign()
+    private func installOverlayIfNeeded() {
+        guard UITestSupport.showsLiveBanner, let banner else { return }
+        if overlayWindow != nil {
+            overlayWindow?.isHidden = overlayHidden
             return
         }
-        guard sheetBorrowTask == nil || sheetBorrowTask?.isCancelled == true else { return }
-        sheetBorrowTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            try? await Task.sleep(nanoseconds: 350_000_000)
-            if Task.isCancelled { return }
-            self.sheetIsSettled = true
-            self.reassign()
-        }
-    }
-
-    private func reassign() {
-        hosts.removeAll { $0.window == nil }
-        sheetHosts.removeAll { $0.window == nil }
-
-        // Never re-parent a request that is still in flight (13.8 s stall).
-        if isLoadInFlight {
-            return
-        }
-
-        // The name-entry sheet may borrow the banner only after it has settled
-        // and a creative is already on the view. No second load is started.
-        if sheetIsSettled, hasAd, let sheet = visibleSheetHost() {
-            if banner?.superview !== sheet {
-                NSLog("[Ads] Moving filled banner onto the name-entry sheet")
-            }
-            moveBanner(to: sheet)
-            isHostedOnSheet = true
-            return
-        }
-
-        let visible = hosts.filter { Self.isInFrontmostPresentation($0) }
-        moveBanner(to: visible.last)
-        isHostedOnSheet = false
-    }
-
-    private func visibleSheetHost() -> BannerHostView? {
-        sheetHosts.last { $0.window != nil && !$0.isHidden && $0.alpha > 0.01 && Self.isInFrontmostPresentation($0) }
-    }
-
-    private func moveBanner(to host: BannerHostView?) {
-        guard let banner else { return }
-        applyAdSizeIfNeeded()
-        guard let host else {
-            banner.removeFromSuperview()
-            return
-        }
-        if banner.superview !== host {
-            banner.removeFromSuperview()
-            banner.translatesAutoresizingMaskIntoConstraints = false
-            host.addSubview(banner)
-            NSLayoutConstraint.activate([
-                banner.topAnchor.constraint(equalTo: host.topAnchor),
-                banner.leadingAnchor.constraint(equalTo: host.leadingAnchor),
-                banner.trailingAnchor.constraint(equalTo: host.trailingAnchor),
-                banner.bottomAnchor.constraint(equalTo: host.bottomAnchor),
-            ])
-        }
-        banner.rootViewController = AdsRuntime.topViewController() ?? banner.rootViewController
-    }
-
-    private func applyAdSizeIfNeeded() {
-        guard let banner, let adSize else { return }
-        if !isAdSizeEqualToSize(size1: banner.adSize, size2: adSize) {
-            banner.adSize = adSize
-        }
+        guard let scene = Self.activeWindowScene() else { return }
+        let screen = scene.coordinateSpace.bounds
+        let safeBottom = scene.windows.first(where: \.isKeyWindow)?.safeAreaInsets.bottom
+            ?? scene.windows.first?.safeAreaInsets.bottom
+            ?? 0
+        let height = Self.slotHeight + safeBottom
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: screen.height - height, width: screen.width, height: height)
+        window.windowLevel = UIWindow.Level.normal + 1
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        let host = UIViewController()
+        host.view.backgroundColor = .clear
+        window.rootViewController = host
+        banner.translatesAutoresizingMaskIntoConstraints = false
+        banner.rootViewController = host
+        host.view.addSubview(banner)
+        NSLayoutConstraint.activate([
+            banner.leadingAnchor.constraint(equalTo: host.view.leadingAnchor),
+            banner.trailingAnchor.constraint(equalTo: host.view.trailingAnchor),
+            banner.topAnchor.constraint(equalTo: host.view.topAnchor, constant: Self.verticalPadding),
+            banner.heightAnchor.constraint(equalToConstant: Self.slotHeight - Self.verticalPadding * 2),
+        ])
+        window.isHidden = overlayHidden
+        overlayWindow = window
+        NSLog("[Ads] Banner overlay window installed")
     }
 
     private func observeKeyboard() {
@@ -249,18 +163,19 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
         })
     }
 
-    private static func isInFrontmostPresentation(_ view: UIView) -> Bool {
-        guard view.window != nil, !view.isHidden, view.alpha > 0.01 else { return false }
-        guard let topView = AdsRuntime.topViewController()?.viewIfLoaded else { return true }
-        return view.isDescendant(of: topView)
+    private static func activeWindowScene() -> UIWindowScene? {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        return scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first
     }
 
     nonisolated func bannerViewDidReceiveAd(_ bannerView: BannerView) {
+        NSLog("[Ads] Banner received ad")
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.isLoadInFlight = false
             self.hasAd = true
-            self.reassign()
+            self.banner?.isHidden = false
+            self.installOverlayIfNeeded()
         }
     }
 
@@ -270,67 +185,43 @@ final class SharedBannerController: NSObject, ObservableObject, BannerViewDelega
             guard let self else { return }
             self.isLoadInFlight = false
             self.hasAd = false
-            // Leave the suit placeholder on the sheet rather than starting
-            // another request while the user may be typing.
-            self.reassign()
+            // Keep the suit placeholder; do not start another request.
+            self.banner?.isHidden = true
         }
     }
 }
 
-/// Container a `BannerSlot` uses to borrow the shared or sheet `BannerView`.
-final class BannerHostView: UIView {
-    var onWindowChange: (() -> Void)?
-
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        onWindowChange?()
-    }
-}
-
-/// Which `BannerView` a 60 pt slot should host. Visual layout is the same
+/// Which 60 pt slot this screen should reserve. Visual layout is the same
 /// for all cases: reserved height, suit placeholder until an ad is in.
+/// The live `BannerView` is not hosted in the slot; it lives in the overlay window.
 enum BannerSlotKind {
-    /// Suit placeholder only; no live `BannerView`.
+    /// Suit placeholder only.
     case placeholder
-    /// The shared home / Settings / scoreboard banner.
+    /// Home / Settings / scoreboard reserved slot.
     case shared
-    /// Name-entry sheet: borrow the shared filled banner after the sheet settles.
+    /// Name-entry sheet reserved slot (exposes `banner.sheet` for hang tests).
     case sheet
 }
 
 struct AdMobBannerSlotView: View {
     var kind: BannerSlotKind = .shared
-    @ObservedObject private var runtime = AdsRuntime.shared
     @ObservedObject private var sharedBanner = SharedBannerController.shared
 
     // Build 79 hang fix: back to the 1.0.2 slot (which never froze on device): a static
     // placeholder under the ad, one opacity fade when an ad arrives. No loading shimmer,
-    // no per-state animations.
+    // no per-state animations. The live BannerView is in the overlay window, not here,
+    // so opening a sheet never re-parents a WKWebView.
     var body: some View {
         let adSize = anchoredAdaptiveBannerSize()
-        let showsLive = kind != .placeholder && runtime.isReady && UITestSupport.showsLiveBanner
-        let filled = kind == .sheet
-            ? (sharedBanner.hasAd && sharedBanner.isHostedOnSheet)
-            : sharedBanner.hasAd
         ZStack {
             BannerSlotBackground()
-            // Regular UI tests keep the static placeholder: a filled demo BannerView
-            // is a WKWebView that keeps XCUITest waiting for idle (first name-field
-            // focus was 15–18 s). Production, TestFlight, and `-uiTestLiveBanner`
-            // still mount the live banner. The reserved slot stays either way.
-            if showsLive {
-                bannerHost(adSize: adSize)
-                    .frame(width: adSize.size.width, height: adSize.size.height)
-                    .opacity(filled ? 1 : 0)
-                    .animation(.easeIn(duration: 0.25), value: filled)
-            }
             if kind == .sheet {
                 Color.clear
                     .frame(width: 1, height: 1)
                     .accessibilityElement()
                     .accessibilityIdentifier("banner.sheet")
-                    .accessibilityLabel((sharedBanner.hasAd && sharedBanner.isHostedOnSheet) ? "filled" : "placeholder")
-                    .accessibilityValue((sharedBanner.hasAd && sharedBanner.isHostedOnSheet) ? "filled" : "placeholder")
+                    .accessibilityLabel(sharedBanner.hasAd ? "filled" : "placeholder")
+                    .accessibilityValue(sharedBanner.hasAd ? "filled" : "placeholder")
                     .allowsHitTesting(false)
             }
         }
@@ -339,72 +230,6 @@ struct AdMobBannerSlotView: View {
         .clipped()
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("banner")
-    }
-
-    @ViewBuilder
-    private func bannerHost(adSize: AdSize) -> some View {
-        if kind == .sheet {
-            SheetBannerHostRepresentable(adSize: adSize)
-        } else {
-            SharedBannerHostRepresentable(adSize: adSize)
-        }
-    }
-}
-
-/// Re-parents the shared `BannerView` into this slot when the slot is on the
-/// frontmost screen. `dismantleUIView` does not destroy the banner.
-private struct SharedBannerHostRepresentable: UIViewRepresentable {
-    let adSize: AdSize
-
-    func makeUIView(context: Context) -> BannerHostView {
-        let host = BannerHostView()
-        host.backgroundColor = .clear
-        host.clipsToBounds = true
-        host.onWindowChange = {
-            Task { @MainActor in
-                SharedBannerController.shared.hostDidChangeWindow()
-            }
-        }
-        SharedBannerController.shared.attach(to: host, adSize: adSize)
-        return host
-    }
-
-    func updateUIView(_ host: BannerHostView, context: Context) {
-        SharedBannerController.shared.attach(to: host, adSize: adSize)
-    }
-
-    static func dismantleUIView(_ host: BannerHostView, coordinator: ()) {
-        host.onWindowChange = nil
-        SharedBannerController.shared.detach(from: host)
-    }
-}
-
-/// Registers the name-entry slot as a deferred host for the shared, already-
-/// filled `BannerView`. The banner is not moved here until the sheet has
-/// settled and the request has completed. `dismantleUIView` returns it home.
-private struct SheetBannerHostRepresentable: UIViewRepresentable {
-    let adSize: AdSize
-
-    func makeUIView(context: Context) -> BannerHostView {
-        let host = BannerHostView()
-        host.backgroundColor = .clear
-        host.clipsToBounds = true
-        host.onWindowChange = {
-            Task { @MainActor in
-                SharedBannerController.shared.sheetHostDidChangeWindow()
-            }
-        }
-        SharedBannerController.shared.attachSheet(to: host, adSize: adSize)
-        return host
-    }
-
-    func updateUIView(_ host: BannerHostView, context: Context) {
-        SharedBannerController.shared.attachSheet(to: host, adSize: adSize)
-    }
-
-    static func dismantleUIView(_ host: BannerHostView, coordinator: ()) {
-        host.onWindowChange = nil
-        SharedBannerController.shared.detachSheet(from: host)
     }
 }
 
@@ -494,12 +319,10 @@ struct BannerAdContainer: View {
     }
 }
 
-/// The bottom banner every screen shows, including sheets and full-screen covers.
-/// Sheets cover the root slot, so each still reserves the 60pt band. Most sheets
-/// reuse one shared `BannerView` (re-parented into the frontmost host) instead of
-/// loading a second ad. The name-entry sheet borrows that same view only after
-/// the creative has filled and the sheet has settled, so opening 新開一場 never
-/// starts a second WKWebView and never moves a request that is still in flight.
+/// The bottom banner band every screen shows, including sheets and full-screen covers.
+/// Sheets cover the root slot, so each still reserves the 60pt band. The live
+/// `BannerView` lives in a window-level overlay aligned with that band, so opening
+/// 新開一場 never re-parents a WKWebView and never starts a second ad request.
 /// Hidden while an interstitial is showing (instant). After 移除廣告,
 /// the 60pt band collapses to 0 over 220 ms when 動畫效果 is on and Reduce Motion
 /// is off; otherwise it collapses instantly.
@@ -533,9 +356,18 @@ struct BannerSlot: View {
         .frame(height: hideForInterstitial ? 0 : height)
         .frame(maxWidth: .infinity)
         .clipped()
-        .onAppear { applyAdsRemoved(vm.model.data.adsRemoved, animated: false) }
+        .onAppear {
+            applyAdsRemoved(vm.model.data.adsRemoved, animated: false)
+            SharedBannerController.shared.setOverlayHidden(
+                vm.model.data.adsRemoved || hideForInterstitial
+            )
+        }
         .onChange(of: vm.model.data.adsRemoved) { removed in
             applyAdsRemoved(removed, animated: true)
+            SharedBannerController.shared.setOverlayHidden(removed || vm.isShowingInterstitial)
+        }
+        .onChange(of: vm.isShowingInterstitial) { showing in
+            SharedBannerController.shared.setOverlayHidden(vm.model.data.adsRemoved || showing)
         }
         .onChange(of: height) { newHeight in
             if newHeight < 0.5 { holdsContent = false }

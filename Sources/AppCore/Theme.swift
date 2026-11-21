@@ -90,6 +90,16 @@ public struct Theme: Equatable, Sendable {
     /// Fill behind white destructive labels (swipe 刪除). Classic's `negative` text red
     /// (FF6363) is too light under white text, so the fill is a slightly deeper red (AA 4.6:1).
     public var destructiveFill: RGBColor = RGBColor(hex: 0xD63A3A)
+    /// Empty-home suit-fan card fill (HANDOFF §4 01a). Classic matches the icon front
+    /// card (#323745); Ledger is white.
+    public var emptyFanFill: RGBColor = RGBColor(hex: 0x323745)
+    /// Outer-card stroke width for the empty-home fan (♠ and ♦).
+    public var emptyFanStrokeOuter: Double = 3.4
+    /// Inner-card stroke width for the empty-home fan (♥ and ♣).
+    public var emptyFanStrokeInner: Double = 4.0
+    /// Default spring used by motion-spec animations, including the empty-home deal-in.
+    public var springResponse: Double = 0.30
+    public var springDamping: Double = 0.75
 
     /// The default 街坊 skin: dark grey, yellow primary, rounded 14–16 pt.
     public static let neighbourhood = Theme(
@@ -197,6 +207,11 @@ public struct Theme: Equatable, Sendable {
             t.badgeTier4 = RGBColor(hex: 0x9B2C2C)
             t.tierText = RGBColor(hex: 0x1E2128)
             t.destructiveFill = RGBColor(hex: 0xD63A3A)
+            t.emptyFanFill = RGBColor(hex: 0x323745)
+            t.emptyFanStrokeOuter = 3.4
+            t.emptyFanStrokeInner = 4.0
+            t.springResponse = 0.30
+            t.springDamping = 0.75
             t.cardCornerRadius = 16
             t.buttonCornerRadius = 18
             t.keyCornerRadius = 12
@@ -213,6 +228,11 @@ public struct Theme: Equatable, Sendable {
             t.badgeTier4 = RGBColor(hex: 0xC9363B)
             t.tierText = RGBColor(hex: 0xFFFFFF)
             t.destructiveFill = p.neg
+            t.emptyFanFill = RGBColor(hex: 0xFFFFFF)
+            t.emptyFanStrokeOuter = 4.2
+            t.emptyFanStrokeInner = 4.8
+            t.springResponse = 0.25
+            t.springDamping = 1.0
             t.cardCornerRadius = 10
             t.buttonCornerRadius = 10
             t.keyCornerRadius = 8

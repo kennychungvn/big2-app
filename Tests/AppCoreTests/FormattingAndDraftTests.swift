@@ -118,6 +118,11 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertFalse(classic.monoNumbers)
         XCTAssertFalse(classic.suitOutline)
         XCTAssertEqual(classic.suitBlack.hexString, "#3A3F4B")
+        XCTAssertEqual(classic.emptyFanFill.hexString, "#323745")
+        XCTAssertEqual(classic.emptyFanStrokeOuter, 3.4)
+        XCTAssertEqual(classic.emptyFanStrokeInner, 4.0)
+        XCTAssertEqual(classic.springResponse, 0.30)
+        XCTAssertEqual(classic.springDamping, 0.75)
 
         let ledger = Theme.make(skin: .ledger)
         XCTAssertFalse(ledger.isDark)
@@ -133,6 +138,11 @@ final class FormattingAndDraftTests: XCTestCase {
         XCTAssertTrue(ledger.squareMarker)
         XCTAssertTrue(ledger.suitOutline)
         XCTAssertEqual(ledger.suitRed.hexString, "#AFC0F7")
+        XCTAssertEqual(ledger.emptyFanFill.hexString, "#FFFFFF")
+        XCTAssertEqual(ledger.emptyFanStrokeOuter, 4.2)
+        XCTAssertEqual(ledger.emptyFanStrokeInner, 4.8)
+        XCTAssertEqual(ledger.springResponse, 0.25)
+        XCTAssertEqual(ledger.springDamping, 1.0)
 
         XCTAssertEqual(SkinID.ledger.alternateIconName, "AppIcon-Ledger")
         XCTAssertNil(SkinID.classic.alternateIconName)

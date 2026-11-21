@@ -1,6 +1,6 @@
 import XCTest
 
-/// Design sign-off stills for the 2.0 names-delete polish and (later) the empty home.
+/// Design sign-off stills for the 2.0 names-delete polish and the empty-home fan.
 /// Screenshot names must match the CI export regex: `(HK|TW|DLE)[-A-Za-z0-9]+`.
 /// HK stills land in the `ui-screenshots` artifact; DaLaoEr stills in `ui-screenshots-taiwan`.
 final class SignOffUITests: XCTestCase {
@@ -23,6 +23,11 @@ final class SignOffUITests: XCTestCase {
 
     private func runNamesDelete(skin: String) {
         launch(skin: skin, knownNames: "A,B,C,D")
+        waitForEmptyHomeSettle()
+        element("home.emptyState")
+        element("home.newSession")
+        snap("\(prefix)-SIGNOFF-\(skin)-home-empty")
+
         openKnownNamesEditor()
 
         // Mid-row 刪除 open (B), minus and name stay visible on the left.
@@ -65,6 +70,12 @@ final class SignOffUITests: XCTestCase {
         app.launchArguments = args
         app.launch()
         element("home.title")
+    }
+
+    /// Deal-in is ~700 ms; stills should show the rest fan + CTA.
+    private func waitForEmptyHomeSettle() {
+        element("home.emptyState")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.85))
     }
 
     private func openKnownNamesEditor() {

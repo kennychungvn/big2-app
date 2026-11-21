@@ -104,6 +104,25 @@ struct PressStyle: ButtonStyle {
     }
 }
 
+extension Theme {
+    /// Motion-spec default spring (經典 soft with a tiny overshoot; Ledger critically damped).
+    var defaultSpring: Animation {
+        .spring(response: springResponse, dampingFraction: springDamping)
+    }
+
+    /// Motion-spec ease: Classic `.easeOut`, Ledger the crisp 0.2/0/0/1 curve.
+    func easeOut(duration: Double) -> Animation {
+        if skin == .ledger {
+            return .timingCurve(0.2, 0, 0, 1, duration: duration)
+        }
+        return .easeOut(duration: duration)
+    }
+
+    func emptyFanStrokeWidth(isOuter: Bool) -> CGFloat {
+        CGFloat(isOuter ? emptyFanStrokeOuter : emptyFanStrokeInner)
+    }
+}
+
 /// 動畫效果 master switch, mirrored from AppData.chaoAnimationEnabled (same stored value,
 /// renamed label) so leaf views can gate motion without the view model.
 enum MotionSettings {

@@ -205,6 +205,8 @@ final class Big2UITests: XCTestCase {
         // Home (fresh)
         XCTAssertEqual(label("home.title"), "鋤大D計分")
         XCTAssertFalse(app.descendants(matching: .any)["home.allSessions"].exists)
+        element("home.emptyState")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.85))
         assertBanner("home-fresh")
         snap("home-fresh")
 
@@ -438,6 +440,8 @@ final class Big2UITests: XCTestCase {
                 extra: ["-skin", config.skin]
             )
             XCTAssertEqual(label("home.title"), "鋤大D計分")
+            element("home.emptyState")
+            RunLoop.current.run(until: Date().addingTimeInterval(0.85))
             snap("home-empty")
 
             tap("home.newSession")
@@ -522,6 +526,8 @@ final class Big2UITests: XCTestCase {
         launch(languages: "zh-Hant-TW", locale: "zh_TW", prefix: "TW", extra: ["-enableTaiwan"])
 
         XCTAssertEqual(label("home.title"), "大老二記分")
+        element("home.emptyState")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.85))
         assertBanner("home-fresh")
         snap("home-fresh")
 

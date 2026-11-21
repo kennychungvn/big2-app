@@ -66,6 +66,7 @@ final class DaLaoErUITests: XCTestCase {
         app.launchArguments += ["-skin", "ledger"]
         app.launch()
         element("home.title")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.85))
         snap("DLE-L-01-home")
         tap("home.newSession")
         element("setup.name.0")
@@ -115,6 +116,7 @@ final class DaLaoErUITests: XCTestCase {
         app.terminate()
         app.launch()
         element("home.title")
+        RunLoop.current.run(until: Date().addingTimeInterval(0.85))
         snap("DLE-C-01-home")
         tap("home.newSession")
         element("setup.name.0")

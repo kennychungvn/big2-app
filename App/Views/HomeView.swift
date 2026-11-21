@@ -6,7 +6,39 @@ struct HomeView: View {
     @Environment(\.appTheme) private var theme
     @State private var pendingDelete: StoredSession?
 
+    /// No open game and no history: option C 花色版 empty state (HANDOFF §4 01a).
+    private var isEmptyHome: Bool {
+        vm.model.latestUnfinished == nil && vm.model.allSessions.isEmpty
+    }
+
     var body: some View {
+        Group {
+            if isEmptyHome {
+                emptyHome
+            } else {
+                sessionHome
+            }
+        }
+        .background(Color(theme.background).ignoresSafeArea())
+        .deleteSessionAlert(pending: $pendingDelete) { vm.deleteSession($0.id) }
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    /// Header + centred fan + CTA. The 60 pt banner slot lives outside this view
+    /// (RootView `.bannerSlot()`); do not add or change ad code here.
+    private var emptyHome: some View {
+        VStack(spacing: 0) {
+            header
+                .padding(.top, 8)
+            EmptyHomeCluster(
+                theme: theme,
+                ctaTitle: tr("＋ 新開一場"),
+                onStart: { vm.isPresentingNewSession = true }
+            )
+        }
+    }
+
+    private var sessionHome: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
@@ -94,19 +126,10 @@ struct HomeView: View {
                     .accessibilityIdentifier("home.allSessions")
                     .padding(.horizontal, 16)
                     .padding(.top, 22)
-                } else if vm.model.latestUnfinished == nil {
-                    Text(tr("未有對局紀錄，撳「新開一場」開始。"))
-                        .font(.system(size: 13))
-                        .foregroundColor(Color(theme.tertiaryText))
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 28)
                 }
             }
             .padding(.bottom, 12)
         }
-        .background(Color(theme.background).ignoresSafeArea())
-        .deleteSessionAlert(pending: $pendingDelete) { vm.deleteSession($0.id) }
-        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var header: some View {

@@ -99,8 +99,10 @@ final class NameEntryUITests: XCTestCase {
         tap("nav.home")
         tap("home.settings")
         element("settings.done")
-        let manage = element("settings.knownNames")
-        for _ in 0..<4 where !manage.isHittable { app.swipeUp() }
+        // TW Settings inserts 計分方式 and 加倍門檻 above 體驗, so the
+        // 管理快速填入名稱 row may not be in a virtualized List yet.
+        // Scroll until it exists, then until it is hittable.
+        let manage = reveal("settings.knownNames")
         manage.tap()
         assertAlive("known names")
         snap("\(tag)-06-known-names")
@@ -153,6 +155,23 @@ final class NameEntryUITests: XCTestCase {
         let element = app.descendants(matching: .any)[id].firstMatch
         XCTAssertTrue(element.waitForExistence(timeout: timeout), "missing \(id) (app state \(app.state.rawValue))", file: file, line: line)
         return element
+    }
+
+    /// Scroll a Settings list until `id` is in the hierarchy (and then hittable).
+    /// Waiting first fails on TW when the row has not been materialized yet.
+    private func reveal(_ id: String, timeout: TimeInterval = 15, file: StaticString = #filePath, line: UInt = #line) -> XCUIElement {
+        let target = app.descendants(matching: .any)[id].firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        while !target.exists && Date() < deadline {
+            app.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        XCTAssertTrue(target.waitForExistence(timeout: 2), "missing \(id) (app state \(app.state.rawValue))", file: file, line: line)
+        while !target.isHittable && Date() < deadline {
+            app.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        return target
     }
 
     private func tap(_ id: String, file: StaticString = #filePath, line: UInt = #line) {

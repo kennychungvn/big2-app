@@ -168,14 +168,24 @@ struct EmptyHomeCluster: View {
         VStack(spacing: 16) {
             EmptyHomeFan(theme: theme, atRest: cardsAtRest)
             PrimaryButton(title: ctaTitle, height: 60, fontSize: 19, action: onStart)
-                .accessibilityIdentifier("home.newSession")
                 .opacity(ctaAtRest ? 1 : 0)
                 .offset(y: ctaAtRest ? 0 : 8)
                 .animation(ctaAnimation, value: ctaAtRest)
+                // Identifier stays on the button, not the cluster: a container
+                // identifier combines children and hid home.newSession from XCUITest.
+                .accessibilityIdentifier("home.newSession")
+                .accessibilityHidden(false)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .opacity(clusterOpacity)
-        .accessibilityIdentifier("home.emptyState")
+        .accessibilityElement(children: .contain)
+        .overlay(alignment: .topLeading) {
+            // Sign-off tests wait on this; kept off the container so the CTA stays visible.
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityIdentifier("home.emptyState")
+                .allowsHitTesting(false)
+        }
         .onAppear(perform: appear)
     }
 

@@ -337,8 +337,39 @@ jobs:
             -only-testing:${T}/HangUITests \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO > test.log 2>&1
           status=$?
-          grep -E "Test Case|error:|failed|UI hang|s  (tap|probe|focus|type)|\*\* TEST|HANG_DETECTOR|HangDetector" test.log | tail -240
+          grep -E "Test Case|error:|failed|UI hang|s  (tap|probe|focus|type)|\*\* TEST|HANG_DETECTOR|HangDetector|SHEET_BANNER|Sheet banner" test.log | tail -240
           exit $status
+      - name: Export filled-banner screenshot
+        if: always()
+        run: |
+          set -uo pipefail
+          mkdir -p hang-attachments
+          if [ -d Hang.xcresult ]; then
+            if xcrun xcresulttool export attachments --path Hang.xcresult --output-path hang-raw; then
+              python3 - <<'PY'
+          import json, pathlib, shutil
+          raw = pathlib.Path("hang-raw")
+          out = pathlib.Path("hang-attachments")
+          manifest_path = raw / "manifest.json"
+          if not manifest_path.exists():
+              raise SystemExit(0)
+          manifest = json.loads(manifest_path.read_text())
+          for test in manifest:
+              for att in test.get("attachments", []):
+                  src = raw / att["exportedFileName"]
+                  name = att.get("suggestedHumanReadableName") or att["exportedFileName"]
+                  hay = f"{name} {att['exportedFileName']}"
+                  if src.suffix.lower() not in (".png", ".jpg", ".jpeg"):
+                      continue
+                  if "sheet-live-banner" not in hay:
+                      continue
+                  dest = out / ("sheet-live-banner" + src.suffix)
+                  shutil.copy(src, dest)
+                  print(dest)
+          PY
+            fi
+          fi
+          ls -la hang-attachments || true
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -346,4 +377,5 @@ jobs:
           path: |
             test.log
             Hang.xcresult
+            hang-attachments
           if-no-files-found: ignore

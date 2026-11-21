@@ -64,6 +64,21 @@ final class HangUITests: XCTestCase {
             timed("type name \(index)", budget: nil) { field.typeText(name + "\n") }
         }
         settle(1)
+        let sheetBanner = element("banner.sheet", timeout: 20)
+        let fillDeadline = Date().addingTimeInterval(25)
+        while Date() < fillDeadline {
+            let value = (sheetBanner.value as? String) ?? sheetBanner.label
+            if value.contains("filled") { break }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        let bannerState = (sheetBanner.value as? String) ?? sheetBanner.label
+        print("SHEET_BANNER_STATE \(bannerState)")
+        let stateAttachment = XCTAttachment(string: bannerState)
+        stateAttachment.name = "sheet-banner-state"
+        stateAttachment.lifetime = .keepAlways
+        add(stateAttachment)
+        snap("sheet-live-banner")
+        XCTAssertTrue(bannerState.contains("filled"), "sheet banner did not fill (demo ad): \(bannerState)")
         let reportEl = element("hangDetector.report", timeout: 30)
         let report = (reportEl.value as? String).flatMap { $0.isEmpty ? nil : $0 }
             ?? reportEl.label

@@ -22,10 +22,10 @@ struct RootView: View {
         .tint(Color(theme.accentLink))
         .sheet(isPresented: $vm.isPresentingNewSession) {
             NewSessionView(draft: vm.model.newSessionDraft(region: vm.region))
-                // Placeholder only: do not re-parent the live BannerView onto this
-                // sheet. Moving it mid-load blocked the main thread for 13.8 s
-                // while the first name was being typed (run 44874686825).
-                .bannerSlot(liveBanner: false)
+                // Dedicated once-per-session BannerView, loaded only after the
+                // sheet has settled. Never re-parents the home banner (moving it
+                // mid-load stalled the main thread for 13.8 s, run 44874686825).
+                .bannerSlot(.sheet)
                 .environmentObject(vm)
                 .environment(\.appTheme, theme)
                 .preferredColorScheme(theme.colorScheme)

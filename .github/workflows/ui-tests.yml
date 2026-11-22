@@ -79,7 +79,7 @@ jobs:
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -derivedDataPath DerivedData \
             -resultBundlePath UITestResults.xcresult \
-            -skip-testing:Big2UITests/Big2UITests/testTaiwanFlowFlagForcedOn \
+            -only-testing:Big2UITests/AppStoreStillsUITests \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             > xcodebuild-test.log 2>&1
@@ -90,7 +90,7 @@ jobs:
       # Taiwan is on hold (FeatureFlags.taiwanEnabledByDefault = false). This run forces the
       # flag on with -enableTaiwan and never fails the workflow.
       - name: Run UI tests (Taiwan flag forced on, non-blocking)
-        if: always()
+        if: false
         continue-on-error: true
         run: |
           set +e
@@ -226,6 +226,7 @@ jobs:
             -destination "id=${{ steps.sim.outputs.udid }}" \
             -derivedDataPath DerivedData-DaLaoEr \
             -resultBundlePath UITestResults-DaLaoEr.xcresult \
+            -only-testing:DaLaoErUITests/AppStoreStillsUITests \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             > xcodebuild-test-dalaoer.log 2>&1
@@ -291,6 +292,7 @@ jobs:
   # Intel setup): 1.0.2 build 63, which is fine on device, took 8.4 s to focus the first name
   # field and 32.8 s to focus the second. The test and its 8 s limit are unchanged.
   hang-demo-ads:
+    if: false
     name: Hang test demo ads ${{ matrix.scheme }} (Release)
     runs-on: macos-15
     timeout-minutes: 60

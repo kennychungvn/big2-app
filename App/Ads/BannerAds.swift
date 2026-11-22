@@ -380,8 +380,8 @@ struct BannerSlot: View {
     /// 50pt ad + 5pt padding on each side.
     private static let expandedHeight: CGFloat = 60
 
-    @State private var height: CGFloat = BannerSlot.expandedHeight
-    @State private var holdsContent = true
+    @State private var height: CGFloat = UITestSupport.hidesBanner ? 0 : BannerSlot.expandedHeight
+    @State private var holdsContent = !UITestSupport.hidesBanner
 
     var body: some View {
         let hideForInterstitial = vm.isShowingInterstitial
@@ -401,9 +401,9 @@ struct BannerSlot: View {
         .frame(maxWidth: .infinity)
         .clipped()
         .onAppear {
-            applyAdsRemoved(vm.model.data.adsRemoved, animated: false)
+            applyAdsRemoved(vm.model.data.adsRemoved || UITestSupport.hidesBanner, animated: false)
             SharedBannerController.shared.setOverlayHidden(
-                vm.model.data.adsRemoved || hideForInterstitial
+                vm.model.data.adsRemoved || UITestSupport.hidesBanner || hideForInterstitial
             )
             if kind == .sheet {
                 SharedBannerController.shared.setNameEntryVisible(true)

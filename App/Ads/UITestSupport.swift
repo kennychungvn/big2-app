@@ -31,6 +31,13 @@ enum UITestSupport {
     static var showsLiveBanner: Bool {
         !isActive || ProcessInfo.processInfo.arguments.contains("-uiTestLiveBanner")
     }
+
+    /// Marketing-still launches: collapse the 60pt ad band and skip the stub
+    /// interstitial so screenshots have no test-ads placeholder. No effect unless
+    /// `-uiTesting` is also set.
+    static var hidesBanner: Bool {
+        isActive && ProcessInfo.processInfo.arguments.contains("-uiTestHideBanner")
+    }
 }
 
 /// Full-screen stand-in for an AdMob interstitial so UI tests can see and close it.
@@ -42,7 +49,7 @@ final class UITestInterstitialAdManager: AdManaging {
     func preloadInterstitial() {}
 
     func showInterstitialIfReady() async -> Bool {
-        guard !adsRemoved, let presenter = Self.topViewController() else { return false }
+        guard !adsRemoved, !UITestSupport.hidesBanner, let presenter = Self.topViewController() else { return false }
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             var host: UIHostingController<InterstitialStubView>?
             let view = InterstitialStubView {

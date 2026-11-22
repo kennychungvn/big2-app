@@ -393,11 +393,12 @@ private struct KnownNameEditRow: View {
             KnownNameDeleteAction(theme: theme, onDelete: onDelete)
                 .opacity(isConfirming ? 1 : 0)
                 .allowsHitTesting(isConfirming)
-                // Hidden while closed: the pill stays in the ZStack (on top, for
-                // the tap) with opacity 0, and XCUITest otherwise still saw it as
-                // hittable on the next row after a delete. Also correct for VoiceOver.
+                // Identifier must sit inside accessibilityHidden. Applying it
+                // afterwards left a settings.knownNames.delete.C Button in the
+                // tree after B was removed (C stayed visually closed). Also
+                // correct for VoiceOver. The pill itself stays in the ZStack.
+                .accessibilityIdentifier(isConfirming ? deleteIdentifier : "")
                 .accessibilityHidden(!isConfirming)
-                .accessibilityIdentifier(deleteIdentifier)
         }
         .frame(minHeight: 44)
         .offset(y: dragOffset)
